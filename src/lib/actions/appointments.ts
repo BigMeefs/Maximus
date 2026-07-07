@@ -7,8 +7,10 @@ export type AppointmentFormState = {
   error?: string;
 };
 
-function revalidateParticipant(participantId: string) {
-  revalidatePath(`/participants/${participantId}`);
+function revalidateParticipant() {
+  // Advisor isn't known here, so revalidate the whole workspace layout
+  // (dashboard, participants list, and every participant profile page).
+  revalidatePath("/advisors/[advisor]", "layout");
 }
 
 export async function createAppointment(
@@ -38,7 +40,7 @@ export async function createAppointment(
     return { error: error.message };
   }
 
-  revalidateParticipant(participantId);
+  revalidateParticipant();
   return {};
 }
 
@@ -48,5 +50,5 @@ export async function deleteAppointment(
 ) {
   const supabase = await createClient();
   await supabase.from("appointments").delete().eq("id", appointmentId);
-  revalidateParticipant(participantId);
+  revalidateParticipant();
 }

@@ -6,13 +6,18 @@ Next.js (App Router), TypeScript, Tailwind CSS and Supabase.
 
 ## Features
 
-- No per-advisor login — pick your name from a list when you open the app.
-- Each advisor's dashboard and participant list default to their own
-  caseload; use the advisor filter on the participants list to look up a
-  colleague's client by name.
-- Participant profiles: PTP name, business name, advisor, previous advisor,
-  scheme start date, calculated days remaining (365-day scheme), website and
-  social media links.
+- No login. The home screen (`/select-advisor`) lists the four advisors as
+  cards; picking one opens `/advisors/<name>/dashboard` — that advisor's own
+  workspace.
+- Each advisor's dashboard and participant list show only participants
+  belonging to that workspace (`participants.advisor_name`). There's a link
+  back to the home screen from every page ("← All advisors" in the sidebar),
+  and any advisor can open any other advisor's workspace from there — e.g.
+  if Charles is on holiday, Kyle can open `/advisors/Charles/dashboard` and
+  work his caseload directly.
+- Participant profiles: PTP name, business name, advisor (the workspace
+  that created them), previous advisor, scheme start date, calculated days
+  remaining (365-day scheme), website and social media links.
 - Business plan tracker (Not Started / In Progress / Complete) with optional
   document upload.
 - Monthly earnings with an editable table and chart view.
@@ -20,21 +25,19 @@ Next.js (App Router), TypeScript, Tailwind CSS and Supabase.
 - Ongoing action plan tracker with full history.
 - Appointment history (date, advisor, notes, outcome).
 - Dashboard with caseload size, expiring participants, missing business plans
-  and outstanding actions.
-- Searchable, filterable (including by advisor), responsive participant list.
+  and outstanding actions, scoped to that workspace.
+- Searchable, filterable, responsive participant list, scoped to that
+  workspace.
 
 ## Security model
 
-There is no authentication. The four advisor names are just a picker used to
-stamp a display name/cookie — anyone who opens the app can act as any
-advisor. The dashboard and participants list default to showing only the
-picked advisor's own caseload, but that's a UI default, not a data boundary:
-switching the advisor filter to "All advisors" (or a specific colleague)
-shows their participants too, and the underlying data is not actually
-restricted per advisor. Row-level security is disabled on every table, so
-**the Supabase anon key (shipped in the browser bundle) has full read/write
-access to all participant data.** This is intentional for a small, trusted
-internal tool, but it means:
+There is no authentication. `/advisors/<name>/...` is just a URL — anyone who
+opens the app can navigate into any advisor's workspace by typing or clicking
+their name; this is intentional (see above), not an oversight. Row-level
+security is disabled on every table, so **the Supabase anon key (shipped in
+the browser bundle) has full read/write access to all participant data,
+independent of the workspace-based navigation.** This is fine for a small,
+trusted internal tool, but it means:
 
 - Do not deploy this somewhere publicly reachable without another access
   barrier in front of it (e.g. a hosting platform's password protection, a
@@ -77,7 +80,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), pick your name, and go.
+Open [http://localhost:3000](http://localhost:3000), pick an advisor, and go.
 
 ### Deploying (e.g. Vercel)
 
@@ -85,16 +88,17 @@ Open [http://localhost:3000](http://localhost:3000), pick your name, and go.
 set as **Environment Variables on the hosting project itself** (Vercel:
 Project Settings → Environment Variables) — `.env.local` is git-ignored and
 never reaches a deployment. If they're missing, every page that talks to
-Supabase (e.g. the dashboard, right after picking your name) will fail to
-load. After adding or changing them, redeploy — Next.js inlines these at
-build time, so an existing deployment won't pick up new values on its own.
+Supabase (e.g. an advisor's dashboard) will fail to load. After adding or
+changing them, redeploy — Next.js inlines these at build time, so an
+existing deployment won't pick up new values on its own.
 
 ## Project structure
 
 - `supabase/migrations` — SQL schema and storage buckets.
-- `src/app/select-advisor` — the name picker shown before entering the app.
-- `src/app/(app)` — app shell, dashboard, participants and participant
-  profile tabs.
-- `src/lib/actions` — server actions for business plans, earnings, evidence,
-  action plan items, appointments and advisor selection.
+- `src/app/select-advisor` — the home screen (advisor selection cards).
+- `src/app/advisors/[advisor]` — one advisor's workspace: layout/nav shell,
+  dashboard, participants list, and participant create/edit/profile pages,
+  all scoped to the `advisor` route segment.
+- `src/lib/actions` — server actions for participants, business plans,
+  earnings, evidence, action plan items and appointments.
 - `src/lib/supabase` — Supabase client helpers.

@@ -4,13 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 
-const links = [
-  { href: "/dashboard", label: "Dashboard", icon: "▦" },
-  { href: "/participants", label: "Participants", icon: "▤" },
-];
-
-export default function NavLinks() {
+export default function NavLinks({ advisorName }: { advisorName: string }) {
   const pathname = usePathname();
+
+  const links = [
+    { href: `/advisors/${advisorName}/dashboard`, label: "Dashboard", icon: "▦" },
+    { href: `/advisors/${advisorName}/participants`, label: "Participants", icon: "▤" },
+  ];
 
   return (
     <nav className="flex flex-1 flex-col gap-1 px-3">

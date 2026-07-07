@@ -7,9 +7,10 @@ export type EarningsFormState = {
   error?: string;
 };
 
-function revalidateParticipant(participantId: string) {
-  revalidatePath(`/participants/${participantId}`);
-  revalidatePath("/dashboard");
+function revalidateParticipant() {
+  // Advisor isn't known here, so revalidate the whole workspace layout
+  // (dashboard, participants list, and every participant profile page).
+  revalidatePath("/advisors/[advisor]", "layout");
 }
 
 export async function upsertMonthlyEarning(
@@ -42,7 +43,7 @@ export async function upsertMonthlyEarning(
     return { error: error.message };
   }
 
-  revalidateParticipant(participantId);
+  revalidateParticipant();
   return {};
 }
 
@@ -52,5 +53,5 @@ export async function deleteMonthlyEarning(
 ) {
   const supabase = await createClient();
   await supabase.from("monthly_earnings").delete().eq("id", earningId);
-  revalidateParticipant(participantId);
+  revalidateParticipant();
 }

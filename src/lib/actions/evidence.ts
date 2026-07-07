@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-function revalidateParticipant(participantId: string) {
-  revalidatePath(`/participants/${participantId}`);
+function revalidateParticipant() {
+  // Advisor isn't known here, so revalidate the whole workspace layout
+  // (dashboard, participants list, and every participant profile page).
+  revalidatePath("/advisors/[advisor]", "layout");
 }
 
 export async function uploadEvidenceFile(
@@ -34,7 +36,7 @@ export async function uploadEvidenceFile(
     file_name: file.name,
   });
 
-  revalidateParticipant(participantId);
+  revalidateParticipant();
 }
 
 export async function deleteEvidenceFile(
@@ -47,7 +49,7 @@ export async function deleteEvidenceFile(
   await supabase.storage.from("evidence-files").remove([filePath]);
   await supabase.from("evidence_files").delete().eq("id", evidenceId);
 
-  revalidateParticipant(participantId);
+  revalidateParticipant();
 }
 
 export async function getEvidenceFileUrl(filePath: string) {

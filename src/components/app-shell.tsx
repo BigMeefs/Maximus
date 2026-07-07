@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import NavLinks from "@/components/nav-links";
-import SwitchAdvisorButton from "@/components/switch-advisor-button";
+import BackToAdvisorsLink from "@/components/back-to-advisors-link";
 
 export default function AppShell({
   advisorName,
@@ -13,12 +13,13 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const dashboardHref = `/advisors/${advisorName}/dashboard`;
 
   return (
     <div className="flex min-h-screen flex-1 bg-slate-50">
       {/* Desktop sidebar */}
       <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white py-6 md:flex">
-        <Link href="/dashboard" className="mb-6 flex items-center gap-2 px-4">
+        <Link href={dashboardHref} className="mb-6 flex items-center gap-2 px-4">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
             SE
           </div>
@@ -28,7 +29,7 @@ export default function AppShell({
             Manager
           </span>
         </Link>
-        <NavLinks />
+        <NavLinks advisorName={advisorName} />
         <div className="mt-auto flex items-center justify-between border-t border-slate-200 px-4 pt-4">
           <div className="text-sm">
             <p className="font-medium text-slate-900">{advisorName}</p>
@@ -36,14 +37,14 @@ export default function AppShell({
           </div>
         </div>
         <div className="px-3 pt-2">
-          <SwitchAdvisorButton />
+          <BackToAdvisorsLink />
         </div>
       </aside>
 
       {/* Mobile top bar */}
       <div className="flex flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
-          <Link href="/dashboard" className="flex items-center gap-2">
+          <Link href={dashboardHref} className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-xs font-bold text-white">
               SE
             </div>
@@ -63,13 +64,13 @@ export default function AppShell({
 
         {mobileOpen && (
           <div className="border-b border-slate-200 bg-white px-3 pb-4 md:hidden">
-            <NavLinks />
+            <NavLinks advisorName={advisorName} />
             <div className="mt-3 flex items-center justify-between border-t border-slate-200 px-3 pt-3">
               <div className="text-sm">
                 <p className="font-medium text-slate-900">{advisorName}</p>
                 <p className="text-xs text-slate-500">Advisor</p>
               </div>
-              <SwitchAdvisorButton />
+              <BackToAdvisorsLink />
             </div>
           </div>
         )}

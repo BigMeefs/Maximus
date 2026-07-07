@@ -8,9 +8,10 @@ export type ActionPlanFormState = {
   error?: string;
 };
 
-function revalidateParticipant(participantId: string) {
-  revalidatePath(`/participants/${participantId}`);
-  revalidatePath("/dashboard");
+function revalidateParticipant() {
+  // Advisor isn't known here, so revalidate the whole workspace layout
+  // (dashboard, participants list, and every participant profile page).
+  revalidatePath("/advisors/[advisor]", "layout");
 }
 
 export async function createActionPlanItem(
@@ -38,7 +39,7 @@ export async function createActionPlanItem(
     return { error: error.message };
   }
 
-  revalidateParticipant(participantId);
+  revalidateParticipant();
   return {};
 }
 
@@ -57,7 +58,7 @@ export async function updateActionPlanStatus(
     })
     .eq("id", itemId);
 
-  revalidateParticipant(participantId);
+  revalidateParticipant();
 }
 
 export async function deleteActionPlanItem(
@@ -66,5 +67,5 @@ export async function deleteActionPlanItem(
 ) {
   const supabase = await createClient();
   await supabase.from("action_plan_items").delete().eq("id", itemId);
-  revalidateParticipant(participantId);
+  revalidateParticipant();
 }

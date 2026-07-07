@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { isAdvisorName } from "@/lib/constants";
+import type { AdvisorName } from "@/lib/constants";
 
 export type ParticipantFormState = {
   error?: string;
@@ -12,7 +12,6 @@ export type ParticipantFormState = {
 function readParticipantFields(formData: FormData) {
   const ptpName = formData.get("ptp_name")?.toString().trim() ?? "";
   const businessName = formData.get("business_name")?.toString().trim() ?? "";
-  const advisorName = formData.get("advisor_name")?.toString() ?? "";
   const previousAdvisor =
     formData.get("previous_advisor")?.toString().trim() || null;
   const schemeStartDate = formData.get("scheme_start_date")?.toString() ?? "";
@@ -23,7 +22,6 @@ function readParticipantFields(formData: FormData) {
   return {
     ptpName,
     businessName,
-    advisorName,
     previousAdvisor,
     schemeStartDate,
     website,
@@ -31,7 +29,13 @@ function readParticipantFields(formData: FormData) {
   };
 }
 
+function revalidateAdvisor(advisorName: AdvisorName) {
+  revalidatePath(`/advisors/${advisorName}/participants`);
+  revalidatePath(`/advisors/${advisorName}/dashboard`);
+}
+
 export async function createParticipant(
+  advisorName: AdvisorName,
   _prevState: ParticipantFormState,
   formData: FormData,
 ): Promise<ParticipantFormState> {
@@ -41,16 +45,12 @@ export async function createParticipant(
     return { error: "PTP name, business name and scheme start date are required." };
   }
 
-  if (!isAdvisorName(fields.advisorName)) {
-    return { error: "Select an advisor." };
-  }
-
   const supabase = await createClient();
 
   const { data: participant, error } = await supabase
     .from("participants")
     .insert({
-      advisor_name: fields.advisorName,
+      advisor_name: advisorName,
       ptp_name: fields.ptpName,
       business_name: fields.businessName,
       previous_advisor: fields.previousAdvisor,
@@ -69,12 +69,12 @@ export async function createParticipant(
     .from("business_plans")
     .insert({ participant_id: participant.id, status: "Not Started" });
 
-  revalidatePath("/participants");
-  revalidatePath("/dashboard");
-  redirect(`/participants/${participant.id}`);
+  revalidateAdvisor(advisorName);
+  redirect(`/advisors/${advisorName}/participants/${participant.id}`);
 }
 
 export async function updateParticipant(
+  advisorName: AdvisorName,
   participantId: string,
   _prevState: ParticipantFormState,
   formData: FormData,
@@ -85,10 +85,6 @@ export async function updateParticipant(
     return { error: "PTP name, business name and scheme start date are required." };
   }
 
-  if (!isAdvisorName(fields.advisorName)) {
-    return { error: "Select an advisor." };
-  }
-
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -96,7 +92,6 @@ export async function updateParticipant(
     .update({
       ptp_name: fields.ptpName,
       business_name: fields.businessName,
-      advisor_name: fields.advisorName,
       previous_advisor: fields.previousAdvisor,
       scheme_start_date: fields.schemeStartDate,
       website: fields.website,
@@ -108,17 +103,18 @@ export async function updateParticipant(
     return { error: error.message };
   }
 
-  revalidatePath("/participants");
-  revalidatePath(`/participants/${participantId}`);
-  revalidatePath("/dashboard");
-  redirect(`/participants/${participantId}`);
+  revalidateAdvisor(advisorName);
+  revalidatePath(`/advisors/${advisorName}/participants/${participantId}`);
+  redirect(`/advisors/${advisorName}/participants/${participantId}`);
 }
 
-export async function deleteParticipant(participantId: string) {
+export async function deleteParticipant(
+  advisorName: AdvisorName,
+  participantId: string,
+) {
   const supabase = await createClient();
   await supabase.from("participants").delete().eq("id", participantId);
 
-  revalidatePath("/participants");
-  revalidatePath("/dashboard");
-  redirect("/participants");
+  revalidateAdvisor(advisorName);
+  redirect(`/advisors/${advisorName}/participants`);
 }

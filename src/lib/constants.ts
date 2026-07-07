@@ -5,6 +5,4 @@ export function isAdvisorName(value: string | undefined): value is AdvisorName {
   return !!value && (ADVISOR_NAMES as readonly string[]).includes(value);
 }
 
-export const ADVISOR_COOKIE = "advisor_name";
-
 export const SCHEME_DURATION_DAYS = 365;

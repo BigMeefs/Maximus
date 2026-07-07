@@ -4,10 +4,10 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { BusinessPlanStatus } from "@/types/database";
 
-function revalidateParticipant(participantId: string) {
-  revalidatePath(`/participants/${participantId}`);
-  revalidatePath("/participants");
-  revalidatePath("/dashboard");
+function revalidateParticipant() {
+  // Advisor isn't known here, so revalidate the whole workspace layout
+  // (dashboard, participants list, and every participant profile page).
+  revalidatePath("/advisors/[advisor]", "layout");
 }
 
 export async function updateBusinessPlanStatus(
@@ -23,7 +23,7 @@ export async function updateBusinessPlanStatus(
       { onConflict: "participant_id" },
     );
 
-  revalidateParticipant(participantId);
+  revalidateParticipant();
 }
 
 export async function uploadBusinessPlanFile(
@@ -56,7 +56,7 @@ export async function uploadBusinessPlanFile(
     { onConflict: "participant_id" },
   );
 
-  revalidateParticipant(participantId);
+  revalidateParticipant();
 }
 
 export async function deleteBusinessPlanFile(
@@ -72,7 +72,7 @@ export async function deleteBusinessPlanFile(
     .update({ file_path: null, file_name: null })
     .eq("participant_id", participantId);
 
-  revalidateParticipant(participantId);
+  revalidateParticipant();
 }
 
 export async function getBusinessPlanFileUrl(filePath: string) {

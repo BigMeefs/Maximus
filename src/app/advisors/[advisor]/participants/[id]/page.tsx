@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getParticipantDetail } from "@/lib/data/participant";
 import { getDaysRemaining } from "@/lib/participant";
+import type { AdvisorName } from "@/lib/constants";
 import Badge, { statusTone } from "@/components/badge";
 import Tabs from "@/components/tabs";
 import DeleteParticipantButton from "@/components/participant/delete-participant-button";
@@ -9,16 +10,18 @@ import MonthlyEarningsTab from "@/components/participant/monthly-earnings-tab";
 import EvidenceLibraryTab from "@/components/participant/evidence-library-tab";
 import ActionPlanTab from "@/components/participant/action-plan-tab";
 import AppointmentsTab from "@/components/participant/appointments-tab";
+import { deleteParticipant } from "@/app/advisors/[advisor]/participants/actions";
 
 export default async function ParticipantProfilePage({
   params,
   searchParams,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ advisor: string; id: string }>;
   searchParams: Promise<{ tab?: string }>;
 }) {
-  const { id } = await params;
+  const { advisor, id } = (await params) as { advisor: AdvisorName; id: string };
   const { tab } = await searchParams;
+  const basePath = `/advisors/${advisor}/participants`;
 
   const {
     participant,
@@ -30,12 +33,13 @@ export default async function ParticipantProfilePage({
   } = await getParticipantDetail(id);
 
   const daysRemaining = getDaysRemaining(participant.scheme_start_date);
+  const boundDelete = deleteParticipant.bind(null, advisor, id);
 
   return (
     <div className="space-y-6">
       <div>
         <Link
-          href="/participants"
+          href={basePath}
           className="text-sm text-slate-500 hover:text-indigo-600"
         >
           ← Back to participants
@@ -52,12 +56,12 @@ export default async function ParticipantProfilePage({
           </div>
           <div className="flex items-center gap-2">
             <Link
-              href={`/participants/${id}/edit`}
+              href={`${basePath}/${id}/edit`}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
               Edit
             </Link>
-            <DeleteParticipantButton participantId={id} />
+            <DeleteParticipantButton action={boundDelete} />
           </div>
         </div>
 

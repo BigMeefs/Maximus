@@ -1,20 +1,24 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentAdvisor } from "@/lib/current-advisor";
 import { getDaysRemaining } from "@/lib/participant";
+import type { AdvisorName } from "@/lib/constants";
 import StatCard from "@/components/stat-card";
 import Badge, { statusTone } from "@/components/badge";
 
 const EXPIRING_THRESHOLD_DAYS = 30;
 
-export default async function DashboardPage() {
-  const advisor = await getCurrentAdvisor();
+export default async function DashboardPage({
+  params,
+}: {
+  params: Promise<{ advisor: string }>;
+}) {
+  const { advisor } = (await params) as { advisor: AdvisorName };
   const supabase = await createClient();
 
   const { data: participants } = await supabase
     .from("participants")
-    .select("id, ptp_name, business_name, advisor_name, scheme_start_date")
-    .eq("advisor_name", advisor.name)
+    .select("id, ptp_name, business_name, scheme_start_date")
+    .eq("advisor_name", advisor)
     .order("scheme_start_date", { ascending: true });
 
   const rows = participants ?? [];
@@ -61,11 +65,13 @@ export default async function DashboardPage() {
     participantName: participantNameById.get(a.participant_id) ?? "",
   }));
 
+  const participantsHref = `/advisors/${advisor}/participants`;
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">
-          Welcome back, {advisor.name}
+          Welcome back, {advisor}
         </h1>
         <p className="mt-1 text-sm text-slate-500">
           Here&apos;s an overview of your caseload.
@@ -73,17 +79,17 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Caseload size" value={rows.length} href="/participants" />
+        <StatCard label="Caseload size" value={rows.length} href={participantsHref} />
         <StatCard
           label="Expiring soon"
           value={expiring.length}
-          href="/participants?filter=expiring"
+          href={`${participantsHref}?filter=expiring`}
           tone={expiring.length > 0 ? "warning" : "default"}
         />
         <StatCard
           label="Missing business plans"
           value={missingBusinessPlans.length}
-          href="/participants?filter=missing-plan"
+          href={`${participantsHref}?filter=missing-plan`}
           tone={missingBusinessPlans.length > 0 ? "danger" : "default"}
         />
         <StatCard
@@ -107,7 +113,7 @@ export default async function DashboardPage() {
               {expiring.slice(0, 6).map((p) => (
                 <li key={p.id} className="py-2.5">
                   <Link
-                    href={`/participants/${p.id}`}
+                    href={`${participantsHref}/${p.id}`}
                     className="flex items-center justify-between text-sm hover:text-indigo-600"
                   >
                     <span className="font-medium text-slate-800">
@@ -141,7 +147,7 @@ export default async function DashboardPage() {
               {missingBusinessPlans.slice(0, 6).map((p) => (
                 <li key={p.id} className="py-2.5">
                   <Link
-                    href={`/participants/${p.id}?tab=business-plan`}
+                    href={`${participantsHref}/${p.id}?tab=business-plan`}
                     className="flex items-center justify-between text-sm hover:text-indigo-600"
                   >
                     <span className="font-medium text-slate-800">
@@ -171,7 +177,7 @@ export default async function DashboardPage() {
               {outstandingActions.slice(0, 8).map((a) => (
                 <li key={a.id} className="py-2.5">
                   <Link
-                    href={`/participants/${a.participantId}?tab=action-plan`}
+                    href={`${participantsHref}/${a.participantId}?tab=action-plan`}
                     className="flex items-center justify-between text-sm hover:text-indigo-600"
                   >
                     <span>

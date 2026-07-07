@@ -1,16 +1,15 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentAdvisor } from "@/lib/current-advisor";
+import type { AdvisorName } from "@/lib/constants";
 import ParticipantForm from "@/components/participant-form";
-import { updateParticipant } from "@/app/(app)/participants/actions";
+import { updateParticipant } from "@/app/advisors/[advisor]/participants/actions";
 
 export default async function EditParticipantPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ advisor: string; id: string }>;
 }) {
-  const { id } = await params;
-  const advisor = await getCurrentAdvisor();
+  const { advisor, id } = (await params) as { advisor: AdvisorName; id: string };
   const supabase = await createClient();
 
   const { data: participant } = await supabase
@@ -23,7 +22,7 @@ export default async function EditParticipantPage({
     notFound();
   }
 
-  const boundAction = updateParticipant.bind(null, id);
+  const boundAction = updateParticipant.bind(null, advisor, id);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -36,7 +35,7 @@ export default async function EditParticipantPage({
 
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <ParticipantForm
-          currentAdvisorName={advisor.name}
+          currentAdvisorName={advisor}
           participant={participant}
           action={boundAction}
           submitLabel="Save changes"

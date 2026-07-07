@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import type { Participant } from "@/types/database";
-import type { ParticipantFormState } from "@/app/(app)/participants/actions";
+import type { ParticipantFormState } from "@/app/advisors/[advisor]/participants/actions";
 import { ADVISOR_NAMES } from "@/lib/constants";
 
 const initialState: ParticipantFormState = {};
@@ -46,20 +46,13 @@ export default function ParticipantForm({
           />
         </Field>
 
-        <Field label="Advisor" htmlFor="advisor_name" required>
-          <select
-            id="advisor_name"
-            name="advisor_name"
-            required
-            defaultValue={participant?.advisor_name ?? currentAdvisorName}
-            className={inputClass}
-          >
-            {ADVISOR_NAMES.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
+        <Field label="Advisor" htmlFor="advisor_display">
+          <input
+            id="advisor_display"
+            disabled
+            value={participant?.advisor_name ?? currentAdvisorName}
+            className={`${inputClass} bg-slate-50 text-slate-500`}
+          />
         </Field>
 
         <Field label="Previous Advisor" htmlFor="previous_advisor">

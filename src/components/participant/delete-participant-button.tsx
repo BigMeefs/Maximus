@@ -1,12 +1,11 @@
 "use client";
 
 import { useTransition } from "react";
-import { deleteParticipant } from "@/app/(app)/participants/actions";
 
 export default function DeleteParticipantButton({
-  participantId,
+  action,
 }: {
-  participantId: string;
+  action: () => Promise<void>;
 }) {
   const [pending, startTransition] = useTransition();
 
@@ -21,7 +20,7 @@ export default function DeleteParticipantButton({
           )
         ) {
           startTransition(() => {
-            deleteParticipant(participantId);
+            action();
           });
         }
       }}
