@@ -36,5 +36,5 @@ export async function updateGainfulAssessment(
     { onConflict: "participant_id" },
   );
 
-  revalidatePath("/advisors/[advisor]", "layout");
+  revalidatePath("/advisors/[advisorId]", "layout");
 }

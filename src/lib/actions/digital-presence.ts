@@ -19,5 +19,5 @@ export async function updateDigitalPresenceItem(
     { onConflict: "participant_id,platform" },
   );
 
-  revalidatePath("/advisors/[advisor]", "layout");
+  revalidatePath("/advisors/[advisorId]", "layout");
 }

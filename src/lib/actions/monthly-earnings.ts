@@ -10,7 +10,7 @@ export type EarningsFormState = {
 function revalidateParticipant() {
   // Advisor isn't known here, so revalidate the whole workspace layout
   // (dashboard, participants list, and every participant profile page).
-  revalidatePath("/advisors/[advisor]", "layout");
+  revalidatePath("/advisors/[advisorId]", "layout");
 }
 
 function numberOrNull(value: FormDataEntryValue | null) {

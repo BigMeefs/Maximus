@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { listAdvisors } from "@/lib/data/advisor";
 
 export async function getParticipantDetail(participantId: string) {
   const supabase = await createClient();
@@ -17,6 +18,7 @@ export async function getParticipantDetail(participantId: string) {
     gatewayChecklistRes,
     gainfulRes,
     incomeTrackerEntriesRes,
+    advisors,
   ] = await Promise.all([
     supabase
       .from("participants")
@@ -76,14 +78,20 @@ export async function getParticipantDetail(participantId: string) {
       .select("*")
       .eq("participant_id", participantId)
       .order("month", { ascending: true }),
+    listAdvisors(),
   ]);
 
   if (!participantRes.data) {
     notFound();
   }
 
+  const assignedAdvisor =
+    advisors.find((a) => a.id === participantRes.data.advisor_id) ?? null;
+
   return {
     participant: participantRes.data,
+    assignedAdvisor,
+    advisors,
     businessPlan: businessPlanRes.data,
     monthlyEarnings: monthlyEarningsRes.data ?? [],
     evidenceFiles: evidenceFilesRes.data ?? [],

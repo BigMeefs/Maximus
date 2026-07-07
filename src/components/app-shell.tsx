@@ -4,16 +4,17 @@ import { useState } from "react";
 import Link from "next/link";
 import NavLinks from "@/components/nav-links";
 import BackToAdvisorsLink from "@/components/back-to-advisors-link";
+import type { AdvisorWithOffice } from "@/lib/data/advisor";
 
 export default function AppShell({
-  advisorName,
+  advisor,
   children,
 }: {
-  advisorName: string;
+  advisor: AdvisorWithOffice;
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const dashboardHref = `/advisors/${advisorName}/dashboard`;
+  const dashboardHref = `/advisors/${advisor.id}/dashboard`;
 
   return (
     <div className="flex min-h-screen flex-1 bg-slate-50">
@@ -29,11 +30,13 @@ export default function AppShell({
             Manager
           </span>
         </Link>
-        <NavLinks advisorName={advisorName} />
+        <NavLinks advisorId={advisor.id} />
         <div className="mt-auto flex items-center justify-between border-t border-slate-200 px-4 pt-4">
           <div className="text-sm">
-            <p className="font-medium text-slate-900">{advisorName}</p>
-            <p className="text-xs text-slate-500">Advisor</p>
+            <p className="font-medium text-slate-900">{advisor.full_name}</p>
+            <p className="text-xs text-slate-500">
+              {advisor.job_title || "Advisor"} · {advisor.office_name}
+            </p>
           </div>
         </div>
         <div className="px-3 pt-2">
@@ -64,11 +67,13 @@ export default function AppShell({
 
         {mobileOpen && (
           <div className="border-b border-slate-200 bg-white px-3 pb-4 md:hidden">
-            <NavLinks advisorName={advisorName} />
+            <NavLinks advisorId={advisor.id} />
             <div className="mt-3 flex items-center justify-between border-t border-slate-200 px-3 pt-3">
               <div className="text-sm">
-                <p className="font-medium text-slate-900">{advisorName}</p>
-                <p className="text-xs text-slate-500">Advisor</p>
+                <p className="font-medium text-slate-900">{advisor.full_name}</p>
+                <p className="text-xs text-slate-500">
+                  {advisor.job_title || "Advisor"} · {advisor.office_name}
+                </p>
               </div>
               <BackToAdvisorsLink />
             </div>

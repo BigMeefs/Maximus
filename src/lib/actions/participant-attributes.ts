@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { BusinessStage, RagStatus } from "@/types/database";
 
 function revalidateParticipant() {
-  revalidatePath("/advisors/[advisor]", "layout");
+  revalidatePath("/advisors/[advisorId]", "layout");
 }
 
 export async function updateBusinessStage(

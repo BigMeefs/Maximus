@@ -15,5 +15,5 @@ export async function toggleGatewayChecklistItem(
     { onConflict: "participant_id,item" },
   );
 
-  revalidatePath("/advisors/[advisor]", "layout");
+  revalidatePath("/advisors/[advisorId]", "layout");
 }

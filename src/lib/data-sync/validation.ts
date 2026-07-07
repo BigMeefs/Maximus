@@ -1,4 +1,3 @@
-import { isAdvisorName } from "@/lib/constants";
 import type { MappedParticipantRow, ValidationIssue } from "./types";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -17,7 +16,14 @@ function matchKey(row: MappedParticipantRow): string | null {
 // Validates a single row's required fields, date/email formats, and advisor
 // name. "error" issues mean the row is skipped on import; "warning" issues
 // are surfaced in the preview but don't block the row.
-export function validateRow(row: MappedParticipantRow): ValidationIssue[] {
+//
+// validAdvisorNames is the live set of advisor full names (lowercased) from
+// the Administration panel — there's no hard-coded advisor list to check
+// against.
+export function validateRow(
+  row: MappedParticipantRow,
+  validAdvisorNames: Set<string>,
+): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const v = row.values;
   const err = (field: ValidationIssue["field"], message: string) =>
@@ -45,10 +51,10 @@ export function validateRow(row: MappedParticipantRow): ValidationIssue[] {
     err("email", `Invalid email address "${v.email}".`);
   }
 
-  if (v.advisor_name && !isAdvisorName(v.advisor_name)) {
+  if (v.advisor_name && !validAdvisorNames.has(v.advisor_name.trim().toLowerCase())) {
     warn(
       "advisor_name",
-      `Unrecognised advisor "${v.advisor_name}" — must be Kyle, Charles, Elliott or Aroosa. You'll be asked to choose an advisor for this row.`,
+      `Unrecognised advisor "${v.advisor_name}" — no advisor with that name in the Administration panel. You'll be asked to choose an advisor for this row.`,
     );
   }
 

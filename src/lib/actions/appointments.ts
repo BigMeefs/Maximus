@@ -10,7 +10,7 @@ export type AppointmentFormState = {
 function revalidateParticipant() {
   // Advisor isn't known here, so revalidate the whole workspace layout
   // (dashboard, participants list, and every participant profile page).
-  revalidatePath("/advisors/[advisor]", "layout");
+  revalidatePath("/advisors/[advisorId]", "layout");
 }
 
 export async function createAppointment(
@@ -19,11 +19,11 @@ export async function createAppointment(
   formData: FormData,
 ): Promise<AppointmentFormState> {
   const appointmentDate = formData.get("appointment_date")?.toString() ?? "";
-  const advisorName = formData.get("advisor_name")?.toString().trim() ?? "";
+  const advisorId = formData.get("advisor_id")?.toString().trim() ?? "";
   const notes = formData.get("notes")?.toString().trim() || null;
   const outcome = formData.get("outcome")?.toString().trim() || null;
 
-  if (!appointmentDate || !advisorName) {
+  if (!appointmentDate || !advisorId) {
     return { error: "Date and advisor are required." };
   }
 
@@ -31,7 +31,7 @@ export async function createAppointment(
   const { error } = await supabase.from("appointments").insert({
     participant_id: participantId,
     appointment_date: appointmentDate,
-    advisor_name: advisorName,
+    advisor_id: advisorId,
     notes,
     outcome,
   });

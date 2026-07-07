@@ -34,7 +34,7 @@ export const IMPORTABLE_FIELDS: FieldDefinition[] = [
     field: "advisor_name",
     label: "Assigned Advisor",
     required: false,
-    description: "Advisor (Kyle, Charles, Elliott, Aroosa) — auto-assigned if recognised.",
+    description: "Advisor's full name as it appears in the Administration panel — auto-assigned if recognised.",
     aliases: ["advisor", "advisor name", "assigned advisor", "caseworker", "coach"],
   },
   {

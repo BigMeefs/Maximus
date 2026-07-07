@@ -7,7 +7,7 @@ import type { BusinessPlanStatus } from "@/types/database";
 function revalidateParticipant() {
   // Advisor isn't known here, so revalidate the whole workspace layout
   // (dashboard, participants list, and every participant profile page).
-  revalidatePath("/advisors/[advisor]", "layout");
+  revalidatePath("/advisors/[advisorId]", "layout");
 }
 
 export async function updateBusinessPlanStatus(

@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useMemo, useTransition } from "react";
 import type { Appointment } from "@/types/database";
-import { ADVISOR_NAMES } from "@/lib/constants";
+import type { AdvisorWithOffice } from "@/lib/data/advisor";
 import {
   createAppointment,
   deleteAppointment,
@@ -14,9 +14,13 @@ const initialState: AppointmentFormState = {};
 export default function AppointmentsTab({
   participantId,
   appointments,
+  advisors,
+  defaultAdvisorId,
 }: {
   participantId: string;
   appointments: Appointment[];
+  advisors: AdvisorWithOffice[];
+  defaultAdvisorId: string;
 }) {
   const boundAction = createAppointment.bind(null, participantId);
   const [state, formAction, pending] = useActionState(
@@ -24,6 +28,11 @@ export default function AppointmentsTab({
     initialState,
   );
   const [deletingId, startDeleteTransition] = useTransition();
+
+  const advisorNameById = useMemo(
+    () => new Map(advisors.map((a) => [a.id, a.full_name])),
+    [advisors],
+  );
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -48,17 +57,14 @@ export default function AppointmentsTab({
               Advisor
             </label>
             <select
-              name="advisor_name"
+              name="advisor_id"
               required
-              defaultValue=""
+              defaultValue={defaultAdvisorId}
               className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
             >
-              <option value="" disabled>
-                Select advisor
-              </option>
-              {ADVISOR_NAMES.map((name) => (
-                <option key={name} value={name}>
-                  {name}
+              {advisors.map((advisor) => (
+                <option key={advisor.id} value={advisor.id}>
+                  {advisor.full_name}
                 </option>
               ))}
             </select>
@@ -108,7 +114,7 @@ export default function AppointmentsTab({
                 <div>
                   <p className="text-sm font-medium text-slate-800">
                     {new Date(appt.appointment_date).toLocaleDateString()} ·{" "}
-                    {appt.advisor_name}
+                    {advisorNameById.get(appt.advisor_id) ?? "Unknown advisor"}
                   </p>
                   {appt.notes && (
                     <p className="mt-1 text-sm text-slate-600">{appt.notes}</p>

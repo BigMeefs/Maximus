@@ -3,12 +3,12 @@
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { ADVISOR_NAMES, type AdvisorName } from "@/lib/constants";
 import { parseImportFile, type ParsedSheet } from "@/lib/data-sync/parse";
 import { IMPORTABLE_FIELDS, suggestFieldMapping } from "@/lib/data-sync/field-mapping";
 import type { FieldMapping, ParticipantTargetField } from "@/lib/data-sync/types";
 import type { ImportPreviewRow, ImportRowOutcome } from "@/lib/data-sync/preview";
 import { previewImport, runImport, saveFieldMapping, type ImportRunResult } from "@/lib/actions/data-sync";
+import type { AdvisorWithOffice } from "@/lib/data/advisor";
 
 type Step = "upload" | "map" | "preview" | "summary";
 
@@ -29,10 +29,12 @@ const OUTCOME_TONE: Record<ImportRowOutcome, string> = {
 const PREVIEW_ROW_LIMIT = 200;
 
 export default function ImportWizard({
-  advisorName,
+  advisorId,
+  advisors,
   savedMapping,
 }: {
-  advisorName: AdvisorName;
+  advisorId: string;
+  advisors: AdvisorWithOffice[];
   savedMapping: Record<string, ParticipantTargetField>;
 }) {
   const [step, setStep] = useState<Step>("upload");
@@ -42,7 +44,7 @@ export default function ImportWizard({
   const [mapping, setMapping] = useState<FieldMapping>({});
   const [rememberMapping, setRememberMapping] = useState(true);
   const [preview, setPreview] = useState<ImportPreviewRow[] | null>(null);
-  const [fallbackAdvisor, setFallbackAdvisor] = useState<AdvisorName>(advisorName);
+  const [fallbackAdvisorId, setFallbackAdvisorId] = useState(advisorId);
   const [result, setResult] = useState<ImportRunResult | null>(null);
   const [isPending, startTransition] = useTransition();
   const [dragOver, setDragOver] = useState(false);
@@ -110,7 +112,7 @@ export default function ImportWizard({
         if (rememberMapping) {
           await saveFieldMapping(mapping);
         }
-        const res = await runImport(advisorName, fallbackAdvisor, fileName, sheet.rows, mapping);
+        const res = await runImport(advisorId, fallbackAdvisorId, fileName, sheet.rows, mapping);
         setResult(res);
         setStep("summary");
       } catch (err) {
@@ -342,13 +344,13 @@ export default function ImportWizard({
                 Advisor for rows without a recognised advisor
               </label>
               <select
-                value={fallbackAdvisor}
-                onChange={(e) => setFallbackAdvisor(e.target.value as AdvisorName)}
+                value={fallbackAdvisorId}
+                onChange={(e) => setFallbackAdvisorId(e.target.value)}
                 className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               >
-                {ADVISOR_NAMES.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
+                {advisors.map((advisor) => (
+                  <option key={advisor.id} value={advisor.id}>
+                    {advisor.full_name} ({advisor.office_name})
                   </option>
                 ))}
               </select>
@@ -407,13 +409,13 @@ export default function ImportWizard({
 
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              href={`/advisors/${advisorName}/data-sync/history/${result.batchId}`}
+              href={`/advisors/${advisorId}/data-sync/history/${result.batchId}`}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
             >
               View import details
             </Link>
             <Link
-              href={`/advisors/${advisorName}/participants`}
+              href={`/advisors/${advisorId}/participants`}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
               Go to participants

@@ -50,6 +50,6 @@ export async function updateHmrcInfo(
     return { error: error.message };
   }
 
-  revalidatePath("/advisors/[advisor]", "layout");
+  revalidatePath("/advisors/[advisorId]", "layout");
   return {};
 }

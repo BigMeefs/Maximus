@@ -8,7 +8,7 @@ export type IncomeTrackerFormState = {
 };
 
 function revalidateParticipant() {
-  revalidatePath("/advisors/[advisor]", "layout");
+  revalidatePath("/advisors/[advisorId]", "layout");
 }
 
 function numberOrZero(value: FormDataEntryValue | null) {

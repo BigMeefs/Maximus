@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { isAdvisorName, type AdvisorName } from "@/lib/constants";
+import { listAdvisors } from "@/lib/data/advisor";
 import { findMatch, type MatchCandidate } from "@/lib/data-sync/matching";
 import { transformRows } from "@/lib/data-sync/transform";
 import { detectInFileDuplicates, validateRow } from "@/lib/data-sync/validation";
@@ -19,7 +19,7 @@ import type { ImportBatch, ImportError, ImportFieldMapping, ImportStatus } from 
 const CANDIDATE_COLUMNS =
   "id, external_participant_id, email, phone, national_insurance_number, ptp_name, date_of_birth";
 
-const UPDATABLE_FIELDS: ParticipantTargetField[] = [
+const UPDATABLE_FIELDS: Exclude<ParticipantTargetField, "advisor_name">[] = [
   "ptp_name",
   "business_name",
   "scheme_start_date",
@@ -35,10 +35,24 @@ const UPDATABLE_FIELDS: ParticipantTargetField[] = [
   "previous_advisor",
 ];
 
-function revalidateDataSync(advisorName: AdvisorName) {
-  revalidatePath(`/advisors/${advisorName}/data-sync`);
-  revalidatePath(`/advisors/${advisorName}/participants`);
-  revalidatePath(`/advisors/${advisorName}/dashboard`);
+function revalidateDataSync(advisorId: string) {
+  revalidatePath(`/advisors/${advisorId}/data-sync`);
+  revalidatePath(`/advisors/${advisorId}/participants`);
+  revalidatePath(`/advisors/${advisorId}/dashboard`);
+}
+
+// Builds lowercased-full-name -> id and id -> full-name lookups — there's no
+// hard-coded advisor list, so import rows are matched against whoever is
+// currently in the Administration panel.
+async function getAdvisorIndexes(): Promise<{
+  byName: Map<string, string>;
+  byId: Map<string, string>;
+}> {
+  const advisors = await listAdvisors();
+  return {
+    byName: new Map(advisors.map((a) => [a.full_name.trim().toLowerCase(), a.id])),
+    byId: new Map(advisors.map((a) => [a.id, a.full_name])),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -156,6 +170,8 @@ export async function getSyncDashboardStats(): Promise<SyncDashboardStats> {
 export async function previewImport(rows: ImportRow[], mapping: FieldMapping): Promise<ImportPreviewRow[]> {
   const supabase = await createClient();
   const mappedRows = transformRows(rows, mapping);
+  const { byName: advisorNameIndex } = await getAdvisorIndexes();
+  const validAdvisorNames = new Set(advisorNameIndex.keys());
 
   const { data: existing } = await supabase.from("participants").select(CANDIDATE_COLUMNS);
   const candidates: MatchCandidate[] = existing ?? [];
@@ -172,7 +188,10 @@ export async function previewImport(rows: ImportRow[], mapping: FieldMapping): P
   const preview: ImportPreviewRow[] = [];
 
   for (const row of mappedRows) {
-    const issues = [...validateRow(row), ...(duplicateIssuesByRow.get(row.rowNumber) ?? [])];
+    const issues = [
+      ...validateRow(row, validAdvisorNames),
+      ...(duplicateIssuesByRow.get(row.rowNumber) ?? []),
+    ];
 
     if (issues.some((i) => i.severity === "error")) {
       preview.push({ rowNumber: row.rowNumber, values: row.values, issues, outcome: "error" });
@@ -229,12 +248,23 @@ function issuesToMessage(issues: ValidationIssue[]): string {
   return issues.map((i) => i.message).join(" ");
 }
 
-function buildCreatePayload(values: MappedParticipantRow["values"], fallbackAdvisor: AdvisorName) {
-  const advisor =
-    values.advisor_name && isAdvisorName(values.advisor_name) ? values.advisor_name : fallbackAdvisor;
+function resolveAdvisorId(
+  rawName: string | null | undefined,
+  advisorNameIndex: Map<string, string>,
+): string | undefined {
+  if (!rawName) return undefined;
+  return advisorNameIndex.get(rawName.trim().toLowerCase());
+}
+
+function buildCreatePayload(
+  values: MappedParticipantRow["values"],
+  advisorNameIndex: Map<string, string>,
+  fallbackAdvisorId: string,
+) {
+  const advisorId = resolveAdvisorId(values.advisor_name, advisorNameIndex) ?? fallbackAdvisorId;
 
   return {
-    advisor_name: advisor,
+    advisor_id: advisorId,
     ptp_name: values.ptp_name!,
     business_name: values.business_name!,
     scheme_start_date: values.scheme_start_date!,
@@ -255,24 +285,30 @@ function buildCreatePayload(values: MappedParticipantRow["values"], fallbackAdvi
 // value for, and only ever touches participants columns — funding, gateway,
 // gainful, evidence and business-plan data are untouched by construction
 // since this function never references those tables.
-function buildUpdatePayload(values: MappedParticipantRow["values"]) {
-  const payload: Partial<Record<ParticipantTargetField, string>> = {};
+function buildUpdatePayload(
+  values: MappedParticipantRow["values"],
+  advisorNameIndex: Map<string, string>,
+) {
+  const payload: Partial<Record<Exclude<ParticipantTargetField, "advisor_name">, string>> & {
+    advisor_id?: string;
+  } = {};
 
   for (const field of UPDATABLE_FIELDS) {
     const value = values[field];
     if (value !== null && value !== undefined) payload[field] = value;
   }
 
-  if (values.advisor_name && isAdvisorName(values.advisor_name)) {
-    payload.advisor_name = values.advisor_name;
+  const advisorId = resolveAdvisorId(values.advisor_name, advisorNameIndex);
+  if (advisorId) {
+    payload.advisor_id = advisorId;
   }
 
   return payload;
 }
 
 export async function runImport(
-  runByAdvisor: AdvisorName,
-  fallbackAdvisor: AdvisorName,
+  runByAdvisorId: string,
+  fallbackAdvisorId: string,
   fileName: string,
   rows: ImportRow[],
   mapping: FieldMapping,
@@ -280,6 +316,8 @@ export async function runImport(
   const supabase = await createClient();
   const rawByRowNumber = new Map(rows.map((r) => [r.rowNumber, r.raw]));
   const mappedRows = transformRows(rows, mapping);
+  const { byName: advisorNameIndex, byId: advisorIdIndex } = await getAdvisorIndexes();
+  const validAdvisorNames = new Set(advisorNameIndex.keys());
 
   const { data: existing } = await supabase.from("participants").select(CANDIDATE_COLUMNS);
   const candidates: MatchCandidate[] = existing ?? [];
@@ -292,7 +330,7 @@ export async function runImport(
   const errorRecords: { row_number: number; error_message: string; row_data: Record<string, unknown> }[] = [];
 
   for (const row of mappedRows) {
-    const blocking = validateRow(row).filter((i) => i.severity === "error");
+    const blocking = validateRow(row, validAdvisorNames).filter((i) => i.severity === "error");
 
     if (blocking.length > 0) {
       errorCount++;
@@ -312,7 +350,7 @@ export async function runImport(
     }
 
     if (outcome.type === "match") {
-      const payload = buildUpdatePayload(row.values);
+      const payload = buildUpdatePayload(row.values, advisorNameIndex);
       if (Object.keys(payload).length > 0) {
         await supabase.from("participants").update(payload).eq("id", outcome.participantId);
       }
@@ -323,7 +361,7 @@ export async function runImport(
 
     const { data: created, error } = await supabase
       .from("participants")
-      .insert(buildCreatePayload(row.values, fallbackAdvisor))
+      .insert(buildCreatePayload(row.values, advisorNameIndex, fallbackAdvisorId))
       .select(CANDIDATE_COLUMNS)
       .single();
 
@@ -350,7 +388,7 @@ export async function runImport(
   const { data: batch, error: batchError } = await supabase
     .from("import_batches")
     .insert({
-      imported_by: runByAdvisor,
+      imported_by: advisorIdIndex.get(runByAdvisorId) ?? "Unknown advisor",
       file_name: fileName,
       source: "file",
       row_count: rows.length,
@@ -373,7 +411,7 @@ export async function runImport(
       .insert(errorRecords.map((record) => ({ ...record, import_batch_id: batch.id })));
   }
 
-  revalidateDataSync(runByAdvisor);
+  revalidateDataSync(runByAdvisorId);
 
   return {
     batchId: batch.id,

@@ -9,7 +9,7 @@ export type FundingFormState = {
 };
 
 function revalidateParticipant() {
-  revalidatePath("/advisors/[advisor]", "layout");
+  revalidatePath("/advisors/[advisorId]", "layout");
 }
 
 function readFundingFields(formData: FormData) {

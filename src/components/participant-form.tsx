@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 import type { Participant } from "@/types/database";
-import type { ParticipantFormState } from "@/app/advisors/[advisor]/participants/actions";
-import { ADVISOR_NAMES, BUSINESS_SECTOR_SUGGESTIONS } from "@/lib/constants";
+import type { ParticipantFormState } from "@/app/advisors/[advisorId]/participants/actions";
+import { BUSINESS_SECTOR_SUGGESTIONS } from "@/lib/constants";
 
 const initialState: ParticipantFormState = {};
 
@@ -66,9 +66,12 @@ export default function ParticipantForm({
           <input
             id="advisor_display"
             disabled
-            value={participant?.advisor_name ?? currentAdvisorName}
+            value={currentAdvisorName}
             className={`${inputClass} bg-slate-50 text-slate-500`}
           />
+          <p className="mt-1 text-xs text-slate-500">
+            To reassign this participant, use Transfer Participant instead.
+          </p>
         </Field>
 
         <Field label="Email" htmlFor="email">
@@ -86,19 +89,13 @@ export default function ParticipantForm({
         </Field>
 
         <Field label="Previous Advisor" htmlFor="previous_advisor">
-          <select
+          <input
             id="previous_advisor"
             name="previous_advisor"
+            placeholder="If handed over from elsewhere"
             defaultValue={participant?.previous_advisor ?? ""}
             className={inputClass}
-          >
-            <option value="">None</option>
-            {ADVISOR_NAMES.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
+          />
         </Field>
 
         <Field label="Scheme Start Date" htmlFor="scheme_start_date" required>

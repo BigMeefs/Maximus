@@ -61,6 +61,8 @@ export type GainfulRecommendation =
 
 export type ImportStatus = "Success" | "Partial" | "Failed";
 
+export type AdvisorStatus = "Active" | "Inactive";
+
 export const EVIDENCE_CATEGORIES = [
   "Business Plan",
   "Cashflow",
@@ -76,9 +78,41 @@ export const EVIDENCE_CATEGORIES = [
 ] as const;
 export type EvidenceCategory = (typeof EVIDENCE_CATEGORIES)[number];
 
+export type Office = {
+  id: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Advisor = {
+  id: string;
+  full_name: string;
+  email: string;
+  office_id: string;
+  job_title: string | null;
+  status: AdvisorStatus;
+  last_login_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ParticipantTransfer = {
+  id: string;
+  participant_id: string;
+  from_advisor_id: string | null;
+  to_advisor_id: string;
+  from_office_id: string | null;
+  to_office_id: string;
+  transferred_by: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
 export type Participant = {
   id: string;
-  advisor_name: string;
+  advisor_id: string;
   ptp_name: string;
   business_name: string;
   previous_advisor: string | null;
@@ -148,7 +182,7 @@ export type Appointment = {
   id: string;
   participant_id: string;
   appointment_date: string;
-  advisor_name: string;
+  advisor_id: string;
   notes: string | null;
   outcome: string | null;
   created_at: string;
@@ -270,10 +304,36 @@ export type ImportError = {
 export type Database = {
   public: {
     Tables: {
+      offices: {
+        Row: Office;
+        Insert: Partial<Office> & { name: string };
+        Update: Partial<Office>;
+        Relationships: [];
+      };
+      advisors: {
+        Row: Advisor;
+        Insert: Partial<Advisor> & {
+          full_name: string;
+          email: string;
+          office_id: string;
+        };
+        Update: Partial<Advisor>;
+        Relationships: [];
+      };
+      participant_transfers: {
+        Row: ParticipantTransfer;
+        Insert: Partial<ParticipantTransfer> & {
+          participant_id: string;
+          to_advisor_id: string;
+          to_office_id: string;
+        };
+        Update: Partial<ParticipantTransfer>;
+        Relationships: [];
+      };
       participants: {
         Row: Participant;
         Insert: Partial<Participant> & {
-          advisor_name: string;
+          advisor_id: string;
           ptp_name: string;
           business_name: string;
           scheme_start_date: string;
@@ -321,7 +381,7 @@ export type Database = {
         Insert: Partial<Appointment> & {
           participant_id: string;
           appointment_date: string;
-          advisor_name: string;
+          advisor_id: string;
         };
         Update: Partial<Appointment>;
         Relationships: [];

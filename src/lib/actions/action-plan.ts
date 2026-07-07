@@ -11,7 +11,7 @@ export type ActionPlanFormState = {
 function revalidateParticipant() {
   // Advisor isn't known here, so revalidate the whole workspace layout
   // (dashboard, participants list, and every participant profile page).
-  revalidatePath("/advisors/[advisor]", "layout");
+  revalidatePath("/advisors/[advisorId]", "layout");
 }
 
 export async function createActionPlanItem(
