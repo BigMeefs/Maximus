@@ -40,7 +40,7 @@ export default function AppointmentsTab({
               type="date"
               name="appointment_date"
               required
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
             />
           </div>
           <div>
@@ -51,7 +51,7 @@ export default function AppointmentsTab({
               name="advisor_name"
               required
               defaultValue=""
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
             >
               <option value="" disabled>
                 Select advisor
@@ -70,7 +70,7 @@ export default function AppointmentsTab({
             <textarea
               name="notes"
               rows={2}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
             />
           </div>
           <div className="sm:col-span-2">
@@ -79,7 +79,7 @@ export default function AppointmentsTab({
             </label>
             <input
               name="outcome"
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
               placeholder="e.g. Follow-up required in 2 weeks"
             />
           </div>

@@ -65,7 +65,7 @@ export default function MonthlyEarningsManager({
             type="month"
             name="month"
             required
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
           />
         </div>
         <div>
@@ -78,7 +78,7 @@ export default function MonthlyEarningsManager({
             step="0.01"
             min="0"
             required
-            className="w-32 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            className="w-32 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
           />
         </div>
         <button

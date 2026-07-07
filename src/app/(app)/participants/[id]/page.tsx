@@ -159,7 +159,7 @@ function Info({
 }) {
   return (
     <div className={className}>
-      <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
+      <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
         {label}
       </dt>
       <dd className="mt-1 text-slate-800">{children}</dd>

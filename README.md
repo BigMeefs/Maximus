@@ -7,8 +7,9 @@ Next.js (App Router), TypeScript, Tailwind CSS and Supabase.
 ## Features
 
 - No per-advisor login — pick your name from a list when you open the app.
-  Everyone shares full access to every participant, so any advisor can pick up
-  a colleague's client if needed.
+- Each advisor's dashboard and participant list default to their own
+  caseload; use the advisor filter on the participants list to look up a
+  colleague's client by name.
 - Participant profiles: PTP name, business name, advisor, previous advisor,
   scheme start date, calculated days remaining (365-day scheme), website and
   social media links.
@@ -18,18 +19,22 @@ Next.js (App Router), TypeScript, Tailwind CSS and Supabase.
 - Evidence library with upload, view, delete and upload timestamps.
 - Ongoing action plan tracker with full history.
 - Appointment history (date, advisor, notes, outcome).
-- Dashboard with total caseload, expiring participants, missing business plans
-  and outstanding actions across the whole team.
+- Dashboard with caseload size, expiring participants, missing business plans
+  and outstanding actions.
 - Searchable, filterable (including by advisor), responsive participant list.
 
 ## Security model
 
 There is no authentication. The four advisor names are just a picker used to
 stamp a display name/cookie — anyone who opens the app can act as any
-advisor and see or edit every participant. Row-level security is disabled on
-every table, so **the Supabase anon key (shipped in the browser bundle) has
-full read/write access to all participant data.** This is intentional for a
-small, trusted internal tool, but it means:
+advisor. The dashboard and participants list default to showing only the
+picked advisor's own caseload, but that's a UI default, not a data boundary:
+switching the advisor filter to "All advisors" (or a specific colleague)
+shows their participants too, and the underlying data is not actually
+restricted per advisor. Row-level security is disabled on every table, so
+**the Supabase anon key (shipped in the browser bundle) has full read/write
+access to all participant data.** This is intentional for a small, trusted
+internal tool, but it means:
 
 - Do not deploy this somewhere publicly reachable without another access
   barrier in front of it (e.g. a hosting platform's password protection, a

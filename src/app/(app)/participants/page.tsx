@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentAdvisor } from "@/lib/current-advisor";
 import { getDaysRemaining } from "@/lib/participant";
 import { isAdvisorName } from "@/lib/constants";
 import Badge, { statusTone } from "@/components/badge";
@@ -10,7 +11,10 @@ export default async function ParticipantsPage({
 }: {
   searchParams: Promise<{ q?: string; filter?: string; advisor?: string }>;
 }) {
-  const { q = "", filter = "all", advisor = "all" } = await searchParams;
+  const { q = "", filter = "all", advisor: advisorParam } = await searchParams;
+  const currentAdvisor = await getCurrentAdvisor();
+  // Default to "my own participants" — pass ?advisor=all to see everyone's.
+  const advisor = advisorParam ?? currentAdvisor.name;
   const supabase = await createClient();
 
   const { data: participants } = await supabase

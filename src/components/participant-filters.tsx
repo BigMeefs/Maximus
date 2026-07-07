@@ -42,12 +42,12 @@ export default function ParticipantFilters({
         defaultValue={defaultQuery}
         placeholder="Search by name or business..."
         onChange={(e) => updateParam("q", e.target.value)}
-        className="w-full max-w-sm rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+        className="w-full max-w-sm rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
       />
       <select
         defaultValue={defaultFilter}
         onChange={(e) => updateParam("filter", e.target.value)}
-        className="w-full max-w-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+        className="w-full max-w-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
       >
         {FILTERS.map((f) => (
           <option key={f.value} value={f.value}>
@@ -58,7 +58,7 @@ export default function ParticipantFilters({
       <select
         defaultValue={defaultAdvisor}
         onChange={(e) => updateParam("advisor", e.target.value)}
-        className="w-full max-w-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+        className="w-full max-w-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
       >
         <option value="all">All advisors</option>
         {ADVISOR_NAMES.map((name) => (

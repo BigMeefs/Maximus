@@ -43,7 +43,7 @@ export default function ActionPlanTab({
             <input
               name="description"
               required
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
               placeholder="e.g. Submit quarterly accounts"
             />
           </div>
@@ -54,7 +54,7 @@ export default function ActionPlanTab({
             <input
               type="date"
               name="target_date"
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
             />
           </div>
           <div>
@@ -63,7 +63,7 @@ export default function ActionPlanTab({
             </label>
             <input
               name="notes"
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
             />
           </div>
         </div>
