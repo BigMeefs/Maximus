@@ -7,6 +7,7 @@ import Tabs from "@/components/tabs";
 import DeleteParticipantButton from "@/components/participant/delete-participant-button";
 import BusinessPlanTab from "@/components/participant/business-plan-tab";
 import MonthlyEarningsTab from "@/components/participant/monthly-earnings-tab";
+import IncomeTrackerTab from "@/components/participant/income-tracker-tab";
 import EvidenceLibraryTab from "@/components/participant/evidence-library-tab";
 import ActionPlanTab from "@/components/participant/action-plan-tab";
 import AppointmentsTab from "@/components/participant/appointments-tab";
@@ -56,6 +57,7 @@ export default async function ParticipantProfilePage({
     digitalPresence,
     gatewayChecklist,
     gainful,
+    incomeTrackerEntries,
   } = await getParticipantDetail(id);
 
   const daysRemaining = getDaysRemaining(participant.scheme_start_date);
@@ -150,6 +152,7 @@ export default async function ParticipantProfilePage({
             {new Date(participant.scheme_start_date).toLocaleDateString()}
           </Info>
           <Info label="Advisor">{participant.advisor_name}</Info>
+          <Info label="Email">{participant.email || "—"}</Info>
           <Info label="Previous advisor">
             {participant.previous_advisor || "—"}
           </Info>
@@ -251,6 +254,13 @@ export default async function ParticipantProfilePage({
                   participantId={id}
                   earnings={monthlyEarnings}
                 />
+              ),
+            },
+            {
+              id: "income-tracker",
+              label: "Income Tracker",
+              content: (
+                <IncomeTrackerTab participantId={id} entries={incomeTrackerEntries} />
               ),
             },
             {

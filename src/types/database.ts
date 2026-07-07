@@ -221,6 +221,20 @@ export type GainfulAssessment = {
   updated_at: string;
 };
 
+export type IncomeTrackerEntry = {
+  id: string;
+  participant_id: string;
+  month: string;
+  entry_date: string;
+  income: number;
+  expense: number;
+  mileage_cost: number;
+  notes: string | null;
+  source: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ImportFieldMapping = {
   id: string;
   source_column: string;
@@ -349,6 +363,16 @@ export type Database = {
         Row: GainfulAssessment;
         Insert: Partial<GainfulAssessment> & { participant_id: string };
         Update: Partial<GainfulAssessment>;
+        Relationships: [];
+      };
+      income_tracker_entries: {
+        Row: IncomeTrackerEntry;
+        Insert: Partial<IncomeTrackerEntry> & {
+          participant_id: string;
+          month: string;
+          entry_date: string;
+        };
+        Update: Partial<IncomeTrackerEntry>;
         Relationships: [];
       };
       import_field_mappings: {

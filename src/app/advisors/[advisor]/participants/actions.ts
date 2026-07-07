@@ -13,6 +13,7 @@ function readParticipantFields(formData: FormData) {
   const ptpName = formData.get("ptp_name")?.toString().trim() ?? "";
   const businessName = formData.get("business_name")?.toString().trim() ?? "";
   const businessSector = formData.get("business_sector")?.toString().trim() || null;
+  const email = formData.get("email")?.toString().trim() || null;
   const previousAdvisor =
     formData.get("previous_advisor")?.toString().trim() || null;
   const schemeStartDate = formData.get("scheme_start_date")?.toString() ?? "";
@@ -26,6 +27,7 @@ function readParticipantFields(formData: FormData) {
     ptpName,
     businessName,
     businessSector,
+    email,
     previousAdvisor,
     schemeStartDate,
     gatewayTargetDate,
@@ -59,6 +61,7 @@ export async function createParticipant(
       ptp_name: fields.ptpName,
       business_name: fields.businessName,
       business_sector: fields.businessSector,
+      email: fields.email,
       previous_advisor: fields.previousAdvisor,
       scheme_start_date: fields.schemeStartDate,
       gateway_target_date: fields.gatewayTargetDate,
@@ -100,6 +103,7 @@ export async function updateParticipant(
       ptp_name: fields.ptpName,
       business_name: fields.businessName,
       business_sector: fields.businessSector,
+      email: fields.email,
       previous_advisor: fields.previousAdvisor,
       scheme_start_date: fields.schemeStartDate,
       gateway_target_date: fields.gatewayTargetDate,

@@ -16,6 +16,7 @@ export async function getParticipantDetail(participantId: string) {
     digitalPresenceRes,
     gatewayChecklistRes,
     gainfulRes,
+    incomeTrackerEntriesRes,
   ] = await Promise.all([
     supabase
       .from("participants")
@@ -70,6 +71,11 @@ export async function getParticipantDetail(participantId: string) {
       .select("*")
       .eq("participant_id", participantId)
       .maybeSingle(),
+    supabase
+      .from("income_tracker_entries")
+      .select("*")
+      .eq("participant_id", participantId)
+      .order("month", { ascending: true }),
   ]);
 
   if (!participantRes.data) {
@@ -88,5 +94,6 @@ export async function getParticipantDetail(participantId: string) {
     digitalPresence: digitalPresenceRes.data ?? [],
     gatewayChecklist: gatewayChecklistRes.data ?? [],
     gainful: gainfulRes.data,
+    incomeTrackerEntries: incomeTrackerEntriesRes.data ?? [],
   };
 }

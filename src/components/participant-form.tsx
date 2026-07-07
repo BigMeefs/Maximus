@@ -71,6 +71,20 @@ export default function ParticipantForm({
           />
         </Field>
 
+        <Field label="Email" htmlFor="email">
+          <input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="participant@example.com"
+            defaultValue={participant?.email ?? ""}
+            className={inputClass}
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            Used to match submissions from the client income tracker to this participant.
+          </p>
+        </Field>
+
         <Field label="Previous Advisor" htmlFor="previous_advisor">
           <select
             id="previous_advisor"

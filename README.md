@@ -80,6 +80,12 @@ Every participant profile now includes, above the original CRM tabs:
   participant's live stage and readiness data. Requires `ANTHROPIC_API_KEY`
   (see below); without it, the tab explains what to add rather than failing
   silently.
+- **Income Tracker** — populated automatically from the client-facing income
+  tracker form (see `integrations/google-apps-script/`) via the
+  participant's Email field, one entry per calendar month. Kept separate
+  from Monthly Performance so the two data sources never overwrite each
+  other; Net Profit is computed live, not stored. Advisors can also add or
+  edit entries here directly.
 
 Nothing here duplicates data that already exists elsewhere — readiness %,
 health scores, days-until-Gateway, next appointment, last contact and
@@ -226,3 +232,7 @@ won't pick up new values on its own.
 - `src/app/advisors/[advisor]/data-sync` — Sync Dashboard, Import wizard,
   Import History (+ per-batch detail), and Field Mappings pages.
 - `src/lib/supabase` — Supabase client helpers.
+- `integrations/google-apps-script` — reference copy of the Apps Script
+  function that syncs the external client income tracker form into the
+  CRM's Income Tracker tab. Not part of the Next.js app; paste it into the
+  Apps Script project that already handles that form's Sheets/Drive writes.
