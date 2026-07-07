@@ -11,6 +11,11 @@ export async function getParticipantDetail(participantId: string) {
     evidenceFilesRes,
     actionPlanRes,
     appointmentsRes,
+    fundingRecordsRes,
+    hmrcRes,
+    digitalPresenceRes,
+    gatewayChecklistRes,
+    gainfulRes,
   ] = await Promise.all([
     supabase
       .from("participants")
@@ -42,6 +47,29 @@ export async function getParticipantDetail(participantId: string) {
       .select("*")
       .eq("participant_id", participantId)
       .order("appointment_date", { ascending: false }),
+    supabase
+      .from("funding_records")
+      .select("*")
+      .eq("participant_id", participantId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("hmrc_business_info")
+      .select("*")
+      .eq("participant_id", participantId)
+      .maybeSingle(),
+    supabase
+      .from("digital_presence_items")
+      .select("*")
+      .eq("participant_id", participantId),
+    supabase
+      .from("gateway_checklist_items")
+      .select("*")
+      .eq("participant_id", participantId),
+    supabase
+      .from("gainful_assessments")
+      .select("*")
+      .eq("participant_id", participantId)
+      .maybeSingle(),
   ]);
 
   if (!participantRes.data) {
@@ -55,5 +83,10 @@ export async function getParticipantDetail(participantId: string) {
     evidenceFiles: evidenceFilesRes.data ?? [],
     actionPlanItems: actionPlanRes.data ?? [],
     appointments: appointmentsRes.data ?? [],
+    fundingRecords: fundingRecordsRes.data ?? [],
+    hmrc: hmrcRes.data,
+    digitalPresence: digitalPresenceRes.data ?? [],
+    gatewayChecklist: gatewayChecklistRes.data ?? [],
+    gainful: gainfulRes.data,
   };
 }

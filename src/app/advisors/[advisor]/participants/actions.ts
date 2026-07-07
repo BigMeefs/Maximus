@@ -12,9 +12,12 @@ export type ParticipantFormState = {
 function readParticipantFields(formData: FormData) {
   const ptpName = formData.get("ptp_name")?.toString().trim() ?? "";
   const businessName = formData.get("business_name")?.toString().trim() ?? "";
+  const businessSector = formData.get("business_sector")?.toString().trim() || null;
   const previousAdvisor =
     formData.get("previous_advisor")?.toString().trim() || null;
   const schemeStartDate = formData.get("scheme_start_date")?.toString() ?? "";
+  const gatewayTargetDate =
+    formData.get("gateway_target_date")?.toString() || null;
   const website = formData.get("website")?.toString().trim() || null;
   const socialMediaLinks =
     formData.get("social_media_links")?.toString().trim() || null;
@@ -22,8 +25,10 @@ function readParticipantFields(formData: FormData) {
   return {
     ptpName,
     businessName,
+    businessSector,
     previousAdvisor,
     schemeStartDate,
+    gatewayTargetDate,
     website,
     socialMediaLinks,
   };
@@ -53,8 +58,10 @@ export async function createParticipant(
       advisor_name: advisorName,
       ptp_name: fields.ptpName,
       business_name: fields.businessName,
+      business_sector: fields.businessSector,
       previous_advisor: fields.previousAdvisor,
       scheme_start_date: fields.schemeStartDate,
+      gateway_target_date: fields.gatewayTargetDate,
       website: fields.website,
       social_media_links: fields.socialMediaLinks,
     })
@@ -92,8 +99,10 @@ export async function updateParticipant(
     .update({
       ptp_name: fields.ptpName,
       business_name: fields.businessName,
+      business_sector: fields.businessSector,
       previous_advisor: fields.previousAdvisor,
       scheme_start_date: fields.schemeStartDate,
+      gateway_target_date: fields.gatewayTargetDate,
       website: fields.website,
       social_media_links: fields.socialMediaLinks,
     })

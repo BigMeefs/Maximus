@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import type { EvidenceCategory } from "@/types/database";
 
 function revalidateParticipant() {
   // Advisor isn't known here, so revalidate the whole workspace layout
@@ -17,6 +18,7 @@ export async function uploadEvidenceFile(
   if (!(file instanceof File) || file.size === 0) {
     return;
   }
+  const category = (formData.get("category")?.toString() as EvidenceCategory) || "Other";
 
   const supabase = await createClient();
 
@@ -34,6 +36,7 @@ export async function uploadEvidenceFile(
     participant_id: participantId,
     file_path: path,
     file_name: file.name,
+    category,
   });
 
   revalidateParticipant();

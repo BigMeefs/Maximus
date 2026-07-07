@@ -10,7 +10,28 @@ import MonthlyEarningsTab from "@/components/participant/monthly-earnings-tab";
 import EvidenceLibraryTab from "@/components/participant/evidence-library-tab";
 import ActionPlanTab from "@/components/participant/action-plan-tab";
 import AppointmentsTab from "@/components/participant/appointments-tab";
+import JourneyTab from "@/components/participant/journey-tab";
+import GatewayTab from "@/components/participant/gateway-tab";
+import GainfulTab from "@/components/participant/gainful-tab";
+import FundingTab from "@/components/participant/funding-tab";
+import HmrcTab from "@/components/participant/hmrc-tab";
+import DigitalPresenceTab from "@/components/participant/digital-presence-tab";
+import AiAssistantTab from "@/components/participant/ai-assistant-tab";
+import SelfEmploymentOverview from "@/components/participant/self-employment-overview";
+import NextBestActionPanel from "@/components/participant/next-best-action-panel";
+import HealthScorePanel from "@/components/participant/health-score-panel";
 import { deleteParticipant } from "@/app/advisors/[advisor]/participants/actions";
+import {
+  getBusinessHealthScores,
+  getDaysUntilGateway,
+  getGainfulChecklist,
+  getGatewayChecklist,
+  getLastContactDate,
+  getNextAppointment,
+  getOutstandingActions,
+  getSuggestedRag,
+} from "@/lib/business-rules";
+import { getNextBestAction } from "@/lib/next-best-action";
 
 export default async function ParticipantProfilePage({
   params,
@@ -30,10 +51,64 @@ export default async function ParticipantProfilePage({
     evidenceFiles,
     actionPlanItems,
     appointments,
+    fundingRecords,
+    hmrc,
+    digitalPresence,
+    gatewayChecklist,
+    gainful,
   } = await getParticipantDetail(id);
 
   const daysRemaining = getDaysRemaining(participant.scheme_start_date);
   const boundDelete = deleteParticipant.bind(null, advisor, id);
+
+  const gateway = getGatewayChecklist({
+    participant,
+    businessPlan,
+    hmrc,
+    digitalPresence,
+    evidenceFiles,
+    manualItems: gatewayChecklist,
+  });
+
+  const invoicesAvailable =
+    gateway.entries.find((e) => e.label === "Invoices Available")?.complete ?? false;
+
+  const gainfulChecklist = getGainfulChecklist({
+    gainful,
+    earnings: monthlyEarnings,
+    evidenceFiles,
+    invoicesAvailable,
+  });
+
+  const healthScores = getBusinessHealthScores({
+    participant,
+    businessPlan,
+    hmrc,
+    digitalPresence,
+    fundingRecords,
+    earnings: monthlyEarnings,
+    manualGatewayItems: gatewayChecklist,
+  });
+
+  const suggestedRag = getSuggestedRag({ appointments, actionItems: actionPlanItems });
+  const daysUntilGateway = getDaysUntilGateway(participant);
+  const nextAppointment = getNextAppointment(appointments);
+  const lastContactDate = getLastContactDate(appointments);
+  const outstandingActions = getOutstandingActions(actionPlanItems);
+
+  const nextBestAction = getNextBestAction({
+    participant,
+    businessPlan,
+    hmrc,
+    digitalPresence,
+    evidenceFiles,
+    manualGatewayItems: gatewayChecklist,
+    fundingRecords,
+    earnings: monthlyEarnings,
+    actionItems: actionPlanItems,
+    appointments,
+    gainful,
+  });
 
   return (
     <div className="space-y-6">
@@ -103,6 +178,21 @@ export default async function ParticipantProfilePage({
         </dl>
       </div>
 
+      <NextBestActionPanel recommendation={nextBestAction} />
+
+      <SelfEmploymentOverview
+        participant={participant}
+        gatewayPercent={gateway.percent}
+        gainfulPercent={gainfulChecklist.percent}
+        daysUntilGateway={daysUntilGateway}
+        nextAppointment={nextAppointment}
+        outstandingActionsCount={outstandingActions.length}
+        lastContactDate={lastContactDate}
+        suggestedRag={suggestedRag}
+      />
+
+      <HealthScorePanel participantId={id} scores={healthScores} />
+
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <Tabs
           initialTab={tab}
@@ -115,8 +205,47 @@ export default async function ParticipantProfilePage({
               ),
             },
             {
+              id: "journey",
+              label: "Journey",
+              content: (
+                <JourneyTab
+                  participantId={id}
+                  currentStage={participant.business_stage}
+                  stageUpdatedAt={participant.business_stage_updated_at}
+                />
+              ),
+            },
+            {
+              id: "gateway",
+              label: "Gateway",
+              content: (
+                <GatewayTab
+                  participantId={id}
+                  entries={gateway.entries}
+                  percent={gateway.percent}
+                />
+              ),
+            },
+            {
+              id: "gainful",
+              label: "Gainful Decision",
+              content: (
+                <GainfulTab
+                  participantId={id}
+                  entries={gainfulChecklist.entries}
+                  percent={gainfulChecklist.percent}
+                  gainful={gainful}
+                />
+              ),
+            },
+            {
+              id: "funding",
+              label: "Funding",
+              content: <FundingTab participantId={id} records={fundingRecords} />,
+            },
+            {
               id: "monthly-earnings",
-              label: "Monthly Earnings",
+              label: "Monthly Performance",
               content: (
                 <MonthlyEarningsTab
                   participantId={id}
@@ -125,8 +254,20 @@ export default async function ParticipantProfilePage({
               ),
             },
             {
+              id: "hmrc",
+              label: "HMRC & Business",
+              content: <HmrcTab participantId={id} hmrc={hmrc} />,
+            },
+            {
+              id: "digital-presence",
+              label: "Digital Presence",
+              content: (
+                <DigitalPresenceTab participantId={id} items={digitalPresence} />
+              ),
+            },
+            {
               id: "evidence",
-              label: "Evidence Library",
+              label: "Evidence Vault",
               content: (
                 <EvidenceLibraryTab participantId={id} files={evidenceFiles} />
               ),
@@ -143,6 +284,25 @@ export default async function ParticipantProfilePage({
               label: "Appointment History",
               content: (
                 <AppointmentsTab participantId={id} appointments={appointments} />
+              ),
+            },
+            {
+              id: "ai-assistant",
+              label: "AI Assistant",
+              content: (
+                <AiAssistantTab
+                  participantId={id}
+                  participant={participant}
+                  businessPlan={businessPlan}
+                  gatewayPercent={gateway.percent}
+                  gainfulPercent={gainfulChecklist.percent}
+                  incompleteGatewayItems={gateway.entries
+                    .filter((e) => !e.complete)
+                    .map((e) => e.label)}
+                  incompleteGainfulItems={gainfulChecklist.entries
+                    .filter((e) => !e.complete)
+                    .map((e) => e.label)}
+                />
               ),
             },
           ]}

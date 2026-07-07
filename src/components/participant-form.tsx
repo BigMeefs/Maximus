@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import type { Participant } from "@/types/database";
 import type { ParticipantFormState } from "@/app/advisors/[advisor]/participants/actions";
-import { ADVISOR_NAMES } from "@/lib/constants";
+import { ADVISOR_NAMES, BUSINESS_SECTOR_SUGGESTIONS } from "@/lib/constants";
 
 const initialState: ParticipantFormState = {};
 
@@ -46,6 +46,22 @@ export default function ParticipantForm({
           />
         </Field>
 
+        <Field label="Business Sector" htmlFor="business_sector">
+          <input
+            id="business_sector"
+            name="business_sector"
+            list="business-sector-options"
+            placeholder="e.g. Trades, Hospitality, Retail..."
+            defaultValue={participant?.business_sector ?? ""}
+            className={inputClass}
+          />
+          <datalist id="business-sector-options">
+            {BUSINESS_SECTOR_SUGGESTIONS.map((sector) => (
+              <option key={sector} value={sector} />
+            ))}
+          </datalist>
+        </Field>
+
         <Field label="Advisor" htmlFor="advisor_display">
           <input
             id="advisor_display"
@@ -78,6 +94,16 @@ export default function ParticipantForm({
             type="date"
             required
             defaultValue={participant?.scheme_start_date}
+            className={inputClass}
+          />
+        </Field>
+
+        <Field label="Gateway Target Date" htmlFor="gateway_target_date">
+          <input
+            id="gateway_target_date"
+            name="gateway_target_date"
+            type="date"
+            defaultValue={participant?.gateway_target_date ?? ""}
             className={inputClass}
           />
         </Field>

@@ -3,6 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { getDaysRemaining } from "@/lib/participant";
 import Badge, { statusTone } from "@/components/badge";
 import ParticipantFilters from "@/components/participant-filters";
+import type { RagStatus } from "@/types/database";
+
+function ragTone(status: RagStatus) {
+  return status === "Green" ? "green" : status === "Amber" ? "amber" : "red";
+}
 
 export default async function ParticipantsPage({
   params,
@@ -93,6 +98,8 @@ export default async function ParticipantsPage({
               <tr>
                 <th className="px-4 py-3">PTP Name</th>
                 <th className="hidden px-4 py-3 sm:table-cell">Business</th>
+                <th className="px-4 py-3">RAG</th>
+                <th className="hidden px-4 py-3 md:table-cell">Stage</th>
                 <th className="px-4 py-3">Days remaining</th>
                 <th className="hidden px-4 py-3 lg:table-cell">
                   Business plan
@@ -115,6 +122,12 @@ export default async function ParticipantsPage({
                   </td>
                   <td className="hidden px-4 py-3 text-slate-600 sm:table-cell">
                     {p.business_name}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge tone={ragTone(p.rag_status)}>{p.rag_status}</Badge>
+                  </td>
+                  <td className="hidden px-4 py-3 text-slate-600 md:table-cell">
+                    {p.business_stage}
                   </td>
                   <td className="px-4 py-3">
                     <Badge tone={p.daysRemaining <= 30 ? (p.daysRemaining <= 0 ? "red" : "amber") : "slate"}>
