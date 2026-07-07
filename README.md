@@ -74,6 +74,16 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000), pick your name, and go.
 
+### Deploying (e.g. Vercel)
+
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` also need to be
+set as **Environment Variables on the hosting project itself** (Vercel:
+Project Settings → Environment Variables) — `.env.local` is git-ignored and
+never reaches a deployment. If they're missing, every page that talks to
+Supabase (e.g. the dashboard, right after picking your name) will fail to
+load. After adding or changing them, redeploy — Next.js inlines these at
+build time, so an existing deployment won't pick up new values on its own.
+
 ## Project structure
 
 - `supabase/migrations` — SQL schema and storage buckets.
