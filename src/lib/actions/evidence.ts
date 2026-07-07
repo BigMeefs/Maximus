@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentAdvisor } from "@/lib/current-advisor";
 
 function revalidateParticipant(participantId: string) {
   revalidatePath(`/participants/${participantId}`);
@@ -17,10 +16,9 @@ export async function uploadEvidenceFile(
     return;
   }
 
-  const advisor = await getCurrentAdvisor();
   const supabase = await createClient();
 
-  const path = `${advisor.id}/${participantId}/${Date.now()}-${file.name}`;
+  const path = `${participantId}/${Date.now()}-${file.name}`;
 
   const { error: uploadError } = await supabase.storage
     .from("evidence-files")

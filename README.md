@@ -6,8 +6,9 @@ Next.js (App Router), TypeScript, Tailwind CSS and Supabase.
 
 ## Features
 
-- Advisor authentication — each advisor can only view and edit their own
-  participants (enforced by Postgres row-level security).
+- No per-advisor login — pick your name from a list when you open the app.
+  Everyone shares full access to every participant, so any advisor can pick up
+  a colleague's client if needed.
 - Participant profiles: PTP name, business name, advisor, previous advisor,
   scheme start date, calculated days remaining (365-day scheme), website and
   social media links.
@@ -17,9 +18,24 @@ Next.js (App Router), TypeScript, Tailwind CSS and Supabase.
 - Evidence library with upload, view, delete and upload timestamps.
 - Ongoing action plan tracker with full history.
 - Appointment history (date, advisor, notes, outcome).
-- Dashboard with caseload size, expiring participants, missing business plans
-  and outstanding actions.
-- Searchable, filterable, responsive participant list.
+- Dashboard with total caseload, expiring participants, missing business plans
+  and outstanding actions across the whole team.
+- Searchable, filterable (including by advisor), responsive participant list.
+
+## Security model
+
+There is no authentication. The four advisor names are just a picker used to
+stamp a display name/cookie — anyone who opens the app can act as any
+advisor and see or edit every participant. Row-level security is disabled on
+every table, so **the Supabase anon key (shipped in the browser bundle) has
+full read/write access to all participant data.** This is intentional for a
+small, trusted internal tool, but it means:
+
+- Do not deploy this somewhere publicly reachable without another access
+  barrier in front of it (e.g. a hosting platform's password protection, a
+  VPN, or an IP allowlist).
+- Anyone with the anon key can call the Supabase REST API directly and bypass
+  the app's UI entirely.
 
 ## Getting started
 
@@ -38,8 +54,8 @@ supabase db push
 # or paste each file in supabase/migrations/*.sql into the SQL editor in order
 ```
 
-This creates all tables, row-level security policies, and the
-`business-plans` / `evidence-files` storage buckets.
+This creates all tables and the `business-plans` / `evidence-files` storage
+buckets.
 
 ### 3. Configure environment variables
 
@@ -49,37 +65,21 @@ cp .env.example .env.local
 
 Fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 
-### 4. Seed the four advisor accounts
-
-The app authenticates advisors by name + password (email is derived as
-`<name>@caseload.local` internally). Create the four accounts once with the
-service role key (found in Project Settings → API — keep this secret):
-
-```bash
-SUPABASE_SERVICE_ROLE_KEY=... NEXT_PUBLIC_SUPABASE_URL=... ADVISOR_PASSWORD=... \
-  node scripts/seed-advisors.mjs
-```
-
-This creates Kyle, Charles, Elliott and Aroosa with the same starter
-password — advisors can change it later via Supabase Auth if needed.
-
-### 5. Run the app
+### 4. Run the app
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and sign in as one of the
-four advisors.
+Open [http://localhost:3000](http://localhost:3000), pick your name, and go.
 
 ## Project structure
 
-- `supabase/migrations` — SQL schema, RLS policies and storage buckets.
-- `scripts/seed-advisors.mjs` — one-off script to create advisor accounts.
-- `src/app/login` — advisor sign-in.
-- `src/app/(app)` — authenticated app shell, dashboard, participants and
-  participant profile tabs.
+- `supabase/migrations` — SQL schema and storage buckets.
+- `src/app/select-advisor` — the name picker shown before entering the app.
+- `src/app/(app)` — app shell, dashboard, participants and participant
+  profile tabs.
 - `src/lib/actions` — server actions for business plans, earnings, evidence,
-  action plan items and appointments.
-- `src/lib/supabase` — Supabase client helpers (browser, server, middleware).
+  action plan items, appointments and advisor selection.
+- `src/lib/supabase` — Supabase client helpers.

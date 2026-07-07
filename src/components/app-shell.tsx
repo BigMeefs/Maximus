@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import NavLinks from "@/components/nav-links";
-import SignOutButton from "@/components/sign-out-button";
+import SwitchAdvisorButton from "@/components/switch-advisor-button";
 
 export default function AppShell({
   advisorName,
@@ -36,7 +36,7 @@ export default function AppShell({
           </div>
         </div>
         <div className="px-3 pt-2">
-          <SignOutButton />
+          <SwitchAdvisorButton />
         </div>
       </aside>
 
@@ -69,7 +69,7 @@ export default function AppShell({
                 <p className="font-medium text-slate-900">{advisorName}</p>
                 <p className="text-xs text-slate-500">Advisor</p>
               </div>
-              <SignOutButton />
+              <SwitchAdvisorButton />
             </div>
           </div>
         )}

@@ -8,5 +8,5 @@ export default async function AppLayout({
 }) {
   const advisor = await getCurrentAdvisor();
 
-  return <AppShell advisorName={advisor.fullName}>{children}</AppShell>;
+  return <AppShell advisorName={advisor.name}>{children}</AppShell>;
 }

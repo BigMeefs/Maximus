@@ -70,6 +70,7 @@ export default async function ParticipantProfilePage({
           <Info label="Scheme start date">
             {new Date(participant.scheme_start_date).toLocaleDateString()}
           </Info>
+          <Info label="Advisor">{participant.advisor_name}</Info>
           <Info label="Previous advisor">
             {participant.previous_advisor || "—"}
           </Info>

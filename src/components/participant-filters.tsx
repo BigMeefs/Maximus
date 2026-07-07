@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
+import { ADVISOR_NAMES } from "@/lib/constants";
 
 const FILTERS = [
   { value: "all", label: "All participants" },
@@ -12,9 +13,11 @@ const FILTERS = [
 export default function ParticipantFilters({
   defaultQuery,
   defaultFilter,
+  defaultAdvisor,
 }: {
   defaultQuery: string;
   defaultFilter: string;
+  defaultAdvisor: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,6 +52,18 @@ export default function ParticipantFilters({
         {FILTERS.map((f) => (
           <option key={f.value} value={f.value}>
             {f.label}
+          </option>
+        ))}
+      </select>
+      <select
+        defaultValue={defaultAdvisor}
+        onChange={(e) => updateParam("advisor", e.target.value)}
+        className="w-full max-w-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+      >
+        <option value="all">All advisors</option>
+        {ADVISOR_NAMES.map((name) => (
+          <option key={name} value={name}>
+            {name}
           </option>
         ))}
       </select>

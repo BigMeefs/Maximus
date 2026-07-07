@@ -1,25 +1,14 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { ADVISOR_COOKIE, isAdvisorName, type AdvisorName } from "@/lib/constants";
 
-export async function getCurrentAdvisor() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export async function getCurrentAdvisor(): Promise<{ name: AdvisorName }> {
+  const cookieStore = await cookies();
+  const name = cookieStore.get(ADVISOR_COOKIE)?.value;
 
-  if (!user) {
-    redirect("/login");
+  if (!isAdvisorName(name)) {
+    redirect("/select-advisor");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
-  return {
-    id: user.id,
-    email: user.email ?? "",
-    fullName: profile?.full_name ?? user.email ?? "Advisor",
-  };
+  return { name };
 }

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentAdvisor } from "@/lib/current-advisor";
+import { isAdvisorName } from "@/lib/constants";
 
 export type ParticipantFormState = {
   error?: string;
@@ -12,6 +12,7 @@ export type ParticipantFormState = {
 function readParticipantFields(formData: FormData) {
   const ptpName = formData.get("ptp_name")?.toString().trim() ?? "";
   const businessName = formData.get("business_name")?.toString().trim() ?? "";
+  const advisorName = formData.get("advisor_name")?.toString() ?? "";
   const previousAdvisor =
     formData.get("previous_advisor")?.toString().trim() || null;
   const schemeStartDate = formData.get("scheme_start_date")?.toString() ?? "";
@@ -22,6 +23,7 @@ function readParticipantFields(formData: FormData) {
   return {
     ptpName,
     businessName,
+    advisorName,
     previousAdvisor,
     schemeStartDate,
     website,
@@ -33,11 +35,14 @@ export async function createParticipant(
   _prevState: ParticipantFormState,
   formData: FormData,
 ): Promise<ParticipantFormState> {
-  const advisor = await getCurrentAdvisor();
   const fields = readParticipantFields(formData);
 
   if (!fields.ptpName || !fields.businessName || !fields.schemeStartDate) {
     return { error: "PTP name, business name and scheme start date are required." };
+  }
+
+  if (!isAdvisorName(fields.advisorName)) {
+    return { error: "Select an advisor." };
   }
 
   const supabase = await createClient();
@@ -45,7 +50,7 @@ export async function createParticipant(
   const { data: participant, error } = await supabase
     .from("participants")
     .insert({
-      advisor_id: advisor.id,
+      advisor_name: fields.advisorName,
       ptp_name: fields.ptpName,
       business_name: fields.businessName,
       previous_advisor: fields.previousAdvisor,
@@ -80,6 +85,10 @@ export async function updateParticipant(
     return { error: "PTP name, business name and scheme start date are required." };
   }
 
+  if (!isAdvisorName(fields.advisorName)) {
+    return { error: "Select an advisor." };
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -87,6 +96,7 @@ export async function updateParticipant(
     .update({
       ptp_name: fields.ptpName,
       business_name: fields.businessName,
+      advisor_name: fields.advisorName,
       previous_advisor: fields.previousAdvisor,
       scheme_start_date: fields.schemeStartDate,
       website: fields.website,

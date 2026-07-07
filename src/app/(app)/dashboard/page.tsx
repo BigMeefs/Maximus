@@ -13,8 +13,7 @@ export default async function DashboardPage() {
 
   const { data: participants } = await supabase
     .from("participants")
-    .select("id, ptp_name, business_name, scheme_start_date")
-    .eq("advisor_id", advisor.id)
+    .select("id, ptp_name, business_name, advisor_name, scheme_start_date")
     .order("scheme_start_date", { ascending: true });
 
   const rows = participants ?? [];
@@ -65,15 +64,15 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">
-          Welcome back, {advisor.fullName}
+          Welcome back, {advisor.name}
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Here&apos;s an overview of your caseload.
+          Here&apos;s an overview of the whole team&apos;s caseload.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Caseload size" value={rows.length} href="/participants" />
+        <StatCard label="Total caseload" value={rows.length} href="/participants" />
         <StatCard
           label="Expiring soon"
           value={expiring.length}
@@ -113,7 +112,7 @@ export default async function DashboardPage() {
                     <span className="font-medium text-slate-800">
                       {p.ptp_name}
                       <span className="ml-1 text-slate-400">
-                        · {p.business_name}
+                        · {p.business_name} · {p.advisor_name}
                       </span>
                     </span>
                     <Badge tone={p.daysRemaining <= 0 ? "red" : "amber"}>
@@ -147,7 +146,7 @@ export default async function DashboardPage() {
                     <span className="font-medium text-slate-800">
                       {p.ptp_name}
                       <span className="ml-1 text-slate-400">
-                        · {p.business_name}
+                        · {p.business_name} · {p.advisor_name}
                       </span>
                     </span>
                     <Badge tone="red">Not started</Badge>

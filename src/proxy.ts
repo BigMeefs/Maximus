@@ -1,8 +1,27 @@
-import { type NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
+import { NextResponse, type NextRequest } from "next/server";
+import { ADVISOR_COOKIE, isAdvisorName } from "@/lib/constants";
 
-export async function proxy(request: NextRequest) {
-  return updateSession(request);
+export function proxy(request: NextRequest) {
+  const hasAdvisor = isAdvisorName(
+    request.cookies.get(ADVISOR_COOKIE)?.value,
+  );
+  const isSelectRoute = request.nextUrl.pathname.startsWith("/select-advisor");
+
+  if (!hasAdvisor && !isSelectRoute) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/select-advisor";
+    url.searchParams.set("redirectTo", request.nextUrl.pathname);
+    return NextResponse.redirect(url);
+  }
+
+  if (hasAdvisor && isSelectRoute) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {

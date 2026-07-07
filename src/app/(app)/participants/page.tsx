@@ -1,23 +1,21 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentAdvisor } from "@/lib/current-advisor";
 import { getDaysRemaining } from "@/lib/participant";
+import { isAdvisorName } from "@/lib/constants";
 import Badge, { statusTone } from "@/components/badge";
 import ParticipantFilters from "@/components/participant-filters";
 
 export default async function ParticipantsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; filter?: string }>;
+  searchParams: Promise<{ q?: string; filter?: string; advisor?: string }>;
 }) {
-  const { q = "", filter = "all" } = await searchParams;
-  const advisor = await getCurrentAdvisor();
+  const { q = "", filter = "all", advisor = "all" } = await searchParams;
   const supabase = await createClient();
 
   const { data: participants } = await supabase
     .from("participants")
     .select("*")
-    .eq("advisor_id", advisor.id)
     .order("created_at", { ascending: false });
 
   const participantIds = (participants ?? []).map((p) => p.id);
@@ -53,6 +51,10 @@ export default async function ParticipantsPage({
     rows = rows.filter((p) => p.businessPlanStatus === "Not Started");
   }
 
+  if (isAdvisorName(advisor)) {
+    rows = rows.filter((p) => p.advisor_name === advisor);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -73,7 +75,11 @@ export default async function ParticipantsPage({
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <ParticipantFilters defaultQuery={q} defaultFilter={filter} />
+        <ParticipantFilters
+          defaultQuery={q}
+          defaultFilter={filter}
+          defaultAdvisor={advisor}
+        />
       </div>
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -105,14 +111,14 @@ export default async function ParticipantsPage({
                       {p.ptp_name}
                     </Link>
                     <p className="text-xs text-slate-500 sm:hidden">
-                      {p.business_name}
+                      {p.business_name} · {p.advisor_name}
                     </p>
                   </td>
                   <td className="hidden px-4 py-3 text-slate-600 sm:table-cell">
                     {p.business_name}
                   </td>
                   <td className="hidden px-4 py-3 text-slate-600 md:table-cell">
-                    {advisor.fullName}
+                    {p.advisor_name}
                   </td>
                   <td className="px-4 py-3">
                     <Badge tone={p.daysRemaining <= 30 ? (p.daysRemaining <= 0 ? "red" : "amber") : "slate"}>

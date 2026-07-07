@@ -1,15 +1,9 @@
 export type BusinessPlanStatus = "Not Started" | "In Progress" | "Complete";
 export type ActionStatus = "Not Started" | "In Progress" | "Complete";
 
-export type Profile = {
-  id: string;
-  full_name: string;
-  created_at: string;
-};
-
 export type Participant = {
   id: string;
-  advisor_id: string;
+  advisor_name: string;
   ptp_name: string;
   business_name: string;
   previous_advisor: string | null;
@@ -70,16 +64,10 @@ export type Appointment = {
 export type Database = {
   public: {
     Tables: {
-      profiles: {
-        Row: Profile;
-        Insert: Partial<Profile> & { id: string; full_name: string };
-        Update: Partial<Profile>;
-        Relationships: [];
-      };
       participants: {
         Row: Participant;
         Insert: Partial<Participant> & {
-          advisor_id: string;
+          advisor_name: string;
           ptp_name: string;
           business_name: string;
           scheme_start_date: string;

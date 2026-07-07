@@ -18,7 +18,7 @@ export default async function NewParticipantPage() {
 
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <ParticipantForm
-          advisorName={advisor.fullName}
+          currentAdvisorName={advisor.name}
           action={createParticipant}
           submitLabel="Create participant"
         />
