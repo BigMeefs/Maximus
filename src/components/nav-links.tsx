@@ -10,6 +10,7 @@ export default function NavLinks({ advisorName }: { advisorName: string }) {
   const links = [
     { href: `/advisors/${advisorName}/dashboard`, label: "Dashboard", icon: "▦" },
     { href: `/advisors/${advisorName}/participants`, label: "Participants", icon: "▤" },
+    { href: `/advisors/${advisorName}/data-sync`, label: "Data Sync", icon: "⇅" },
   ];
 
   return (

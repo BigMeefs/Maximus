@@ -86,6 +86,53 @@ health scores, days-until-Gateway, next appointment, last contact and
 income/customer trends are all computed at read time from the same
 underlying records the other tabs already manage.
 
+## Data Sync
+
+A "Data Sync" section in the nav (`/advisors/<name>/data-sync`) lets advisors
+bulk-import participant data from exported Power BI reports (`.xlsx`/`.csv`),
+instead of entering each participant by hand.
+
+- **Import wizard** (`.../data-sync/import`) — a 4-step flow: upload a file,
+  map spreadsheet columns to CRM fields (auto-suggested from the header text,
+  with previously-used mappings remembered automatically), preview every row
+  with its predicted outcome and any validation issues, then confirm to run
+  the import and see a summary.
+- **Intelligent matching** — never creates a duplicate participant. Each row
+  is matched against existing participants in priority order: external
+  Participant ID, then Email, then Phone, then National Insurance Number,
+  then Name + Date of Birth. A match updates that participant; no match
+  creates a new one.
+- **Safe Import Rules** — updates only ever touch the fields a row actually
+  supplied a value for, and only ever touch `participants` columns. Funding,
+  Gateway/Gainful checklists, Business Health Score, evidence, business plan
+  status and every other CRM-managed record are structurally untouched by an
+  import — the import engine has no code path that writes to those tables.
+- **Automatic advisor assignment** — if a row includes a recognised advisor
+  name it's used directly; otherwise new participants fall back to an advisor
+  chosen on the Preview & Validate step before the import runs.
+- **Data validation** — missing required fields, invalid dates/emails,
+  unrecognised advisor names, and duplicate rows within the same file are all
+  flagged in the preview before anything is written.
+- **Import History** (`.../data-sync/history`) — every import batch (date,
+  imported by, file name, rows processed/created/updated/duplicated/errored,
+  status), with a per-batch detail page and a downloadable CSV error report
+  for any failed rows.
+- **Field Mappings** (`.../data-sync/mapping`) — view and forget saved
+  column → field mappings.
+- **Sync Dashboard** (`.../data-sync`) — last import date, totals imported/
+  created/updated, error count, imports this month, and a chart of recent
+  import activity.
+- **Future Power BI integration** — the import engine (`src/lib/data-sync/`)
+  is deliberately source-agnostic: it operates on a generic row shape, not on
+  file-upload specifics, so a future direct Power BI API connector can feed
+  it the same way a parsed spreadsheet does today. A disabled "Connect to
+  Power BI (Coming soon)" option is already in the upload step.
+
+`national_insurance_number` is stored as an optional matching-key field on
+participants for this feature. It's a sensitive UK identifier — see the
+Security model section below, since it carries the same open-access tradeoff
+as every other field in this database.
+
 ## Security model
 
 There is no authentication. `/advisors/<name>/...` is just a URL — anyone who
@@ -171,4 +218,11 @@ won't pick up new values on its own.
   monthly performance, evidence, action plan items, appointments, the
   business journey stage, RAG/health confidence, Gateway/Gainful checklists,
   funding, HMRC info, digital presence, and the AI assistant.
+- `src/lib/data-sync` — the source-agnostic import engine: file parsing
+  (`.xlsx`/`.csv`), field-mapping suggestions, date normalization, row
+  validation, and participant matching. `src/lib/actions/data-sync.ts` wraps
+  it for the UI (preview, run import, saved mappings, history, dashboard
+  stats).
+- `src/app/advisors/[advisor]/data-sync` — Sync Dashboard, Import wizard,
+  Import History (+ per-batch detail), and Field Mappings pages.
 - `src/lib/supabase` — Supabase client helpers.

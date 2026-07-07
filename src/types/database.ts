@@ -59,6 +59,8 @@ export type GainfulRecommendation =
   | "Needs Further Evidence"
   | "Not Yet Ready";
 
+export type ImportStatus = "Success" | "Partial" | "Failed";
+
 export const EVIDENCE_CATEGORIES = [
   "Business Plan",
   "Cashflow",
@@ -92,6 +94,11 @@ export type Participant = {
   rag_note: string | null;
   gateway_target_date: string | null;
   health_confidence: number | null;
+  external_participant_id: string | null;
+  email: string | null;
+  phone: string | null;
+  date_of_birth: string | null;
+  national_insurance_number: string | null;
 };
 
 export type BusinessPlan = {
@@ -214,6 +221,38 @@ export type GainfulAssessment = {
   updated_at: string;
 };
 
+export type ImportFieldMapping = {
+  id: string;
+  source_column: string;
+  target_field: string;
+  updated_at: string;
+};
+
+export type ImportBatch = {
+  id: string;
+  imported_by: string;
+  file_name: string;
+  source: string;
+  row_count: number;
+  created_count: number;
+  updated_count: number;
+  duplicate_count: number;
+  error_count: number;
+  skipped_count: number;
+  status: ImportStatus;
+  notes: string | null;
+  created_at: string;
+};
+
+export type ImportError = {
+  id: string;
+  import_batch_id: string;
+  row_number: number;
+  error_message: string;
+  row_data: Record<string, unknown> | null;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -310,6 +349,34 @@ export type Database = {
         Row: GainfulAssessment;
         Insert: Partial<GainfulAssessment> & { participant_id: string };
         Update: Partial<GainfulAssessment>;
+        Relationships: [];
+      };
+      import_field_mappings: {
+        Row: ImportFieldMapping;
+        Insert: Partial<ImportFieldMapping> & {
+          source_column: string;
+          target_field: string;
+        };
+        Update: Partial<ImportFieldMapping>;
+        Relationships: [];
+      };
+      import_batches: {
+        Row: ImportBatch;
+        Insert: Partial<ImportBatch> & {
+          imported_by: string;
+          file_name: string;
+        };
+        Update: Partial<ImportBatch>;
+        Relationships: [];
+      };
+      import_errors: {
+        Row: ImportError;
+        Insert: Partial<ImportError> & {
+          import_batch_id: string;
+          row_number: number;
+          error_message: string;
+        };
+        Update: Partial<ImportError>;
         Relationships: [];
       };
     };
