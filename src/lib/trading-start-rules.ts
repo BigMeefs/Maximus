@@ -7,7 +7,7 @@ const ELIGIBILITY_NET_PROFIT_THRESHOLD = 900;
 const OUTCOME_TARGET = 5300;
 const OUTCOME_WINDOW_MONTHS = 6;
 
-function netProfit(entry: Pick<IncomeTrackerEntry, "income" | "expense" | "mileage_cost">): number {
+export function netProfit(entry: Pick<IncomeTrackerEntry, "income" | "expense" | "mileage_cost">): number {
   return Number(entry.income) - Number(entry.expense) - Number(entry.mileage_cost);
 }
 
@@ -40,25 +40,43 @@ function areConsecutiveMonths(aMonth: string, bMonth: string): boolean {
 export type NgseEligibility = {
   eligible: boolean;
   qualifyingMonths: string[]; // e.g. ["2026-03", "2026-04"], the two months
+  month1NetProfit: number | null;
+  month2NetProfit: number | null;
+  dateEligible: string | null; // the entry_date of the second qualifying month
+};
+
+const NOT_ELIGIBLE: NgseEligibility = {
+  eligible: false,
+  qualifyingMonths: [],
+  month1NetProfit: null,
+  month2NetProfit: null,
+  dateEligible: null,
 };
 
 export function detectNgseEligibility(entries: IncomeTrackerEntry[]): NgseEligibility {
   const sorted = [...entries].sort((a, b) => a.month.localeCompare(b.month));
 
   for (let i = 1; i < sorted.length; i++) {
-    const prevMonth = sorted[i - 1].month.slice(0, 7);
-    const currMonth = sorted[i].month.slice(0, 7);
+    const prev = sorted[i - 1];
+    const curr = sorted[i];
+    const prevMonth = prev.month.slice(0, 7);
+    const currMonth = curr.month.slice(0, 7);
     if (!areConsecutiveMonths(prevMonth, currMonth)) continue;
 
-    if (
-      netProfit(sorted[i - 1]) > ELIGIBILITY_NET_PROFIT_THRESHOLD &&
-      netProfit(sorted[i]) > ELIGIBILITY_NET_PROFIT_THRESHOLD
-    ) {
-      return { eligible: true, qualifyingMonths: [prevMonth, currMonth] };
+    const month1NetProfit = netProfit(prev);
+    const month2NetProfit = netProfit(curr);
+    if (month1NetProfit > ELIGIBILITY_NET_PROFIT_THRESHOLD && month2NetProfit > ELIGIBILITY_NET_PROFIT_THRESHOLD) {
+      return {
+        eligible: true,
+        qualifyingMonths: [prevMonth, currMonth],
+        month1NetProfit,
+        month2NetProfit,
+        dateEligible: curr.entry_date,
+      };
     }
   }
 
-  return { eligible: false, qualifyingMonths: [] };
+  return NOT_ELIGIBLE;
 }
 
 // ---------------------------------------------------------------------------
@@ -141,4 +159,70 @@ export function computeGseOutcomeProgress(
 
 export function isReviewOverdue(nextReviewDate: string | null, asOf: Date = new Date()): boolean {
   return !!nextReviewDate && new Date(nextReviewDate) < asOf;
+}
+
+// ---------------------------------------------------------------------------
+// Income declarations — expected once per calendar month. The current month
+// isn't over yet, so "missing" is checked against the most recently
+// completed month.
+// ---------------------------------------------------------------------------
+export function getExpectedDeclarationMonth(asOf: Date = new Date()): string {
+  const d = new Date(asOf.getFullYear(), asOf.getMonth() - 1, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function isDeclarationMissing(
+  entries: IncomeTrackerEntry[],
+  tradingStartDate: string,
+  asOf: Date = new Date(),
+): boolean {
+  const expectedMonth = getExpectedDeclarationMonth(asOf);
+  if (expectedMonth < tradingStartDate.slice(0, 7)) return false;
+  return !entries.some((e) => e.month.slice(0, 7) === expectedMonth);
+}
+
+// ---------------------------------------------------------------------------
+// Income analytics — monthly history plus the headline figures for the
+// Income Tracker tab (average/highest/lowest month, cumulative profit).
+// ---------------------------------------------------------------------------
+export type MonthlyIncomePoint = {
+  month: string; // YYYY-MM
+  income: number;
+  expense: number;
+  mileageCost: number;
+  netProfit: number;
+};
+
+export type IncomeAnalytics = {
+  monthly: MonthlyIncomePoint[];
+  averageMonthlyProfit: number;
+  highestMonth: MonthlyIncomePoint | null;
+  lowestMonth: MonthlyIncomePoint | null;
+  totalCumulativeProfit: number;
+};
+
+export function computeIncomeAnalytics(entries: IncomeTrackerEntry[]): IncomeAnalytics {
+  const monthly = [...entries]
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .map((e) => ({
+      month: e.month.slice(0, 7),
+      income: Number(e.income),
+      expense: Number(e.expense),
+      mileageCost: Number(e.mileage_cost),
+      netProfit: netProfit(e),
+    }));
+
+  const totalCumulativeProfit = monthly.reduce((sum, m) => sum + m.netProfit, 0);
+  const averageMonthlyProfit = monthly.length > 0 ? Math.round(totalCumulativeProfit / monthly.length) : 0;
+  const highestMonth = monthly.length > 0 ? monthly.reduce((a, b) => (b.netProfit > a.netProfit ? b : a)) : null;
+  const lowestMonth = monthly.length > 0 ? monthly.reduce((a, b) => (b.netProfit < a.netProfit ? b : a)) : null;
+
+  return { monthly, averageMonthlyProfit, highestMonth, lowestMonth, totalCumulativeProfit };
+}
+
+export function computeProfitSinceTradingStart(tradingStartDate: string, entries: IncomeTrackerEntry[]): number {
+  const startMonth = tradingStartDate.slice(0, 7);
+  return entries
+    .filter((e) => e.month.slice(0, 7) >= startMonth)
+    .reduce((sum, e) => sum + netProfit(e), 0);
 }

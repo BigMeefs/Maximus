@@ -17,6 +17,9 @@ import {
   getOutcomeDeadline,
   isReviewOverdue,
 } from "@/lib/trading-start-rules";
+import { computeParticipantHealth, type ParticipantHealth } from "@/lib/participant-health";
+import HealthBadge from "@/components/participant/health-badge";
+import Badge from "@/components/badge";
 import {
   addIwtReview,
   createTradingStart,
@@ -66,9 +69,17 @@ export default function TradingStartTab({
     );
   }
 
+  const health = !outcome
+    ? computeParticipantHealth(currentTradingStart, incomeTrackerEntries, iwtReviews)
+    : null;
+
   return (
     <div className="max-w-3xl space-y-8">
-      <TradingStartDetailsPanel tradingStart={currentTradingStart} advisorNameById={advisorNameById} />
+      <TradingStartDetailsPanel
+        tradingStart={currentTradingStart}
+        advisorNameById={advisorNameById}
+        health={health}
+      />
 
       <IwtPanel
         tradingStart={currentTradingStart}
@@ -207,13 +218,25 @@ function NoTradingStart({
 function TradingStartDetailsPanel({
   tradingStart,
   advisorNameById,
+  health,
 }: {
   tradingStart: TradingStart;
   advisorNameById: Map<string, string>;
+  health: ParticipantHealth | null;
 }) {
   return (
     <div className="rounded-lg border border-slate-200 p-4">
-      <h3 className="text-sm font-semibold text-slate-900">Trading Start</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-slate-900">Trading Start</h3>
+        {health && <HealthBadge tone={health.tone} label={health.label} />}
+      </div>
+      {health && health.tone !== "green" && (
+        <ul className="mt-2 list-inside list-disc text-xs text-slate-500">
+          {health.reasons.map((reason) => (
+            <li key={reason}>{reason}</li>
+          ))}
+        </ul>
+      )}
       <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
         <Info label="Trading Start Date">
           {new Date(tradingStart.trading_start_date).toLocaleDateString("en-GB")}
@@ -381,9 +404,16 @@ function OutcomeSection({
       )}
 
       {autoAchieved && (
-        <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-          🎉 Outcome target reached — cumulative net profit hit £5,300 within 6 months. Confirm the
-          outcome below.
+        <div className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+          <Badge tone="green">Outcome Ready</Badge>
+          Cumulative net profit hit £5,300 within 6 months. Confirm the outcome below.
+        </div>
+      )}
+
+      {!outcome && !isMonetary && gse?.readyToConfirm && (
+        <div className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+          <Badge tone="green">Outcome Ready</Badge>
+          The full 6-month gainful period is complete. Confirm the outcome below.
         </div>
       )}
 

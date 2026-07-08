@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { listAdvisors } from "@/lib/data/advisor";
 import { getGatewayChecklist } from "@/lib/business-rules";
 import { detectNgseEligibility, getOutcomeDeadline, isReviewOverdue } from "@/lib/trading-start-rules";
+import { computeParticipantHealth } from "@/lib/participant-health";
 import { FUNDING_APPLICATION_STATUSES, TRADING_START_REASONS } from "@/types/database";
 import type {
   BusinessPlan,
@@ -283,6 +284,7 @@ export type TradingStartReportStats = {
   approachingDeadline: number;
   overdueReviews: number;
   eligibleNotProcessed: number;
+  participantsAtRisk: number;
   byAdvisor: TradingStartAdvisorRow[];
 };
 
@@ -371,6 +373,12 @@ export async function getTradingStartReportStats(
     .filter((v): v is number => v !== null);
   const avgDaysTradingStartToOutcome = average(daysTradingStartToOutcome);
 
+  const reviewsByTsId = new Map<string, IwtReview[]>();
+  (iwtReviews ?? []).forEach((r) => {
+    const list = reviewsByTsId.get(r.trading_start_id) ?? [];
+    list.push(r);
+    reviewsByTsId.set(r.trading_start_id, list);
+  });
   const latestReviewByTsId = new Map<string, IwtReview>();
   (iwtReviews ?? []).forEach((r) => {
     if (!latestReviewByTsId.has(r.trading_start_id)) {
@@ -378,22 +386,32 @@ export async function getTradingStartReportStats(
     }
   });
 
-  let approachingDeadline = 0;
-  let overdueReviews = 0;
-  for (const ts of activeTradingStarts) {
-    const deadline = getOutcomeDeadline(ts.trading_start_date, now);
-    if (!deadline.isOverdue && deadline.monthsRemaining <= 1) approachingDeadline += 1;
-
-    const nextReviewDate = latestReviewByTsId.get(ts.id)?.next_review_date ?? null;
-    if (isReviewOverdue(nextReviewDate, now)) overdueReviews += 1;
-  }
-
   const entriesByParticipant = new Map<string, IncomeTrackerEntry[]>();
   (incomeEntries ?? []).forEach((e) => {
     const list = entriesByParticipant.get(e.participant_id) ?? [];
     list.push(e);
     entriesByParticipant.set(e.participant_id, list);
   });
+
+  let approachingDeadline = 0;
+  let overdueReviews = 0;
+  let participantsAtRisk = 0;
+  for (const ts of activeTradingStarts) {
+    const deadline = getOutcomeDeadline(ts.trading_start_date, now);
+    if (!deadline.isOverdue && deadline.monthsRemaining <= 1) approachingDeadline += 1;
+
+    const nextReviewDate = latestReviewByTsId.get(ts.id)?.next_review_date ?? null;
+    if (isReviewOverdue(nextReviewDate, now)) overdueReviews += 1;
+
+    const health = computeParticipantHealth(
+      ts,
+      entriesByParticipant.get(ts.participant_id) ?? [],
+      reviewsByTsId.get(ts.id) ?? [],
+      now,
+    );
+    if (health.tone === "red") participantsAtRisk += 1;
+  }
+
   const eligibleNotProcessed = (participants ?? []).filter(
     (p) => p.status === "Active" && detectNgseEligibility(entriesByParticipant.get(p.id) ?? []).eligible,
   ).length;
@@ -451,6 +469,7 @@ export async function getTradingStartReportStats(
     approachingDeadline,
     overdueReviews,
     eligibleNotProcessed,
+    participantsAtRisk,
     byAdvisor,
   };
 }

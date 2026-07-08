@@ -14,6 +14,8 @@ import JourneyTab from "@/components/participant/journey-tab";
 import StatusBadge from "@/components/participant/status-badge";
 import StatusTimeline from "@/components/participant/status-timeline";
 import TradingStartTab from "@/components/participant/trading-start-tab";
+import HealthBadge from "@/components/participant/health-badge";
+import { computeParticipantHealth } from "@/lib/participant-health";
 import GatewayTab from "@/components/participant/gateway-tab";
 import GainfulTab from "@/components/participant/gainful-tab";
 import FundingTab from "@/components/participant/funding-tab";
@@ -70,6 +72,11 @@ export default async function ParticipantProfilePage({
 
   const daysRemaining = getDaysRemaining(participant.scheme_start_date);
   const boundDelete = deleteParticipant.bind(null, advisorId, id);
+
+  const health =
+    currentTradingStart && !outcome
+      ? computeParticipantHealth(currentTradingStart, incomeTrackerEntries, iwtReviews)
+      : null;
 
   const gateway = getGatewayChecklist({
     participant,
@@ -139,6 +146,7 @@ export default async function ParticipantProfilePage({
                 {participant.ptp_name}
               </h1>
               <StatusBadge status={participant.status} />
+              {health && <HealthBadge tone={health.tone} label={health.label} />}
             </div>
             <p className="text-sm text-slate-500">{participant.business_name}</p>
           </div>
@@ -292,7 +300,11 @@ export default async function ParticipantProfilePage({
               id: "income-tracker",
               label: "Income Tracker",
               content: (
-                <IncomeTrackerTab participantId={id} entries={incomeTrackerEntries} />
+                <IncomeTrackerTab
+                  participantId={id}
+                  entries={incomeTrackerEntries}
+                  tradingStart={currentTradingStart}
+                />
               ),
             },
             {

@@ -9,6 +9,7 @@ export default function NavLinks({ advisorId }: { advisorId: string }) {
 
   const workspaceLinks = [
     { href: `/advisors/${advisorId}/dashboard`, label: "Dashboard", icon: "▦" },
+    { href: `/advisors/${advisorId}/self-employment`, label: "Self Employment", icon: "📈" },
     { href: `/advisors/${advisorId}/participants`, label: "Participants", icon: "▤" },
     { href: `/advisors/${advisorId}/data-sync`, label: "Data Sync", icon: "⇅" },
   ];

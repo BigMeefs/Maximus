@@ -201,6 +201,54 @@ authentication or role system: any advisor can still open any workspace (see
 Security model below), and "managers only see org-wide reporting" is
 satisfied by the existing Reports passcode gate exactly as it already was.
 
+## Self Employment Dashboard
+
+**This CRM is not a replacement for Iconi.** Iconi remains the organisation's
+primary case management system for appointments, communications, diaries and
+general case notes — none of that is duplicated here. This CRM exists purely
+to automate the manual work specific to the Self Employment team: detecting
+Trading Start eligibility, tracking In Work Tracking and Outcomes, and
+analysing earnings. There are deliberately no calendars, messaging, or
+generic case notes anywhere in this codebase.
+
+`/advisors/<id>/self-employment` is a dedicated dashboard, separate from the
+general CRM dashboard, focused entirely on this:
+
+- **Seven headline cards** — Active Participants, Trading Starts This Month,
+  Participants in IWT, Outcomes This Month, Participants Eligible for Trading
+  Start, Participants Near Outcome, Participants At Risk.
+- **Advisor Performance** — all-time Trading Starts achieved and Outcomes
+  achieved (attributed to this advisor as the *original* advisor, per the
+  Trading Start section above), and a live count of participants requiring
+  action today.
+- **Today's Work** — a single queue combining overdue IWT reviews, missing
+  income declarations, participants approaching their 6-month Outcome
+  deadline, participants whose Outcome is ready to process, and participants
+  newly eligible for a Trading Start — sorted most-urgent first. Nothing in
+  this queue is a real notification (no email/push/SMS): it's a live,
+  computed worklist, consistent with "no messaging" above.
+- **Trading Start Intelligence** — every Active participant auto-detected as
+  eligible for an NGSE Trading Start (two consecutive Income Tracker months
+  over £900 net profit), shown with both qualifying months' net profit and
+  the date they became eligible. A "Create Trading Start" button opens the
+  real creation form on their profile — this is never created automatically.
+- **Outcome Intelligence** — every IWT participant's live progress bar
+  (cumulative profit / £5,300 target / % complete / remaining / months left
+  for NGSE and Claim Closed; the 6-month gainful window for GSE), each
+  flagged "Outcome Ready" the moment the criteria are met — again, this only
+  flags readiness; the Outcome record itself is always advisor-confirmed.
+- **Participant Health** — every IWT participant gets a Green (On Track) /
+  Amber (Needs Attention) / Red (At Risk) indicator, shown here, on the
+  participant profile header, and in Reports. For NGSE/Claim Closed it
+  compares actual vs. required monthly earnings pace against the £5,300
+  deadline; for GSE it factors in overdue reviews and missing income
+  declarations. This is computed live, like every other status in this app —
+  nothing is stored.
+- **Income Analytics** — the Income Tracker tab now also shows average/
+  highest/lowest monthly net profit, total cumulative profit, profit since
+  Trading Start, profit towards the Outcome target, and a combined income/
+  expenses/net-profit chart.
+
 ## Data Sync
 
 A "Data Sync" section in the nav (`/advisors/<id>/data-sync`) lets advisors

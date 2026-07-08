@@ -1,12 +1,18 @@
 "use client";
 
 import { useActionState, useRef, useTransition } from "react";
-import type { IncomeTrackerEntry } from "@/types/database";
+import type { IncomeTrackerEntry, TradingStart } from "@/types/database";
 import {
   deleteIncomeTrackerEntry,
   upsertIncomeTrackerEntry,
   type IncomeTrackerFormState,
 } from "@/lib/actions/income-tracker";
+import {
+  computeIncomeAnalytics,
+  computeMonetaryOutcomeProgress,
+  computeProfitSinceTradingStart,
+} from "@/lib/trading-start-rules";
+import IncomeAnalyticsChart from "@/components/participant/income-analytics-chart";
 
 const currency = new Intl.NumberFormat("en-GB", {
   style: "currency",
@@ -26,9 +32,11 @@ const initialState: IncomeTrackerFormState = {};
 export default function IncomeTrackerTab({
   participantId,
   entries,
+  tradingStart,
 }: {
   participantId: string;
   entries: IncomeTrackerEntry[];
+  tradingStart?: TradingStart | null;
 }) {
   const boundUpsert = upsertIncomeTrackerEntry.bind(null, participantId);
   const [state, formAction, pending] = useActionState(boundUpsert, initialState);
@@ -42,6 +50,15 @@ export default function IncomeTrackerTab({
     }),
     { income: 0, expense: 0, mileage: 0 },
   );
+
+  const analytics = computeIncomeAnalytics(entries);
+  const profitSinceTradingStart = tradingStart
+    ? computeProfitSinceTradingStart(tradingStart.trading_start_date, entries)
+    : null;
+  const outcomeProgress =
+    tradingStart && tradingStart.reason !== "GSE"
+      ? computeMonetaryOutcomeProgress(tradingStart.trading_start_date, entries)
+      : null;
 
   return (
     <div className="max-w-3xl space-y-8">
@@ -61,6 +78,42 @@ export default function IncomeTrackerTab({
           label="Net profit"
           value={currency.format(totals.income - totals.expense - totals.mileage)}
         />
+      </div>
+
+      <div>
+        <h3 className="mb-3 text-sm font-semibold text-slate-900">Income Analytics</h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <SummaryStat label="Average monthly profit" value={currency.format(analytics.averageMonthlyProfit)} />
+          <SummaryStat
+            label="Highest month"
+            value={analytics.highestMonth ? currency.format(analytics.highestMonth.netProfit) : "—"}
+          />
+          <SummaryStat
+            label="Lowest month"
+            value={analytics.lowestMonth ? currency.format(analytics.lowestMonth.netProfit) : "—"}
+          />
+          <SummaryStat
+            label="Total cumulative profit"
+            value={currency.format(analytics.totalCumulativeProfit)}
+          />
+        </div>
+        {tradingStart && (
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <SummaryStat
+              label="Profit since Trading Start"
+              value={currency.format(profitSinceTradingStart ?? 0)}
+            />
+            {outcomeProgress && (
+              <SummaryStat
+                label="Profit towards Outcome"
+                value={`${currency.format(outcomeProgress.cumulativeProfit)} of ${currency.format(outcomeProgress.target)}`}
+              />
+            )}
+          </div>
+        )}
+        <div className="mt-4">
+          <IncomeAnalyticsChart monthly={analytics.monthly} />
+        </div>
       </div>
 
       <form

@@ -199,6 +199,11 @@ export default async function ReportsPage({
             value={tsStats.overdueReviews}
             tone={tsStats.overdueReviews > 0 ? "danger" : "default"}
           />
+          <StatCard
+            label="Participants at risk"
+            value={tsStats.participantsAtRisk}
+            tone={tsStats.participantsAtRisk > 0 ? "danger" : "default"}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
