@@ -38,10 +38,15 @@ export function safeEqual(a: string, b: string): boolean {
 }
 
 export async function isAdminAuthenticated(): Promise<boolean> {
+  // Read the cookie unconditionally, before the secret check — calling
+  // cookies() is what tells Next.js this route depends on per-request state
+  // and must never be statically prerendered. Short-circuiting on a missing
+  // secret before this call let /admin get baked into a static page (frozen
+  // "not logged in" forever) whenever ADMIN_PASSCODE was unset at build time.
+  const cookieStore = await cookies();
   const secret = getSecret();
   if (!secret) return false;
 
-  const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
   return !!token && verify(token, secret);
 }
