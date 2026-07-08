@@ -1,0 +1,262 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import type { ParticipantStatus, TradingStartReason } from "@/types/database";
+
+export type TradingStartFormState = {
+  error?: string;
+};
+
+function revalidateParticipant() {
+  revalidatePath("/advisors/[advisorId]", "layout");
+}
+
+async function getAdvisorName(supabase: Awaited<ReturnType<typeof createClient>>, advisorId: string) {
+  const { data } = await supabase.from("advisors").select("full_name").eq("id", advisorId).maybeSingle();
+  return data?.full_name ?? "Unknown advisor";
+}
+
+async function logStatusChange(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  participantId: string,
+  fromStatus: ParticipantStatus | null,
+  toStatus: ParticipantStatus,
+  changedBy: string,
+  notes?: string | null,
+) {
+  await supabase.from("participant_status_history").insert({
+    participant_id: participantId,
+    from_status: fromStatus,
+    to_status: toStatus,
+    changed_by: changedBy,
+    notes: notes ?? null,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Manual status change — for Referral / Active / Closed transitions that
+// don't go through a dedicated Trading Start / Outcome workflow.
+// ---------------------------------------------------------------------------
+export async function setParticipantStatus(
+  participantId: string,
+  advisorId: string,
+  _prevState: TradingStartFormState,
+  formData: FormData,
+): Promise<TradingStartFormState> {
+  const newStatus = formData.get("status")?.toString() as ParticipantStatus | undefined;
+  if (!newStatus) {
+    return { error: "Select a status." };
+  }
+
+  const supabase = await createClient();
+
+  const { data: participant } = await supabase
+    .from("participants")
+    .select("status")
+    .eq("id", participantId)
+    .maybeSingle();
+
+  const { error } = await supabase
+    .from("participants")
+    .update({ status: newStatus })
+    .eq("id", participantId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const advisorName = await getAdvisorName(supabase, advisorId);
+  await logStatusChange(supabase, participantId, participant?.status ?? null, newStatus, advisorName);
+
+  revalidateParticipant();
+  return {};
+}
+
+// ---------------------------------------------------------------------------
+// Create Trading Start — always a manual, advisor-confirmed action, even
+// when the participant was auto-flagged as eligible.
+// ---------------------------------------------------------------------------
+export async function createTradingStart(
+  participantId: string,
+  advisorId: string,
+  _prevState: TradingStartFormState,
+  formData: FormData,
+): Promise<TradingStartFormState> {
+  const tradingStartDate = formData.get("trading_start_date")?.toString() ?? "";
+  const reason = formData.get("reason")?.toString() as TradingStartReason | undefined;
+  const iwtAdvisorId = formData.get("iwt_advisor_id")?.toString() ?? "";
+  const transferDate = formData.get("transfer_date")?.toString() || tradingStartDate;
+  const evidenceNotes = formData.get("evidence_notes")?.toString().trim() || null;
+
+  if (!tradingStartDate || !reason || !iwtAdvisorId) {
+    return { error: "Trading start date, reason and IWT advisor are required." };
+  }
+
+  const supabase = await createClient();
+
+  const { data: participant } = await supabase
+    .from("participants")
+    .select("advisor_id, status")
+    .eq("id", participantId)
+    .maybeSingle();
+
+  if (!participant) {
+    return { error: "Participant not found." };
+  }
+
+  const originalAdvisorId = participant.advisor_id;
+
+  const { data: tradingStart, error } = await supabase
+    .from("trading_starts")
+    .insert({
+      participant_id: participantId,
+      trading_start_date: tradingStartDate,
+      reason,
+      original_advisor_id: originalAdvisorId,
+      iwt_advisor_id: iwtAdvisorId,
+      transfer_date: transferDate,
+      evidence_notes: evidenceNotes,
+    })
+    .select("id")
+    .single();
+
+  if (error || !tradingStart) {
+    return { error: error?.message ?? "Failed to create the Trading Start." };
+  }
+
+  // Move the participant into the IWT advisor's caseload, exactly like a
+  // normal Transfer Participant, so their office follows automatically and
+  // the move is captured in the same audit log.
+  if (iwtAdvisorId !== originalAdvisorId) {
+    const [{ data: fromAdvisor }, { data: toAdvisor }] = await Promise.all([
+      supabase.from("advisors").select("office_id").eq("id", originalAdvisorId).maybeSingle(),
+      supabase.from("advisors").select("office_id").eq("id", iwtAdvisorId).maybeSingle(),
+    ]);
+
+    if (!toAdvisor) {
+      return { error: "IWT advisor could not be found." };
+    }
+
+    await supabase.from("participants").update({ advisor_id: iwtAdvisorId }).eq("id", participantId);
+
+    await supabase.from("participant_transfers").insert({
+      participant_id: participantId,
+      from_advisor_id: originalAdvisorId,
+      to_advisor_id: iwtAdvisorId,
+      from_office_id: fromAdvisor?.office_id ?? null,
+      to_office_id: toAdvisor.office_id,
+      transferred_by: "Trading Start",
+      notes: `Automatic transfer to IWT advisor on Trading Start (${reason}).`,
+    });
+  }
+
+  const advisorName = await getAdvisorName(supabase, advisorId);
+
+  // Record both transitions the spec describes: momentarily "Trading Start",
+  // then immediately "In Work Tracking" — the ongoing state for the rest of
+  // this workflow.
+  await supabase.from("participants").update({ status: "Trading Start" }).eq("id", participantId);
+  await logStatusChange(supabase, participantId, participant.status, "Trading Start", advisorName, `Trading Start created (${reason}).`);
+
+  await supabase.from("participants").update({ status: "In Work Tracking" }).eq("id", participantId);
+  await logStatusChange(supabase, participantId, "Trading Start", "In Work Tracking", advisorName);
+
+  revalidateParticipant();
+  return {};
+}
+
+// ---------------------------------------------------------------------------
+// IWT Reviews
+// ---------------------------------------------------------------------------
+export async function addIwtReview(
+  tradingStartId: string,
+  advisorId: string,
+  _prevState: TradingStartFormState,
+  formData: FormData,
+): Promise<TradingStartFormState> {
+  const reviewDate = formData.get("review_date")?.toString() ?? "";
+  const nextReviewDate = formData.get("next_review_date")?.toString() || null;
+  const notes = formData.get("notes")?.toString().trim() || null;
+
+  if (!reviewDate) {
+    return { error: "Review date is required." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("iwt_reviews").insert({
+    trading_start_id: tradingStartId,
+    review_date: reviewDate,
+    next_review_date: nextReviewDate,
+    notes,
+    reviewed_by_advisor_id: advisorId,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidateParticipant();
+  return {};
+}
+
+// ---------------------------------------------------------------------------
+// Outcome
+// ---------------------------------------------------------------------------
+export async function recordOutcome(
+  tradingStartId: string,
+  participantId: string,
+  advisorId: string,
+  _prevState: TradingStartFormState,
+  formData: FormData,
+): Promise<TradingStartFormState> {
+  const outcomeDate = formData.get("outcome_date")?.toString() ?? "";
+  const outcomeType = formData.get("outcome_type")?.toString() as TradingStartReason | undefined;
+  const outcomeAchieved = formData.get("outcome_achieved")?.toString() === "yes";
+  const evidence = formData.get("evidence")?.toString().trim() || null;
+  const advisorNotes = formData.get("advisor_notes")?.toString().trim() || null;
+
+  if (!outcomeDate || !outcomeType) {
+    return { error: "Outcome date and outcome type are required." };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("outcome_records").upsert(
+    {
+      trading_start_id: tradingStartId,
+      outcome_date: outcomeDate,
+      outcome_type: outcomeType,
+      outcome_achieved: outcomeAchieved,
+      evidence,
+      advisor_notes: advisorNotes,
+    },
+    { onConflict: "trading_start_id" },
+  );
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const { data: participant } = await supabase
+    .from("participants")
+    .select("status")
+    .eq("id", participantId)
+    .maybeSingle();
+
+  const newStatus: ParticipantStatus = outcomeAchieved ? "Outcome Achieved" : "Closed";
+  await supabase.from("participants").update({ status: newStatus }).eq("id", participantId);
+
+  const advisorName = await getAdvisorName(supabase, advisorId);
+  await logStatusChange(
+    supabase,
+    participantId,
+    participant?.status ?? null,
+    newStatus,
+    advisorName,
+    outcomeAchieved ? "Outcome achieved." : "Outcome not achieved — case closed.",
+  );
+
+  revalidateParticipant();
+  return {};
+}

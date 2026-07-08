@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { listAdvisors } from "@/lib/data/advisor";
 import { getGatewayChecklist } from "@/lib/business-rules";
-import { FUNDING_APPLICATION_STATUSES } from "@/types/database";
+import { detectNgseEligibility, getOutcomeDeadline, isReviewOverdue } from "@/lib/trading-start-rules";
+import { FUNDING_APPLICATION_STATUSES, TRADING_START_REASONS } from "@/types/database";
 import type {
   BusinessPlan,
   BusinessStage,
@@ -11,8 +12,11 @@ import type {
   GainfulRecommendation,
   GatewayChecklistItem,
   HmrcBusinessInfo,
+  IncomeTrackerEntry,
+  IwtReview,
   Participant,
   RagStatus,
+  TradingStartReason,
 } from "@/types/database";
 
 type Bucket = { label: string; count: number };
@@ -245,5 +249,208 @@ export async function getCompanyReportStats(): Promise<ReportStats> {
     byGatewayStatus,
     byGainfulStatus,
     byFundingStatus,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Trading Start / IWT / Outcome reporting — company-wide, with original
+// advisors retaining ownership of their Trading Start and outcome stats even
+// after the participant transfers to an IWT advisor.
+// ---------------------------------------------------------------------------
+export type ReportDateRange = { from?: string; to?: string };
+
+export type TradingStartAdvisorRow = {
+  advisorId: string;
+  label: string;
+  officeLabel: string;
+  tradingStarts: number;
+  outcomesAchieved: number;
+  outcomesNotAchieved: number;
+};
+
+export type TradingStartReportStats = {
+  totalTradingStarts: number;
+  tradingStartsInPeriod: number;
+  periodLabel: string;
+  byReason: Bucket[];
+  outcomesInPeriod: number;
+  outcomesAchievedTotal: number;
+  outcomesNotAchievedTotal: number;
+  outcomeConversionRate: number;
+  iwtCaseloadSize: number;
+  avgDaysToTradingStart: number | null;
+  avgDaysTradingStartToOutcome: number | null;
+  approachingDeadline: number;
+  overdueReviews: number;
+  eligibleNotProcessed: number;
+  byAdvisor: TradingStartAdvisorRow[];
+};
+
+function inRange(dateStr: string, range?: ReportDateRange): boolean {
+  if (!range) return true;
+  if (range.from && dateStr < range.from) return false;
+  if (range.to && dateStr > range.to) return false;
+  return true;
+}
+
+function isThisMonth(dateStr: string, now: Date): boolean {
+  const d = new Date(dateStr);
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+}
+
+function daysBetween(fromDateStr: string, toDateStr: string): number {
+  const from = new Date(fromDateStr);
+  const to = new Date(toDateStr);
+  return Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function average(values: number[]): number | null {
+  if (values.length === 0) return null;
+  return Math.round(values.reduce((sum, v) => sum + v, 0) / values.length);
+}
+
+export async function getTradingStartReportStats(
+  dateRange?: ReportDateRange,
+): Promise<TradingStartReportStats> {
+  const supabase = await createClient();
+
+  const [advisors, { data: tradingStarts }, { data: outcomes }, { data: iwtReviews }, { data: participants }, { data: incomeEntries }] =
+    await Promise.all([
+      listAdvisors(),
+      supabase.from("trading_starts").select("*"),
+      supabase.from("outcome_records").select("*"),
+      supabase.from("iwt_reviews").select("*").order("review_date", { ascending: false }),
+      supabase.from("participants").select("id, advisor_id, status, scheme_start_date"),
+      supabase.from("income_tracker_entries").select("*"),
+    ]);
+
+  const now = new Date();
+  const advisorById = new Map(advisors.map((a) => [a.id, a]));
+  const participantById = new Map((participants ?? []).map((p) => [p.id, p]));
+  const tsById = new Map((tradingStarts ?? []).map((ts) => [ts.id, ts]));
+  const outcomeByTsId = new Map((outcomes ?? []).map((o) => [o.trading_start_id, o]));
+
+  const periodRange: ReportDateRange | undefined = dateRange?.from || dateRange?.to ? dateRange : undefined;
+  const periodTradingStarts = (tradingStarts ?? []).filter((ts) =>
+    periodRange ? inRange(ts.trading_start_date, periodRange) : isThisMonth(ts.trading_start_date, now),
+  );
+  const periodOutcomes = (outcomes ?? []).filter((o) =>
+    periodRange ? inRange(o.outcome_date, periodRange) : isThisMonth(o.outcome_date, now),
+  );
+
+  const reasonCounts = new Map<TradingStartReason, number>();
+  for (const ts of periodTradingStarts) {
+    reasonCounts.set(ts.reason, (reasonCounts.get(ts.reason) ?? 0) + 1);
+  }
+  const byReason = TRADING_START_REASONS.map((reason) => ({
+    label: reason,
+    count: reasonCounts.get(reason) ?? 0,
+  }));
+
+  const outcomesAchievedTotal = (outcomes ?? []).filter((o) => o.outcome_achieved).length;
+  const outcomesNotAchievedTotal = (outcomes ?? []).length - outcomesAchievedTotal;
+  const outcomeConversionRate =
+    (outcomes ?? []).length > 0 ? Math.round((outcomesAchievedTotal / (outcomes ?? []).length) * 100) : 0;
+
+  const activeTradingStarts = (tradingStarts ?? []).filter((ts) => !outcomeByTsId.has(ts.id));
+  const iwtCaseloadSize = activeTradingStarts.length;
+
+  const daysToTradingStart = (tradingStarts ?? [])
+    .map((ts) => {
+      const participant = participantById.get(ts.participant_id);
+      return participant ? daysBetween(participant.scheme_start_date, ts.trading_start_date) : null;
+    })
+    .filter((v): v is number => v !== null);
+  const avgDaysToTradingStart = average(daysToTradingStart);
+
+  const daysTradingStartToOutcome = (outcomes ?? [])
+    .map((o) => {
+      const ts = tsById.get(o.trading_start_id);
+      return ts ? daysBetween(ts.trading_start_date, o.outcome_date) : null;
+    })
+    .filter((v): v is number => v !== null);
+  const avgDaysTradingStartToOutcome = average(daysTradingStartToOutcome);
+
+  const latestReviewByTsId = new Map<string, IwtReview>();
+  (iwtReviews ?? []).forEach((r) => {
+    if (!latestReviewByTsId.has(r.trading_start_id)) {
+      latestReviewByTsId.set(r.trading_start_id, r);
+    }
+  });
+
+  let approachingDeadline = 0;
+  let overdueReviews = 0;
+  for (const ts of activeTradingStarts) {
+    const deadline = getOutcomeDeadline(ts.trading_start_date, now);
+    if (!deadline.isOverdue && deadline.monthsRemaining <= 1) approachingDeadline += 1;
+
+    const nextReviewDate = latestReviewByTsId.get(ts.id)?.next_review_date ?? null;
+    if (isReviewOverdue(nextReviewDate, now)) overdueReviews += 1;
+  }
+
+  const entriesByParticipant = new Map<string, IncomeTrackerEntry[]>();
+  (incomeEntries ?? []).forEach((e) => {
+    const list = entriesByParticipant.get(e.participant_id) ?? [];
+    list.push(e);
+    entriesByParticipant.set(e.participant_id, list);
+  });
+  const eligibleNotProcessed = (participants ?? []).filter(
+    (p) => p.status === "Active" && detectNgseEligibility(entriesByParticipant.get(p.id) ?? []).eligible,
+  ).length;
+
+  const advisorStats = new Map<
+    string,
+    { tradingStarts: number; outcomesAchieved: number; outcomesNotAchieved: number }
+  >();
+  for (const ts of tradingStarts ?? []) {
+    const existing = advisorStats.get(ts.original_advisor_id) ?? {
+      tradingStarts: 0,
+      outcomesAchieved: 0,
+      outcomesNotAchieved: 0,
+    };
+    existing.tradingStarts += 1;
+    advisorStats.set(ts.original_advisor_id, existing);
+  }
+  for (const o of outcomes ?? []) {
+    const ts = tsById.get(o.trading_start_id);
+    if (!ts) continue;
+    const existing = advisorStats.get(ts.original_advisor_id) ?? {
+      tradingStarts: 0,
+      outcomesAchieved: 0,
+      outcomesNotAchieved: 0,
+    };
+    if (o.outcome_achieved) existing.outcomesAchieved += 1;
+    else existing.outcomesNotAchieved += 1;
+    advisorStats.set(ts.original_advisor_id, existing);
+  }
+
+  const byAdvisor: TradingStartAdvisorRow[] = [...advisorStats.entries()]
+    .map(([advisorId, stats]) => {
+      const advisor = advisorById.get(advisorId);
+      return {
+        advisorId,
+        label: advisor?.full_name ?? "Unknown advisor",
+        officeLabel: advisor?.office_name ?? "Unknown office",
+        ...stats,
+      };
+    })
+    .sort((a, b) => b.tradingStarts - a.tradingStarts);
+
+  return {
+    totalTradingStarts: (tradingStarts ?? []).length,
+    tradingStartsInPeriod: periodTradingStarts.length,
+    periodLabel: periodRange ? "Selected period" : "This month",
+    byReason,
+    outcomesInPeriod: periodOutcomes.length,
+    outcomesAchievedTotal,
+    outcomesNotAchievedTotal,
+    outcomeConversionRate,
+    iwtCaseloadSize,
+    avgDaysToTradingStart,
+    avgDaysTradingStartToOutcome,
+    approachingDeadline,
+    overdueReviews,
+    eligibleNotProcessed,
+    byAdvisor,
   };
 }

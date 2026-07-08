@@ -18,6 +18,23 @@ export type BusinessStage = (typeof BUSINESS_STAGES)[number];
 
 export type RagStatus = "Green" | "Amber" | "Red";
 
+export const PARTICIPANT_STATUSES = [
+  "Referral",
+  "Active",
+  "Trading Start",
+  "In Work Tracking",
+  "Outcome Achieved",
+  "Closed",
+] as const;
+export type ParticipantStatus = (typeof PARTICIPANT_STATUSES)[number];
+
+export const TRADING_START_REASONS = [
+  "GSE",
+  "NGSE",
+  "Claim Closed Whilst Self Employed",
+] as const;
+export type TradingStartReason = (typeof TRADING_START_REASONS)[number];
+
 export const FUNDING_APPLICATION_STATUSES = [
   "Draft",
   "Applied",
@@ -133,6 +150,52 @@ export type Participant = {
   phone: string | null;
   date_of_birth: string | null;
   national_insurance_number: string | null;
+  status: ParticipantStatus;
+};
+
+export type ParticipantStatusHistoryEntry = {
+  id: string;
+  participant_id: string;
+  from_status: ParticipantStatus | null;
+  to_status: ParticipantStatus;
+  changed_by: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type TradingStart = {
+  id: string;
+  participant_id: string;
+  trading_start_date: string;
+  reason: TradingStartReason;
+  original_advisor_id: string;
+  iwt_advisor_id: string;
+  transfer_date: string;
+  evidence_notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type IwtReview = {
+  id: string;
+  trading_start_id: string;
+  review_date: string;
+  next_review_date: string | null;
+  notes: string | null;
+  reviewed_by_advisor_id: string | null;
+  created_at: string;
+};
+
+export type OutcomeRecord = {
+  id: string;
+  trading_start_id: string;
+  outcome_date: string;
+  outcome_type: TradingStartReason;
+  outcome_achieved: boolean;
+  evidence: string | null;
+  advisor_notes: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type BusinessPlan = {
@@ -461,6 +524,48 @@ export type Database = {
           error_message: string;
         };
         Update: Partial<ImportError>;
+        Relationships: [];
+      };
+      participant_status_history: {
+        Row: ParticipantStatusHistoryEntry;
+        Insert: Partial<ParticipantStatusHistoryEntry> & {
+          participant_id: string;
+          to_status: ParticipantStatus;
+        };
+        Update: Partial<ParticipantStatusHistoryEntry>;
+        Relationships: [];
+      };
+      trading_starts: {
+        Row: TradingStart;
+        Insert: Partial<TradingStart> & {
+          participant_id: string;
+          trading_start_date: string;
+          reason: TradingStartReason;
+          original_advisor_id: string;
+          iwt_advisor_id: string;
+          transfer_date: string;
+        };
+        Update: Partial<TradingStart>;
+        Relationships: [];
+      };
+      iwt_reviews: {
+        Row: IwtReview;
+        Insert: Partial<IwtReview> & {
+          trading_start_id: string;
+          review_date: string;
+        };
+        Update: Partial<IwtReview>;
+        Relationships: [];
+      };
+      outcome_records: {
+        Row: OutcomeRecord;
+        Insert: Partial<OutcomeRecord> & {
+          trading_start_id: string;
+          outcome_date: string;
+          outcome_type: TradingStartReason;
+          outcome_achieved: boolean;
+        };
+        Update: Partial<OutcomeRecord>;
         Relationships: [];
       };
     };

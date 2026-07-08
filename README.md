@@ -144,6 +144,63 @@ health scores, days-until-Gateway, next appointment, last contact and
 income/customer trends are all computed at read time from the same
 underlying records the other tabs already manage.
 
+## Trading Start, In Work Tracking & Outcomes
+
+A case-management layer sits on top of the toolkit above, tracking a
+participant from Trading Start through to a confirmed outcome. This is a
+separate concept from the 11-stage business Journey and from the pre-Trading
+Start Gainful Decision tab — those track *readiness to trade*; this tracks
+what happens *after* trading starts.
+
+- **Status** — every participant now has a case-management status (Referral,
+  Active, Trading Start, In Work Tracking, Outcome Achieved, Closed), shown
+  as a badge on the profile header and logged with a full timestamped history
+  (`participant_status_history`, its own "Status History" tab). This is
+  distinct from `business_stage` (the Journey tab), which is unaffected.
+- **Trading Starts** — a dedicated "Trading Start & IWT" tab records the
+  Trading Start Date, Reason (GSE / NGSE / Claim Closed Whilst Self
+  Employed), the Assigned IWT Advisor, Transfer Date and Evidence/Notes.
+  Confirming one moves the participant to In Work Tracking, reassigns
+  `advisor_id` to the IWT advisor (via the same `participant_transfers` audit
+  trail as a normal transfer), and permanently records the **original
+  advisor** on the Trading Start row itself — so original advisors keep
+  ownership of their Trading Start and outcome statistics even after the
+  handoff.
+- **Automatic eligibility detection** — the Income Tracker is scanned for two
+  *consecutive* calendar months with net profit (income − expense − mileage
+  cost) above £900. When found, the tab shows an "Eligible for NGSE Trading
+  Start" banner with a pre-filled "Create Trading Start" form — nothing is
+  ever created automatically; an advisor always confirms.
+- **In Work Tracking** — once a Trading Start exists, the tab shows months
+  since/remaining against the 6-month outcome window, the current IWT
+  advisor, and a review log (date, next review date, notes); overdue reviews
+  are flagged in red.
+- **Outcome rules** — GSE just needs the participant to remain gainfully
+  self-employed for the full 6 months post-Trading Start (advisor-confirmed,
+  no monetary target). NGSE and Claim Closed both require cumulative net
+  profit from the Income Tracker to reach **£5,300 within 6 months** of the
+  Trading Start date — tracked live with a progress bar, and auto-flagged
+  once the target is hit (still requires advisor confirmation to record).
+- **Outcome record** — Outcome Date, Outcome Type, Achieved (Yes/No),
+  Evidence and Advisor Notes; recording one sets status to Outcome Achieved
+  or Closed and logs it in the status history.
+- **Dashboards** — each advisor's dashboard has a Trading Start/IWT/Outcome
+  section (Trading Starts this month, Eligible for Trading Start, In Work
+  Tracking caseload, Upcoming/Overdue reviews, Outcome caseload). `/reports`
+  adds a company-wide section: Trading Starts and Outcomes for a selectable
+  date range, Trading Starts by reason, Outcome conversion rate, IWT
+  caseload, average days to Trading Start, average days Trading Start →
+  Outcome, participants approaching the 6-month deadline, overdue reviews,
+  participants eligible but not yet processed, and an Advisor Performance
+  table attributed to the **original** advisor.
+
+This extends the existing schema (`trading_starts`, `iwt_reviews`,
+`outcome_records`, `participant_status_history`) and reuses the existing
+advisor-scoped workspace model and `/reports` passcode gate — there's no new
+authentication or role system: any advisor can still open any workspace (see
+Security model below), and "managers only see org-wide reporting" is
+satisfied by the existing Reports passcode gate exactly as it already was.
+
 ## Data Sync
 
 A "Data Sync" section in the nav (`/advisors/<id>/data-sync`) lets advisors

@@ -11,6 +11,9 @@ import EvidenceLibraryTab from "@/components/participant/evidence-library-tab";
 import ActionPlanTab from "@/components/participant/action-plan-tab";
 import AppointmentsTab from "@/components/participant/appointments-tab";
 import JourneyTab from "@/components/participant/journey-tab";
+import StatusBadge from "@/components/participant/status-badge";
+import StatusTimeline from "@/components/participant/status-timeline";
+import TradingStartTab from "@/components/participant/trading-start-tab";
 import GatewayTab from "@/components/participant/gateway-tab";
 import GainfulTab from "@/components/participant/gainful-tab";
 import FundingTab from "@/components/participant/funding-tab";
@@ -59,6 +62,10 @@ export default async function ParticipantProfilePage({
     gatewayChecklist,
     gainful,
     incomeTrackerEntries,
+    statusHistory,
+    currentTradingStart,
+    iwtReviews,
+    outcome,
   } = await getParticipantDetail(id);
 
   const daysRemaining = getDaysRemaining(participant.scheme_start_date);
@@ -127,9 +134,12 @@ export default async function ParticipantProfilePage({
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">
-              {participant.ptp_name}
-            </h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-semibold text-slate-900">
+                {participant.ptp_name}
+              </h1>
+              <StatusBadge status={participant.status} />
+            </div>
             <p className="text-sm text-slate-500">{participant.business_name}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -219,6 +229,26 @@ export default async function ParticipantProfilePage({
                   stageUpdatedAt={participant.business_stage_updated_at}
                 />
               ),
+            },
+            {
+              id: "trading-start",
+              label: "Trading Start & IWT",
+              content: (
+                <TradingStartTab
+                  participantId={id}
+                  advisorId={advisorId}
+                  advisors={advisors}
+                  incomeTrackerEntries={incomeTrackerEntries}
+                  currentTradingStart={currentTradingStart}
+                  iwtReviews={iwtReviews}
+                  outcome={outcome}
+                />
+              ),
+            },
+            {
+              id: "status-history",
+              label: "Status History",
+              content: <StatusTimeline history={statusHistory} />,
             },
             {
               id: "gateway",

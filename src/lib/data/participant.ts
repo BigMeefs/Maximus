@@ -18,6 +18,8 @@ export async function getParticipantDetail(participantId: string) {
     gatewayChecklistRes,
     gainfulRes,
     incomeTrackerEntriesRes,
+    statusHistoryRes,
+    tradingStartsRes,
     advisors,
   ] = await Promise.all([
     supabase
@@ -78,6 +80,16 @@ export async function getParticipantDetail(participantId: string) {
       .select("*")
       .eq("participant_id", participantId)
       .order("month", { ascending: true }),
+    supabase
+      .from("participant_status_history")
+      .select("*")
+      .eq("participant_id", participantId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("trading_starts")
+      .select("*")
+      .eq("participant_id", participantId)
+      .order("created_at", { ascending: false }),
     listAdvisors(),
   ]);
 
@@ -87,6 +99,24 @@ export async function getParticipantDetail(participantId: string) {
 
   const assignedAdvisor =
     advisors.find((a) => a.id === participantRes.data.advisor_id) ?? null;
+
+  const tradingStarts = tradingStartsRes.data ?? [];
+  const currentTradingStart = tradingStarts[0] ?? null;
+
+  const [iwtReviewsRes, outcomeRes] = currentTradingStart
+    ? await Promise.all([
+        supabase
+          .from("iwt_reviews")
+          .select("*")
+          .eq("trading_start_id", currentTradingStart.id)
+          .order("review_date", { ascending: false }),
+        supabase
+          .from("outcome_records")
+          .select("*")
+          .eq("trading_start_id", currentTradingStart.id)
+          .maybeSingle(),
+      ])
+    : [{ data: [] }, { data: null }];
 
   return {
     participant: participantRes.data,
@@ -103,5 +133,10 @@ export async function getParticipantDetail(participantId: string) {
     gatewayChecklist: gatewayChecklistRes.data ?? [],
     gainful: gainfulRes.data,
     incomeTrackerEntries: incomeTrackerEntriesRes.data ?? [],
+    statusHistory: statusHistoryRes.data ?? [],
+    tradingStarts,
+    currentTradingStart,
+    iwtReviews: iwtReviewsRes.data ?? [],
+    outcome: outcomeRes.data,
   };
 }
