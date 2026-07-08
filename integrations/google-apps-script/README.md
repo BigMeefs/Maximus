@@ -13,16 +13,12 @@ alongside your current `doPost`.
 
 ## Setup
 
-1. In the Apps Script editor: **Project Settings → Script Properties**, add:
-
-   | Property | Value |
-   | --- | --- |
-   | `SUPABASE_URL` | `https://wxuuvpjmuqztgoazlgsa.supabase.co` |
-   | `SUPABASE_ANON_KEY` | the CRM's anon key (same one used in the CRM's own `NEXT_PUBLIC_SUPABASE_ANON_KEY`) |
-
-   This project runs with Row Level Security disabled by design (see the
-   main README's "Security model" section), so the anon key already has
-   full read/write access — nothing new is being exposed by putting it here.
+1. Paste `income-tracker-sync.gs` into your Apps Script project. `SUPABASE_URL`
+   and `SUPABASE_ANON_KEY` are already filled in at the top of the file —
+   this project runs with Row Level Security disabled by design (see the
+   main README's "Security model" section), so the anon key is already
+   public in the CRM's own browser bundle; hardcoding it here doesn't expose
+   anything new.
 
 2. Call `syncToCrm(...)` from your existing `doPost`, **after** your current
    Sheets/Drive writes, so a CRM hiccup never blocks the primary flow:

@@ -3,33 +3,25 @@
  * (Supabase), in addition to the existing Google Sheets / Drive writes.
  *
  * SETUP
- * 1. In the Apps Script editor: Project Settings -> Script Properties, add:
- *      SUPABASE_URL          = https://wxuuvpjmuqztgoazlgsa.supabase.co
- *      SUPABASE_ANON_KEY     = <the CRM's anon key>
- *    (Same values the CRM itself uses as NEXT_PUBLIC_SUPABASE_URL /
- *    NEXT_PUBLIC_SUPABASE_ANON_KEY — this project runs with Row Level
- *    Security disabled by design, so the anon key already has full
- *    read/write access; see the CRM's README "Security model" section.)
+ * Call syncToCrm(...) from your existing doPost, AFTER your current
+ * Sheets/Drive writes, so a CRM hiccup never blocks the primary flow:
  *
- * 2. Call syncToCrm(...) from your existing doPost, AFTER your current
- *    Sheets/Drive writes, so a CRM hiccup never blocks the primary flow:
+ *   function doPost(e) {
+ *     const data = JSON.parse(e.postData.contents); // however you parse today
  *
- *      function doPost(e) {
- *        const data = JSON.parse(e.postData.contents); // however you parse today
+ *     // ... your existing Sheets + Drive writes stay exactly as they are ...
  *
- *        // ... your existing Sheets + Drive writes stay exactly as they are ...
+ *     syncToCrm({
+ *       email: data.email,
+ *       date: data.date,             // any parseable date string, or a Date
+ *       income: data.income,
+ *       expense: data.expense,
+ *       mileageCost: data.mileageCost,
+ *       notes: data.notes,
+ *     });
  *
- *        syncToCrm({
- *          email: data.email,
- *          date: data.date,             // any parseable date string, or a Date
- *          income: data.income,
- *          expense: data.expense,
- *          mileageCost: data.mileageCost,
- *          notes: data.notes,
- *        });
- *
- *        return ContentService.createTextOutput("OK");
- *      }
+ *     return ContentService.createTextOutput("OK");
+ *   }
  *
  * BEHAVIOUR
  * - Matches the submission to a CRM participant by email (case-insensitive).
@@ -44,32 +36,32 @@
  * - Never throws: any Supabase/network failure is caught and logged so your
  *   existing Sheets/Drive write always succeeds regardless of CRM sync
  *   outcome.
+ *
+ * CONFIG
+ * SUPABASE_ANON_KEY below is the CRM's public anon key — it's already
+ * shipped in the CRM's own browser bundle by design (Row Level Security is
+ * disabled on this project; see the CRM README's "Security model" section),
+ * so hardcoding it here doesn't expose anything that isn't already public.
  */
+const SUPABASE_URL = "https://wxuuvpjmuqztgoazlgsa.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind4dXV2cGptdXF6dGdvYXpsZ3NhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzNjc2NjEsImV4cCI6MjA5ODk0MzY2MX0.GmVBFKIZCgDhraRYGdNlwsxb6w3Bxu_76UatRpo22PM";
+
 function syncToCrm(fields) {
   try {
-    const props = PropertiesService.getScriptProperties();
-    const SUPABASE_URL = props.getProperty("SUPABASE_URL");
-    const SUPABASE_ANON_KEY = props.getProperty("SUPABASE_ANON_KEY");
-
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-      Logger.log("syncToCrm: SUPABASE_URL / SUPABASE_ANON_KEY script properties not set — skipping.");
-      return;
-    }
-
     const email = (fields.email || "").trim();
     if (!email) {
       Logger.log("syncToCrm: submission has no email — skipping.");
       return;
     }
 
-    const participantId = findParticipantIdByEmail_(SUPABASE_URL, SUPABASE_ANON_KEY, email);
+    const participantId = findParticipantIdByEmail_(email);
     if (!participantId) {
       Logger.log("syncToCrm: no CRM participant matches email " + email + " — skipping. " +
         "Add this email to their profile in the CRM, then future submissions will sync.");
       return;
     }
 
-    upsertIncomeEntry_(SUPABASE_URL, SUPABASE_ANON_KEY, participantId, fields);
+    upsertIncomeEntry_(participantId, fields);
     Logger.log("syncToCrm: synced entry for " + email + " (participant " + participantId + ").");
   } catch (err) {
     // Never let a CRM sync failure break the primary Sheets/Drive flow.
@@ -77,14 +69,14 @@ function syncToCrm(fields) {
   }
 }
 
-function findParticipantIdByEmail_(baseUrl, anonKey, email) {
-  const url = baseUrl + "/rest/v1/participants?select=id&email=ilike." + encodeURIComponent(email);
+function findParticipantIdByEmail_(email) {
+  const url = SUPABASE_URL + "/rest/v1/participants?select=id&email=ilike." + encodeURIComponent(email);
 
   const response = UrlFetchApp.fetch(url, {
     method: "get",
     headers: {
-      apikey: anonKey,
-      Authorization: "Bearer " + anonKey,
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
     },
     muteHttpExceptions: true,
   });
@@ -97,18 +89,18 @@ function findParticipantIdByEmail_(baseUrl, anonKey, email) {
   return rows.length > 0 ? rows[0].id : null;
 }
 
-function upsertIncomeEntry_(baseUrl, anonKey, participantId, fields) {
+function upsertIncomeEntry_(participantId, fields) {
   const entryDate = toIsoDate_(fields.date);
   const month = entryDate.slice(0, 7) + "-01";
 
-  const url = baseUrl + "/rest/v1/income_tracker_entries?on_conflict=participant_id,month";
+  const url = SUPABASE_URL + "/rest/v1/income_tracker_entries?on_conflict=participant_id,month";
 
   const response = UrlFetchApp.fetch(url, {
     method: "post",
     contentType: "application/json",
     headers: {
-      apikey: anonKey,
-      Authorization: "Bearer " + anonKey,
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + SUPABASE_ANON_KEY,
       Prefer: "resolution=merge-duplicates,return=minimal",
     },
     payload: JSON.stringify({
