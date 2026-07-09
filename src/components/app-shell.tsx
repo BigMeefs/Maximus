@@ -25,9 +25,9 @@ export default function AppShell({
             SE
           </div>
           <span className="text-sm font-semibold leading-tight text-slate-900">
-            Caseload
+            Max Self
             <br />
-            Manager
+            Employment Hub
           </span>
         </Link>
         <NavLinks advisorId={advisor.id} />
@@ -52,7 +52,7 @@ export default function AppShell({
               SE
             </div>
             <span className="text-sm font-semibold text-slate-900">
-              Caseload Manager
+              Max Self Employment Hub
             </span>
           </Link>
           <button

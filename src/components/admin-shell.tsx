@@ -20,6 +20,7 @@ export default function AdminShell({
     { href: "/admin/offices", label: "Offices" },
     { href: "/admin/advisors", label: "Advisors" },
     { href: "/admin/transfer", label: "Transfer" },
+    { href: "/admin/funding-approvals", label: "Funding Approvals" },
     { href: "/admin/programme-settings", label: "Programme Settings" },
     { href: "/reports", label: "Reports" },
   ];

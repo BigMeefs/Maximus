@@ -13,10 +13,11 @@ import {
   type GatewayChecklistItem,
   type GatewayChecklistItemName,
   type HmrcBusinessInfo,
-  type MonthlyEarning,
+  type IncomeTrackerEntry,
   type Participant,
   type RagStatus,
 } from "@/types/database";
+import { netProfit } from "@/lib/trading-start-rules";
 
 export function stageIndex(stage: BusinessStage): number {
   return BUSINESS_STAGES.indexOf(stage);
@@ -88,11 +89,11 @@ export function getGatewayChecklist({
 // Gainful Readiness: 8 evidence factors feed the %; recommendation + sign-off
 // are tracked separately since they're the decision itself, not evidence.
 // ---------------------------------------------------------------------------
-export function getIncomeTrend(earnings: MonthlyEarning[]): "up" | "flat" | "down" | "unknown" {
-  const sorted = [...earnings].sort((a, b) => a.month.localeCompare(b.month));
+export function getIncomeTrend(entries: IncomeTrackerEntry[]): "up" | "flat" | "down" | "unknown" {
+  const sorted = [...entries].sort((a, b) => a.month.localeCompare(b.month));
   if (sorted.length < 2) return "unknown";
 
-  const profits = sorted.map((e) => Number(e.amount) - Number(e.expenses));
+  const profits = sorted.map((e) => netProfit(e));
   const half = Math.max(1, Math.floor(profits.length / 2));
   const recent = profits.slice(-half);
   const earlier = profits.slice(0, profits.length - half);
@@ -109,18 +110,18 @@ export function getIncomeTrend(earnings: MonthlyEarning[]): "up" | "flat" | "dow
 
 export function getGainfulChecklist({
   gainful,
-  earnings,
+  incomeTrackerEntries,
   evidenceFiles,
   invoicesAvailable,
 }: {
   gainful: GainfulAssessment | null;
-  earnings: MonthlyEarning[];
+  incomeTrackerEntries: IncomeTrackerEntry[];
   evidenceFiles: EvidenceFile[];
   invoicesAvailable: boolean;
 }): { entries: ChecklistEntry[]; percent: number } {
   const entries: ChecklistEntry[] = [
     { label: "Trading Consistently", complete: !!gainful?.trading_consistently, source: "manual" },
-    { label: "Income Trend", complete: getIncomeTrend(earnings) === "up", source: "auto" },
+    { label: "Income Trend", complete: getIncomeTrend(incomeTrackerEntries) === "up", source: "auto" },
     { label: "Hours Worked Adequate", complete: !!gainful?.hours_worked_adequate, source: "manual" },
     { label: "Evidence Uploaded", complete: evidenceFiles.length > 0, source: "auto" },
     { label: "Invoices Available", complete: invoicesAvailable, source: "auto" },
@@ -147,7 +148,6 @@ export type HealthScores = {
   trading: number;
   legal: number;
   digitalPresence: number;
-  customerAcquisition: number;
   confidence: number;
 };
 
@@ -162,7 +162,7 @@ export function getBusinessHealthScores({
   hmrc,
   digitalPresence,
   fundingRecords,
-  earnings,
+  incomeTrackerEntries,
   manualGatewayItems,
 }: {
   participant: Participant;
@@ -170,7 +170,7 @@ export function getBusinessHealthScores({
   hmrc: HmrcBusinessInfo | null;
   digitalPresence: DigitalPresenceItem[];
   fundingRecords: FundingRecord[];
-  earnings: MonthlyEarning[];
+  incomeTrackerEntries: IncomeTrackerEntry[];
   manualGatewayItems: GatewayChecklistItem[];
 }): HealthScores {
   const manualByItem = new Map(manualGatewayItems.map((m) => [m.item, m.is_complete]));
@@ -188,7 +188,7 @@ export function getBusinessHealthScores({
     (sum, f) => sum + (Number(f.amount_received) || 0),
     0,
   );
-  const incomeTrend = getIncomeTrend(earnings);
+  const incomeTrend = getIncomeTrend(incomeTrackerEntries);
   const finance = average([
     hmrc?.business_bank_account ? 100 : 0,
     totalReceived > 0 ? 100 : fundingRecords.length > 0 ? 40 : 0,
@@ -207,7 +207,7 @@ export function getBusinessHealthScores({
   ]);
 
   const trading = hasReachedStage(participant.business_stage, "Trading")
-    ? average([100, earnings.length > 0 ? 100 : 40])
+    ? average([100, incomeTrackerEntries.length > 0 ? 100 : 40])
     : Math.round((stageIndex(participant.business_stage) / (BUSINESS_STAGES.length - 1)) * 100);
 
   const legal = average([
@@ -217,10 +217,6 @@ export function getBusinessHealthScores({
     hmrc?.business_bank_account ? 100 : 0,
   ]);
 
-  const customerTrend = getCustomerTrend(earnings);
-  const customerAcquisition =
-    customerTrend === "up" ? 100 : customerTrend === "flat" ? 60 : customerTrend === "down" ? 20 : 0;
-
   return {
     planning,
     finance,
@@ -228,25 +224,11 @@ export function getBusinessHealthScores({
     trading,
     legal,
     digitalPresence: digitalPresenceScore,
-    customerAcquisition,
     confidence: participant.health_confidence ?? 50,
   };
 }
 
 const DIGITAL_PLATFORM_COUNT = 9;
-
-export function getCustomerTrend(earnings: MonthlyEarning[]): "up" | "flat" | "down" | "unknown" {
-  const sorted = [...earnings]
-    .filter((e) => e.customer_count != null)
-    .sort((a, b) => a.month.localeCompare(b.month));
-  if (sorted.length < 2) return "unknown";
-
-  const first = sorted[0].customer_count as number;
-  const last = sorted[sorted.length - 1].customer_count as number;
-  if (last > first) return "up";
-  if (last < first) return "down";
-  return "flat";
-}
 
 // ---------------------------------------------------------------------------
 // Appointments / actions derived facts

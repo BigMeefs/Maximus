@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Self Employment Caseload Manager",
+  title: "Max Self Employment Hub",
   description: "CRM for advisors managing self-employment caseloads",
 };
 

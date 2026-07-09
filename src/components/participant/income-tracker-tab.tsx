@@ -67,8 +67,7 @@ export default function IncomeTrackerTab({
       <div>
         <p className="text-sm text-slate-600">
           Populated automatically from the client income tracker (matched by email) — one entry per
-          calendar month, kept separate from the Monthly Performance tab. Submitting a new entry for a
-          month that already has one replaces it.
+          calendar month. Submitting a new entry for a month that already has one replaces it.
         </p>
       </div>
 

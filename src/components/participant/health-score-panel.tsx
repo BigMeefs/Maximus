@@ -12,7 +12,6 @@ const LABELS: { key: keyof HealthScores; label: string }[] = [
   { key: "trading", label: "Trading" },
   { key: "legal", label: "Legal" },
   { key: "digitalPresence", label: "Digital Presence" },
-  { key: "customerAcquisition", label: "Customer Acquisition" },
   { key: "confidence", label: "Confidence" },
 ];
 

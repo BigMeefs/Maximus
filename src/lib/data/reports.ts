@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { listAdvisors } from "@/lib/data/advisor";
+import { listAdvisors, listOffices } from "@/lib/data/advisor";
 import { getGatewayChecklist } from "@/lib/business-rules";
 import {
   evaluateTradingStartEligibility,
@@ -29,6 +29,25 @@ import type {
 type Bucket = { label: string; count: number };
 
 type PerformanceBucket = Bucket & { gatewayReady: number; gainfulReady: number };
+
+export type ReportDateRange = { from?: string; to?: string };
+
+// Company-wide reports are filterable by Office and Advisor (Team was
+// explicitly descoped — no Team entity exists in this app) and by Date
+// Range, applied to the underlying date-bearing records (Trading Starts,
+// Outcomes, funding applications, income tracker entries).
+export type ReportFilters = {
+  officeId?: string;
+  advisorId?: string;
+  dateRange?: ReportDateRange;
+};
+
+function inRange(dateStr: string, range?: ReportDateRange): boolean {
+  if (!range) return true;
+  if (range.from && dateStr < range.from) return false;
+  if (range.to && dateStr > range.to) return false;
+  return true;
+}
 
 export type MonthlyProgressPoint = {
   month: string;
@@ -67,7 +86,7 @@ function gatewayStatusLabel(percent: number): string {
   return "Not Started";
 }
 
-export async function getCompanyReportStats(): Promise<ReportStats> {
+export async function getCompanyReportStats(filters?: ReportFilters): Promise<ReportStats> {
   const supabase = await createClient();
 
   const [
@@ -80,7 +99,7 @@ export async function getCompanyReportStats(): Promise<ReportStats> {
     { data: gatewayItemRows },
     { data: gainfulRows },
     { data: fundingRows },
-    { data: monthlyEarningsRows },
+    { data: incomeTrackerRows },
   ] = await Promise.all([
     listAdvisors(),
     supabase.from("participants").select("*"),
@@ -91,11 +110,21 @@ export async function getCompanyReportStats(): Promise<ReportStats> {
     supabase.from("gateway_checklist_items").select("*"),
     supabase.from("gainful_assessments").select("*"),
     supabase.from("funding_records").select("*"),
-    supabase.from("monthly_earnings").select("month, amount, expenses"),
+    supabase.from("income_tracker_entries").select("participant_id, month, income, expense"),
   ]);
 
-  const rows: Participant[] = participants ?? [];
   const advisorById = new Map(advisors.map((a) => [a.id, a]));
+
+  const allowedAdvisorIds = filters?.advisorId
+    ? new Set([filters.advisorId])
+    : filters?.officeId
+      ? new Set(advisors.filter((a) => a.office_id === filters.officeId).map((a) => a.id))
+      : null;
+
+  const rows: Participant[] = (participants ?? []).filter(
+    (p) => !allowedAdvisorIds || allowedAdvisorIds.has(p.advisor_id),
+  );
+  const participantIdSet = new Set(rows.map((p) => p.id));
 
   const businessPlanByParticipant = new Map<string, BusinessPlan>(
     (businessPlans ?? []).map((bp) => [bp.participant_id, bp]),
@@ -202,7 +231,12 @@ export async function getCompanyReportStats(): Promise<ReportStats> {
     FundingApplicationStatus,
     { count: number; totalRequested: number; totalApproved: number; totalReceived: number }
   >();
-  for (const f of fundingRows ?? []) {
+  const scopedFundingRows = (fundingRows ?? []).filter(
+    (f) =>
+      participantIdSet.has(f.participant_id) &&
+      (!f.application_date || inRange(f.application_date, filters?.dateRange)),
+  );
+  for (const f of scopedFundingRows) {
     const existing = fundingStatusTotals.get(f.application_status) ?? {
       count: 0,
       totalRequested: 0,
@@ -231,18 +265,21 @@ export async function getCompanyReportStats(): Promise<ReportStats> {
     0,
   );
 
+  const scopedIncomeRows = (incomeTrackerRows ?? []).filter(
+    (e) => participantIdSet.has(e.participant_id) && inRange(e.month, filters?.dateRange),
+  );
   const monthlyTotals = new Map<string, { income: number; expenses: number }>();
-  for (const e of monthlyEarningsRows ?? []) {
+  for (const e of scopedIncomeRows) {
     const key = e.month.slice(0, 7);
     const existing = monthlyTotals.get(key) ?? { income: 0, expenses: 0 };
-    existing.income += Number(e.amount) || 0;
-    existing.expenses += Number(e.expenses) || 0;
+    existing.income += Number(e.income) || 0;
+    existing.expenses += Number(e.expense) || 0;
     monthlyTotals.set(key, existing);
   }
-  const monthlyProgress = [...monthlyTotals.entries()]
+  const sortedMonthlyProgress = [...monthlyTotals.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-12)
     .map(([month, totals]) => ({ month, ...totals }));
+  const monthlyProgress = filters?.dateRange ? sortedMonthlyProgress : sortedMonthlyProgress.slice(-12);
 
   return {
     totalParticipants: rows.length,
@@ -264,8 +301,6 @@ export async function getCompanyReportStats(): Promise<ReportStats> {
 // advisors retaining ownership of their Trading Start and outcome stats even
 // after the participant transfers to an IWT advisor.
 // ---------------------------------------------------------------------------
-export type ReportDateRange = { from?: string; to?: string };
-
 export type TradingStartAdvisorRow = {
   advisorId: string;
   label: string;
@@ -292,6 +327,7 @@ export type TradingStartReportStats = {
   outcomesNotAchievedTotal: number;
   outcomeConversionRate: number;
   iwtCaseloadSize: number;
+  forecastOutcomes: number;
   avgDaysToTradingStart: number | null;
   avgDaysTradingStartToOutcome: number | null;
   approachingDeadline: number;
@@ -301,13 +337,6 @@ export type TradingStartReportStats = {
   byAdvisor: TradingStartAdvisorRow[];
   monthlyTrends: MonthlyTrendPoint[];
 };
-
-function inRange(dateStr: string, range?: ReportDateRange): boolean {
-  if (!range) return true;
-  if (range.from && dateStr < range.from) return false;
-  if (range.to && dateStr > range.to) return false;
-  return true;
-}
 
 function isThisMonth(dateStr: string, now: Date): boolean {
   const d = new Date(dateStr);
@@ -326,7 +355,7 @@ function average(values: number[]): number | null {
 }
 
 export async function getTradingStartReportStats(
-  dateRange?: ReportDateRange,
+  filters?: ReportFilters,
 ): Promise<TradingStartReportStats> {
   const supabase = await createClient();
 
@@ -347,11 +376,34 @@ export async function getTradingStartReportStats(
   const tsById = new Map((tradingStarts ?? []).map((ts) => [ts.id, ts]));
   const outcomeByTsId = new Map((outcomes ?? []).map((o) => [o.trading_start_id, o]));
 
+  const allowedAdvisorIds = filters?.advisorId
+    ? new Set([filters.advisorId])
+    : filters?.officeId
+      ? new Set(advisors.filter((a) => a.office_id === filters.officeId).map((a) => a.id))
+      : null;
+  const scopedAdvisors = allowedAdvisorIds ? advisors.filter((a) => allowedAdvisorIds.has(a.id)) : advisors;
+  // Trading Starts and Outcomes stay attributed to the original advisor, so
+  // Office/Advisor filters scope by original_advisor_id here.
+  const scopedTradingStarts = allowedAdvisorIds
+    ? (tradingStarts ?? []).filter((ts) => allowedAdvisorIds.has(ts.original_advisor_id))
+    : tradingStarts ?? [];
+  const scopedOutcomes = allowedAdvisorIds
+    ? (outcomes ?? []).filter((o) => {
+        const ts = tsById.get(o.trading_start_id);
+        return ts ? allowedAdvisorIds.has(ts.original_advisor_id) : false;
+      })
+    : outcomes ?? [];
+  // Caseload-based metrics scope by the participant's current advisor.
+  const scopedParticipants = allowedAdvisorIds
+    ? (participants ?? []).filter((p) => allowedAdvisorIds.has(p.advisor_id))
+    : participants ?? [];
+
+  const dateRange = filters?.dateRange;
   const periodRange: ReportDateRange | undefined = dateRange?.from || dateRange?.to ? dateRange : undefined;
-  const periodTradingStarts = (tradingStarts ?? []).filter((ts) =>
+  const periodTradingStarts = scopedTradingStarts.filter((ts) =>
     periodRange ? inRange(ts.trading_start_date, periodRange) : isThisMonth(ts.trading_start_date, now),
   );
-  const periodOutcomes = (outcomes ?? []).filter((o) =>
+  const periodOutcomes = scopedOutcomes.filter((o) =>
     periodRange ? inRange(o.outcome_date, periodRange) : isThisMonth(o.outcome_date, now),
   );
 
@@ -364,15 +416,15 @@ export async function getTradingStartReportStats(
     count: reasonCounts.get(reason) ?? 0,
   }));
 
-  const outcomesAchievedTotal = (outcomes ?? []).filter((o) => o.outcome_achieved).length;
-  const outcomesNotAchievedTotal = (outcomes ?? []).length - outcomesAchievedTotal;
+  const outcomesAchievedTotal = scopedOutcomes.filter((o) => o.outcome_achieved).length;
+  const outcomesNotAchievedTotal = scopedOutcomes.length - outcomesAchievedTotal;
   const outcomeConversionRate =
-    (outcomes ?? []).length > 0 ? Math.round((outcomesAchievedTotal / (outcomes ?? []).length) * 100) : 0;
+    scopedOutcomes.length > 0 ? Math.round((outcomesAchievedTotal / scopedOutcomes.length) * 100) : 0;
 
-  const activeTradingStarts = (tradingStarts ?? []).filter((ts) => !outcomeByTsId.has(ts.id));
+  const activeTradingStarts = scopedTradingStarts.filter((ts) => !outcomeByTsId.has(ts.id));
   const iwtCaseloadSize = activeTradingStarts.length;
 
-  const daysToTradingStart = (tradingStarts ?? [])
+  const daysToTradingStart = scopedTradingStarts
     .map((ts) => {
       const participant = participantById.get(ts.participant_id);
       return participant ? daysBetween(participant.scheme_start_date, ts.trading_start_date) : null;
@@ -380,7 +432,7 @@ export async function getTradingStartReportStats(
     .filter((v): v is number => v !== null);
   const avgDaysToTradingStart = average(daysToTradingStart);
 
-  const daysTradingStartToOutcome = (outcomes ?? [])
+  const daysTradingStartToOutcome = scopedOutcomes
     .map((o) => {
       const ts = tsById.get(o.trading_start_id);
       return ts ? daysBetween(ts.trading_start_date, o.outcome_date) : null;
@@ -411,6 +463,7 @@ export async function getTradingStartReportStats(
   let approachingDeadline = 0;
   let overdueReviews = 0;
   let participantsAtRisk = 0;
+  let forecastOutcomes = 0;
   for (const ts of activeTradingStarts) {
     const deadline = getOutcomeDeadline(ts.trading_start_date, outcomePeriodMonthsFor(ts.reason, settings), now);
     if (!deadline.isOverdue && deadline.monthsRemaining <= 1) approachingDeadline += 1;
@@ -426,9 +479,10 @@ export async function getTradingStartReportStats(
       now,
     );
     if (health.tone === "red") participantsAtRisk += 1;
+    else forecastOutcomes += 1;
   }
 
-  const eligibleNotProcessed = (participants ?? []).filter(
+  const eligibleNotProcessed = scopedParticipants.filter(
     (p) =>
       p.status === "Active" &&
       evaluateTradingStartEligibility({
@@ -442,7 +496,7 @@ export async function getTradingStartReportStats(
     string,
     { tradingStarts: number; outcomesAchieved: number; outcomesNotAchieved: number }
   >();
-  for (const ts of tradingStarts ?? []) {
+  for (const ts of scopedTradingStarts) {
     const existing = advisorStats.get(ts.original_advisor_id) ?? {
       tradingStarts: 0,
       outcomesAchieved: 0,
@@ -451,7 +505,7 @@ export async function getTradingStartReportStats(
     existing.tradingStarts += 1;
     advisorStats.set(ts.original_advisor_id, existing);
   }
-  for (const o of outcomes ?? []) {
+  for (const o of scopedOutcomes) {
     const ts = tsById.get(o.trading_start_id);
     if (!ts) continue;
     const existing = advisorStats.get(ts.original_advisor_id) ?? {
@@ -465,12 +519,12 @@ export async function getTradingStartReportStats(
   }
 
   const caseloadByAdvisor = new Map<string, number>();
-  for (const p of participants ?? []) {
+  for (const p of scopedParticipants) {
     caseloadByAdvisor.set(p.advisor_id, (caseloadByAdvisor.get(p.advisor_id) ?? 0) + 1);
   }
   // Advisors with no Trading Starts or Outcomes yet still belong on the
   // leaderboard so their caseload is visible.
-  for (const advisor of advisors) {
+  for (const advisor of scopedAdvisors) {
     if (!advisorStats.has(advisor.id)) {
       advisorStats.set(advisor.id, { tradingStarts: 0, outcomesAchieved: 0, outcomesNotAchieved: 0 });
     }
@@ -490,13 +544,13 @@ export async function getTradingStartReportStats(
     .sort((a, b) => b.tradingStarts - a.tradingStarts);
 
   const monthlyTotals = new Map<string, { tradingStarts: number; outcomes: number }>();
-  for (const ts of tradingStarts ?? []) {
+  for (const ts of scopedTradingStarts) {
     const key = ts.trading_start_date.slice(0, 7);
     const existing = monthlyTotals.get(key) ?? { tradingStarts: 0, outcomes: 0 };
     existing.tradingStarts += 1;
     monthlyTotals.set(key, existing);
   }
-  for (const o of outcomes ?? []) {
+  for (const o of scopedOutcomes) {
     const key = o.outcome_date.slice(0, 7);
     const existing = monthlyTotals.get(key) ?? { tradingStarts: 0, outcomes: 0 };
     existing.outcomes += 1;
@@ -508,7 +562,7 @@ export async function getTradingStartReportStats(
     .map(([month, totals]) => ({ month, ...totals }));
 
   return {
-    totalTradingStarts: (tradingStarts ?? []).length,
+    totalTradingStarts: scopedTradingStarts.length,
     tradingStartsInPeriod: periodTradingStarts.length,
     periodLabel: periodRange ? "Selected period" : "This month",
     byReason,
@@ -517,6 +571,7 @@ export async function getTradingStartReportStats(
     outcomesNotAchievedTotal,
     outcomeConversionRate,
     iwtCaseloadSize,
+    forecastOutcomes,
     avgDaysToTradingStart,
     avgDaysTradingStartToOutcome,
     approachingDeadline,
@@ -526,4 +581,122 @@ export async function getTradingStartReportStats(
     byAdvisor,
     monthlyTrends,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Office Reporting — per-office breakdown of Trading Starts, Outcomes, GSE /
+// NGSE / Claim Closed participants, Active IWT, funding requests/approved/
+// rejected and Income Tracker Compliance. Filterable by Office (and Advisor,
+// which narrows a single office row down to one advisor's contribution).
+// ---------------------------------------------------------------------------
+export type OfficeReportRow = {
+  officeId: string;
+  officeName: string;
+  tradingStarts: number;
+  outcomes: number;
+  gseParticipants: number;
+  ngseParticipants: number;
+  claimClosedParticipants: number;
+  activeIwt: number;
+  fundingRequests: number;
+  fundingApproved: number;
+  fundingRejected: number;
+  incomeTrackerCompliance: number;
+};
+
+export async function getOfficeReportStats(filters?: ReportFilters): Promise<OfficeReportRow[]> {
+  const supabase = await createClient();
+
+  const [
+    offices,
+    advisors,
+    { data: participants },
+    { data: tradingStarts },
+    { data: outcomes },
+    { data: fundingRows },
+    { data: incomeRows },
+  ] = await Promise.all([
+    listOffices(),
+    listAdvisors(),
+    supabase.from("participants").select("id, advisor_id, status"),
+    supabase.from("trading_starts").select("*"),
+    supabase.from("outcome_records").select("*"),
+    supabase.from("funding_records").select("participant_id, application_status, application_date"),
+    supabase.from("income_tracker_entries").select("participant_id, month"),
+  ]);
+
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  const tsById = new Map((tradingStarts ?? []).map((ts) => [ts.id, ts]));
+  const outcomeByTsId = new Map((outcomes ?? []).map((o) => [o.trading_start_id, o]));
+
+  const latestIncomeMonthByParticipant = new Map<string, string>();
+  for (const e of incomeRows ?? []) {
+    const existing = latestIncomeMonthByParticipant.get(e.participant_id);
+    if (!existing || e.month > existing) latestIncomeMonthByParticipant.set(e.participant_id, e.month);
+  }
+
+  const scopedOffices = filters?.officeId ? offices.filter((o) => o.id === filters.officeId) : offices;
+
+  return scopedOffices.map((office) => {
+    const officeAdvisorIds = new Set(
+      advisors
+        .filter((a) => a.office_id === office.id && (!filters?.advisorId || a.id === filters.advisorId))
+        .map((a) => a.id),
+    );
+
+    const officeTradingStarts = (tradingStarts ?? []).filter(
+      (ts) => officeAdvisorIds.has(ts.original_advisor_id) && inRange(ts.trading_start_date, filters?.dateRange),
+    );
+    const officeOutcomes = (outcomes ?? []).filter((o) => {
+      const ts = tsById.get(o.trading_start_id);
+      return !!ts && officeAdvisorIds.has(ts.original_advisor_id) && inRange(o.outcome_date, filters?.dateRange);
+    });
+
+    const gseParticipants = officeTradingStarts.filter((ts) => ts.reason === "GSE").length;
+    const ngseParticipants = officeTradingStarts.filter((ts) => ts.reason === "NGSE").length;
+    const claimClosedParticipants = officeTradingStarts.filter(
+      (ts) => ts.reason === "Claim Closed Whilst Self Employed",
+    ).length;
+    const activeIwt = officeTradingStarts.filter((ts) => !outcomeByTsId.has(ts.id)).length;
+
+    const officeParticipantIds = new Set(
+      (participants ?? []).filter((p) => officeAdvisorIds.has(p.advisor_id)).map((p) => p.id),
+    );
+    const officeFunding = (fundingRows ?? []).filter(
+      (f) =>
+        officeParticipantIds.has(f.participant_id) &&
+        (!f.application_date || inRange(f.application_date, filters?.dateRange)),
+    );
+    const fundingRequests = officeFunding.length;
+    const fundingApproved = officeFunding.filter(
+      (f) => f.application_status === "Approved" || f.application_status === "Received",
+    ).length;
+    const fundingRejected = officeFunding.filter((f) => f.application_status === "Declined").length;
+
+    const activeParticipants = (participants ?? []).filter(
+      (p) => officeAdvisorIds.has(p.advisor_id) && p.status === "Active",
+    );
+    const compliant = activeParticipants.filter(
+      (p) => latestIncomeMonthByParticipant.get(p.id)?.slice(0, 7) === currentMonthKey,
+    ).length;
+    const incomeTrackerCompliance =
+      activeParticipants.length > 0 ? Math.round((compliant / activeParticipants.length) * 100) : 100;
+
+    return {
+      officeId: office.id,
+      officeName: office.name,
+      tradingStarts: officeTradingStarts.length,
+      outcomes: officeOutcomes.length,
+      gseParticipants,
+      ngseParticipants,
+      claimClosedParticipants,
+      activeIwt,
+      fundingRequests,
+      fundingApproved,
+      fundingRejected,
+      incomeTrackerCompliance,
+    };
+  });
 }

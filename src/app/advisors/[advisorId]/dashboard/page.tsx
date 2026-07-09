@@ -25,21 +25,32 @@ export default async function DashboardPage({
   const rows = participants ?? [];
   const participantIds = rows.map((p) => p.id);
 
-  const [{ data: businessPlans }, { data: actionItems }] = await Promise.all([
-    participantIds.length
-      ? supabase
-          .from("business_plans")
-          .select("participant_id, status")
-          .in("participant_id", participantIds)
-      : Promise.resolve({ data: [] }),
-    participantIds.length
-      ? supabase
-          .from("action_plan_items")
-          .select("id, participant_id, status, description, target_date")
-          .in("participant_id", participantIds)
-          .neq("status", "Complete")
-      : Promise.resolve({ data: [] }),
-  ]);
+  const [{ data: businessPlans }, { data: actionItems }, { data: fundingRecords }, { data: incomeEntries }] =
+    await Promise.all([
+      participantIds.length
+        ? supabase
+            .from("business_plans")
+            .select("participant_id, status")
+            .in("participant_id", participantIds)
+        : Promise.resolve({ data: [] }),
+      participantIds.length
+        ? supabase
+            .from("action_plan_items")
+            .select("id, participant_id, status, description, target_date")
+            .in("participant_id", participantIds)
+            .neq("status", "Complete")
+        : Promise.resolve({ data: [] }),
+      participantIds.length
+        ? supabase
+            .from("funding_records")
+            .select("id, participant_id, application_status, amount_requested, amount_approved, decision_date")
+            .in("participant_id", participantIds)
+            .order("decision_date", { ascending: false })
+        : Promise.resolve({ data: [] }),
+      participantIds.length
+        ? supabase.from("income_tracker_entries").select("participant_id, month").in("participant_id", participantIds)
+        : Promise.resolve({ data: [] }),
+    ]);
 
   const businessPlanByParticipant = new Map(
     (businessPlans ?? []).map((bp) => [bp.participant_id, bp]),
@@ -68,6 +79,30 @@ export default async function DashboardPage({
     participantName: participantInfoById.get(a.participant_id)?.name ?? "",
   }));
 
+  const fundingRows = (fundingRecords ?? []).map((f) => ({
+    ...f,
+    participantName: participantInfoById.get(f.participant_id)?.name ?? "",
+  }));
+  const pendingFunding = fundingRows.filter(
+    (f) => f.application_status === "Pending Manager Approval",
+  );
+  const recentFundingDecisions = fundingRows.filter(
+    (f) => f.application_status === "Approved" || f.application_status === "Declined",
+  );
+
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const latestIncomeMonthByParticipant = new Map<string, string>();
+  for (const e of incomeEntries ?? []) {
+    const existing = latestIncomeMonthByParticipant.get(e.participant_id);
+    if (!existing || e.month > existing) latestIncomeMonthByParticipant.set(e.participant_id, e.month);
+  }
+  const incomeTrackerAlerts = rows.filter(
+    (p) =>
+      p.status === "Active" &&
+      latestIncomeMonthByParticipant.get(p.id)?.slice(0, 7) !== currentMonthKey,
+  );
+
   const participantsHref = `/advisors/${advisorId}/participants`;
 
   return (
@@ -81,7 +116,7 @@ export default async function DashboardPage({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard label="Caseload size" value={rows.length} href={participantsHref} />
         <StatCard
           label="Expiring soon"
@@ -99,6 +134,16 @@ export default async function DashboardPage({
           label="Outstanding actions"
           value={outstandingActions.length}
           tone={outstandingActions.length > 0 ? "warning" : "default"}
+        />
+        <StatCard
+          label="Funding awaiting approval"
+          value={pendingFunding.length}
+          tone={pendingFunding.length > 0 ? "warning" : "default"}
+        />
+        <StatCard
+          label="Income Tracker alerts"
+          value={incomeTrackerAlerts.length}
+          tone={incomeTrackerAlerts.length > 0 ? "warning" : "default"}
         />
       </div>
 
@@ -160,6 +205,66 @@ export default async function DashboardPage({
                       </span>
                     </span>
                     <Badge tone="red">Not started</Badge>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-4 text-sm font-semibold text-slate-900">Funding</h2>
+          {pendingFunding.length === 0 && recentFundingDecisions.length === 0 ? (
+            <p className="text-sm text-slate-500">No funding activity across your caseload.</p>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {pendingFunding.slice(0, 5).map((f) => (
+                <li key={f.id} className="py-2.5">
+                  <Link
+                    href={`${participantsHref}/${f.participant_id}?tab=funding`}
+                    className="flex items-center justify-between text-sm hover:text-indigo-600"
+                  >
+                    <span className="font-medium text-slate-800">{f.participantName}</span>
+                    <Badge tone="amber">Awaiting approval</Badge>
+                  </Link>
+                </li>
+              ))}
+              {recentFundingDecisions.slice(0, 5).map((f) => (
+                <li key={f.id} className="py-2.5">
+                  <Link
+                    href={`${participantsHref}/${f.participant_id}?tab=funding`}
+                    className="flex items-center justify-between text-sm hover:text-indigo-600"
+                  >
+                    <span className="font-medium text-slate-800">{f.participantName}</span>
+                    <Badge tone={f.application_status === "Approved" ? "green" : "red"}>
+                      {f.application_status}
+                    </Badge>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-4 text-sm font-semibold text-slate-900">Income Tracker alerts</h2>
+          {incomeTrackerAlerts.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              Every active participant has logged income for {currentMonthKey}.
+            </p>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {incomeTrackerAlerts.slice(0, 6).map((p) => (
+                <li key={p.id} className="py-2.5">
+                  <Link
+                    href={`${participantsHref}/${p.id}?tab=income-tracker`}
+                    className="flex items-center justify-between text-sm hover:text-indigo-600"
+                  >
+                    <span className="font-medium text-slate-800">
+                      {p.ptp_name}
+                      <span className="ml-1 text-slate-500">· {p.business_name}</span>
+                    </span>
+                    <Badge tone="amber">No entry this month</Badge>
                   </Link>
                 </li>
               ))}

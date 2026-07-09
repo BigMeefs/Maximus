@@ -52,7 +52,9 @@ export default async function ParticipantsPage({
     rows = rows.filter(
       (p) =>
         p.ptp_name.toLowerCase().includes(needle) ||
-        p.business_name.toLowerCase().includes(needle),
+        p.business_name.toLowerCase().includes(needle) ||
+        (p.iconi_id ?? "").toLowerCase().includes(needle) ||
+        (p.email ?? "").toLowerCase().includes(needle),
     );
   }
 
@@ -99,6 +101,7 @@ export default async function ParticipantsPage({
             <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-3">PTP Name</th>
+                <th className="hidden px-4 py-3 md:table-cell">Iconi ID</th>
                 <th className="hidden px-4 py-3 sm:table-cell">Business</th>
                 <th className="px-4 py-3">RAG</th>
                 <th className="hidden px-4 py-3 md:table-cell">Stage</th>
@@ -121,6 +124,9 @@ export default async function ParticipantsPage({
                     <p className="text-xs text-slate-500 sm:hidden">
                       {p.business_name}
                     </p>
+                  </td>
+                  <td className="hidden px-4 py-3 text-slate-600 md:table-cell">
+                    {p.iconi_id || "—"}
                   </td>
                   <td className="hidden px-4 py-3 text-slate-600 sm:table-cell">
                     {p.business_name}

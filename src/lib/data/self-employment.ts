@@ -1,6 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
-import type { IncomeTrackerEntry, IwtReview, OutcomeRecord, TradingStart, TradingStartReason } from "@/types/database";
+import type {
+  IncomeTrackerEntry,
+  IwtReview,
+  OutcomeRecord,
+  ParticipantStatus,
+  TradingStart,
+  TradingStartReason,
+} from "@/types/database";
 import { getProgrammeSettings } from "@/lib/data/programme-settings";
+import { listAdvisors } from "@/lib/data/advisor";
 import {
   computeGseOutcomeProgress,
   computeMonetaryOutcomeProgress,
@@ -100,12 +108,34 @@ export type SelfEmploymentDashboard = {
   tsIntelligence: TsIntelligenceRow[];
   gseClaimEligible: SimpleEligibleRow[];
   outcomeIntelligence: OutcomeIntelligenceRow[];
+  transferredToIwt: TransferredToIwtRow[];
   workQueue: WorkQueueItem[];
-  // Advisor performance (all-time, attributed to this advisor as the
-  // original advisor — see trading_starts.original_advisor_id).
+  // Advisor performance / forecasting (all-time, attributed to this advisor
+  // as the original advisor — see trading_starts.original_advisor_id).
   tradingStartsAchieved: number;
+  participantsTransferredToIwt: number;
+  forecastOutcomes: number;
   outcomesAchieved: number;
   actionsToday: number;
+};
+
+// ---------------------------------------------------------------------------
+// Transferred to IWT — read-only visibility for the original advisor once a
+// participant they originated has moved to a different IWT advisor's
+// caseload. Original advisors keep this view because their own performance
+// is ultimately judged on the eventual Outcome. No edit affordances are
+// exposed anywhere in this data shape — it's display-only by construction.
+// ---------------------------------------------------------------------------
+export type TransferredToIwtRow = {
+  tradingStart: TradingStart;
+  participantId: string;
+  participantName: string;
+  participantStatus: ParticipantStatus;
+  iwtAdvisorName: string;
+  monetary: MonetaryOutcomeProgress | null;
+  gse: GseOutcomeProgress | null;
+  outcome: OutcomeRecord | null;
+  forecast: ParticipantHealth | null;
 };
 
 function isNearOutcome(row: OutcomeIntelligenceRow): boolean {
@@ -166,6 +196,73 @@ export async function getSelfEmploymentDashboard(
   const { data: outcomesForOriginal } = originalTsIds.length
     ? await supabase.from("outcome_records").select("*").in("trading_start_id", originalTsIds)
     : { data: [] as OutcomeRecord[] };
+
+  // ---- Transferred to IWT: participants this advisor originated whose
+  // Trading Start moved them to a different IWT advisor ----
+  const transferredTradingStarts = (originalTradingStarts ?? []).filter(
+    (ts) => ts.iwt_advisor_id !== advisorId,
+  );
+  const transferredParticipantIds = transferredTradingStarts.map((ts) => ts.participant_id);
+
+  const [advisors, { data: transferredParticipants }, { data: transferredEntries }, { data: transferredReviews }] =
+    await Promise.all([
+      listAdvisors(),
+      transferredParticipantIds.length
+        ? supabase.from("participants").select("id, ptp_name, status").in("id", transferredParticipantIds)
+        : Promise.resolve({ data: [] as { id: string; ptp_name: string; status: ParticipantStatus }[] }),
+      transferredParticipantIds.length
+        ? supabase.from("income_tracker_entries").select("*").in("participant_id", transferredParticipantIds)
+        : Promise.resolve({ data: [] as IncomeTrackerEntry[] }),
+      transferredTradingStarts.length
+        ? supabase
+            .from("iwt_reviews")
+            .select("*")
+            .in(
+              "trading_start_id",
+              transferredTradingStarts.map((ts) => ts.id),
+            )
+            .order("review_date", { ascending: false })
+        : Promise.resolve({ data: [] as IwtReview[] }),
+    ]);
+
+  const advisorNameById = new Map(advisors.map((a) => [a.id, a.full_name]));
+  const transferredParticipantById = new Map((transferredParticipants ?? []).map((p) => [p.id, p]));
+  const transferredEntriesByParticipant = new Map<string, IncomeTrackerEntry[]>();
+  (transferredEntries ?? []).forEach((e) => {
+    const list = transferredEntriesByParticipant.get(e.participant_id) ?? [];
+    list.push(e);
+    transferredEntriesByParticipant.set(e.participant_id, list);
+  });
+  const transferredReviewsByTsId = new Map<string, IwtReview[]>();
+  (transferredReviews ?? []).forEach((r) => {
+    const list = transferredReviewsByTsId.get(r.trading_start_id) ?? [];
+    list.push(r);
+    transferredReviewsByTsId.set(r.trading_start_id, list);
+  });
+  const outcomeByOriginalTsId = new Map((outcomesForOriginal ?? []).map((o) => [o.trading_start_id, o]));
+
+  const transferredToIwt: TransferredToIwtRow[] = transferredTradingStarts.map((ts) => {
+    const entries = transferredEntriesByParticipant.get(ts.participant_id) ?? [];
+    const reviews = transferredReviewsByTsId.get(ts.id) ?? [];
+    const outcome = outcomeByOriginalTsId.get(ts.id) ?? null;
+    const isMonetary = ts.reason !== "GSE";
+    const monetary = isMonetary
+      ? computeMonetaryOutcomeProgress(ts.trading_start_date, entries, settings, now)
+      : null;
+    const gse = !isMonetary ? computeGseOutcomeProgress(ts.trading_start_date, settings, now) : null;
+
+    return {
+      tradingStart: ts,
+      participantId: ts.participant_id,
+      participantName: transferredParticipantById.get(ts.participant_id)?.ptp_name ?? "Unknown",
+      participantStatus: transferredParticipantById.get(ts.participant_id)?.status ?? "In Work Tracking",
+      iwtAdvisorName: advisorNameById.get(ts.iwt_advisor_id) ?? "Unknown advisor",
+      monetary,
+      gse,
+      outcome,
+      forecast: outcome ? null : computeParticipantHealth(ts, entries, reviews, settings, now),
+    };
+  });
 
   const reviewsByTsId = new Map<string, IwtReview[]>();
   (reviewsAll ?? []).forEach((r) => {
@@ -330,6 +427,18 @@ export async function getSelfEmploymentDashboard(
 
   const eligibleForTradingStart = tsIntelligence.length + gseClaimEligible.length;
 
+  // Forecast Outcomes — live, not manually entered: every participant this
+  // advisor originated, with no Outcome recorded yet, whose current health
+  // isn't "At Risk" (red), across both their own IWT caseload and anyone
+  // transferred to a different IWT advisor.
+  const forecastFromOwnCaseload = outcomeIntelligence.filter(
+    (r) => r.tradingStart.original_advisor_id === advisorId && r.health.tone !== "red",
+  ).length;
+  const forecastFromTransferred = transferredToIwt.filter(
+    (r) => !r.outcome && r.forecast && r.forecast.tone !== "red",
+  ).length;
+  const forecastOutcomes = forecastFromOwnCaseload + forecastFromTransferred;
+
   return {
     activeParticipants: rows.filter((p) => p.status === "Active").length,
     tradingStartsThisMonth,
@@ -343,8 +452,11 @@ export async function getSelfEmploymentDashboard(
     tsIntelligence,
     gseClaimEligible,
     outcomeIntelligence,
+    transferredToIwt,
     workQueue,
     tradingStartsAchieved: (originalTradingStarts ?? []).length,
+    participantsTransferredToIwt: transferredToIwt.length,
+    forecastOutcomes,
     outcomesAchieved: (outcomesForOriginal ?? []).filter((o) => o.outcome_achieved).length,
     actionsToday: workQueue.length,
   };

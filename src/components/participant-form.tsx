@@ -36,6 +36,18 @@ export default function ParticipantForm({
           />
         </Field>
 
+        <Field label="Iconi ID" htmlFor="iconi_id">
+          <input
+            id="iconi_id"
+            name="iconi_id"
+            defaultValue={participant?.iconi_id ?? ""}
+            className={inputClass}
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            The participant&apos;s reference number in Iconi. Must be unique if set.
+          </p>
+        </Field>
+
         <Field label="Business Name" htmlFor="business_name" required>
           <input
             id="business_name"

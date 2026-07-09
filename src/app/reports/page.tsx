@@ -2,7 +2,14 @@ import StatCard from "@/components/stat-card";
 import Badge from "@/components/badge";
 import MonthlyProgressChart from "@/components/reports/monthly-progress-chart";
 import TradingStartTrendsChart from "@/components/reports/trading-start-trends-chart";
-import { getCompanyReportStats, getTradingStartReportStats } from "@/lib/data/reports";
+import ReportFilters from "@/components/reports/report-filters";
+import {
+  getCompanyReportStats,
+  getOfficeReportStats,
+  getTradingStartReportStats,
+  type ReportFilters as ReportFiltersType,
+} from "@/lib/data/reports";
+import { listAdvisors, listOffices } from "@/lib/data/advisor";
 
 const currency = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
 
@@ -19,31 +26,58 @@ function ragTone(label: string) {
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; office?: string; advisor?: string }>;
 }) {
-  const { from, to } = await searchParams;
+  const { from, to, office, advisor } = await searchParams;
   const dateRange = from || to ? { from, to } : undefined;
+  const filters: ReportFiltersType = {
+    officeId: office || undefined,
+    advisorId: advisor || undefined,
+    dateRange,
+  };
 
-  const [stats, tsStats] = await Promise.all([
-    getCompanyReportStats(),
-    getTradingStartReportStats(dateRange),
+  const [stats, tsStats, officeStats, offices, advisors] = await Promise.all([
+    getCompanyReportStats(filters),
+    getTradingStartReportStats(filters),
+    getOfficeReportStats(filters),
+    listOffices(),
+    listAdvisors(),
   ]);
 
   const gatewayReadyTotal = stats.byGatewayStatus.find((b) => b.label === "Ready")?.count ?? 0;
   const gainfulReadyTotal = stats.byGainfulStatus.find((b) => b.label === "Ready")?.count ?? 0;
   const fundingApproved = stats.byFundingStatus.reduce((sum, f) => sum + f.totalApproved, 0);
   const fundingReceived = stats.byFundingStatus.reduce((sum, f) => sum + f.totalReceived, 0);
+  const pendingFundingApprovals =
+    stats.byFundingStatus.find((f) => f.label === "Pending Manager Approval")?.count ?? 0;
 
   return (
     <div className="space-y-10">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Reports</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Company-wide breakdowns across every office and advisor.
+          The Manager Dashboard — company-wide breakdowns across every office and advisor.
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+      <ReportFilters offices={offices} advisors={advisors} />
+
+      <a
+        href="/admin/funding-approvals"
+        className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+      >
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900">Funding Approval Queue</h2>
+          <p className="mt-0.5 text-xs text-slate-500">Requests over £100 awaiting a manager decision.</p>
+        </div>
+        <Badge tone={pendingFundingApprovals > 0 ? "amber" : "green"}>
+          {pendingFundingApprovals} pending
+        </Badge>
+      </a>
+
+      <div>
+        <h2 className="mb-3 text-sm font-semibold text-slate-900">Office Overview</h2>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
         <StatCard label="Total participants" value={stats.totalParticipants} />
         <StatCard label="Gateway ready" value={gatewayReadyTotal} />
         <StatCard label="Gainful ready" value={gainfulReadyTotal} />
@@ -53,6 +87,7 @@ export default async function ReportsPage({
           value={currency.format(stats.fundingOutstanding)}
           tone={stats.fundingOutstanding > 0 ? "warning" : "default"}
         />
+        </div>
       </div>
 
       <Section title="Monthly progress" subtitle="Income and expenses reported across all participants, by month.">
@@ -74,6 +109,56 @@ export default async function ReportsPage({
             </>
           )}
         />
+      </Section>
+
+      <Section
+        title="Office Reporting"
+        subtitle="Trading Starts, Outcomes, funding and Income Tracker compliance, broken down by office."
+      >
+        {officeStats.length === 0 ? (
+          <p className="text-sm text-slate-500">No offices found.</p>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-4 py-3">Office</th>
+                  <th className="px-4 py-3">Trading Starts</th>
+                  <th className="px-4 py-3">Outcomes</th>
+                  <th className="px-4 py-3">GSE</th>
+                  <th className="px-4 py-3">NGSE</th>
+                  <th className="px-4 py-3">Claim Closed</th>
+                  <th className="px-4 py-3">Active IWT</th>
+                  <th className="px-4 py-3">Funding Requests</th>
+                  <th className="px-4 py-3">Funding Approved</th>
+                  <th className="px-4 py-3">Funding Rejected</th>
+                  <th className="px-4 py-3">Income Tracker Compliance</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {officeStats.map((row) => (
+                  <tr key={row.officeId}>
+                    <td className="px-4 py-3 font-medium text-slate-900">{row.officeName}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.tradingStarts}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.outcomes}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.gseParticipants}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.ngseParticipants}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.claimClosedParticipants}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.activeIwt}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.fundingRequests}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.fundingApproved}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.fundingRejected}</td>
+                    <td className="px-4 py-3 text-slate-600">
+                      <Badge tone={row.incomeTrackerCompliance >= 80 ? "green" : row.incomeTrackerCompliance >= 50 ? "amber" : "red"}>
+                        {row.incomeTrackerCompliance}%
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Section>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
@@ -135,57 +220,22 @@ export default async function ReportsPage({
       </div>
 
       <div className="space-y-4 border-t border-slate-200 pt-8">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">
-              Trading Start, IWT &amp; Outcomes
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              {tsStats.periodLabel === "This month"
-                ? "Period widgets below default to the current calendar month."
-                : "Period widgets below reflect the selected date range."}
-            </p>
-          </div>
-          <form method="get" className="flex flex-wrap items-end gap-3">
-            <label className="text-xs font-medium text-slate-600">
-              From
-              <input
-                type="date"
-                name="from"
-                defaultValue={from ?? ""}
-                className="mt-1 block rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-900"
-              />
-            </label>
-            <label className="text-xs font-medium text-slate-600">
-              To
-              <input
-                type="date"
-                name="to"
-                defaultValue={to ?? ""}
-                className="mt-1 block rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-900"
-              />
-            </label>
-            <button
-              type="submit"
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-            >
-              Apply
-            </button>
-            {dateRange && (
-              <a
-                href="/reports"
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Clear
-              </a>
-            )}
-          </form>
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Trading Start, IWT &amp; Outcomes
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {tsStats.periodLabel === "This month"
+              ? "Period widgets below default to the current calendar month. Use the filters above to select a date range."
+              : "Period widgets below reflect the selected filters."}
+          </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-7">
           <StatCard label="Trading Starts (period)" value={tsStats.tradingStartsInPeriod} />
           <StatCard label="Outcomes (period)" value={tsStats.outcomesInPeriod} />
           <StatCard label="IWT caseload" value={tsStats.iwtCaseloadSize} />
+          <StatCard label="Forecast Outcomes" value={tsStats.forecastOutcomes} />
           <StatCard
             label="Outcome conversion rate"
             value={`${tsStats.outcomeConversionRate}%`}

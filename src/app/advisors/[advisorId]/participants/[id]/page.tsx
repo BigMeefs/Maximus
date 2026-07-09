@@ -5,7 +5,6 @@ import Badge, { statusTone } from "@/components/badge";
 import Tabs from "@/components/tabs";
 import DeleteParticipantButton from "@/components/participant/delete-participant-button";
 import BusinessPlanTab from "@/components/participant/business-plan-tab";
-import MonthlyEarningsTab from "@/components/participant/monthly-earnings-tab";
 import IncomeTrackerTab from "@/components/participant/income-tracker-tab";
 import EvidenceLibraryTab from "@/components/participant/evidence-library-tab";
 import ActionPlanTab from "@/components/participant/action-plan-tab";
@@ -54,7 +53,6 @@ export default async function ParticipantProfilePage({
     assignedAdvisor,
     advisors,
     businessPlan,
-    monthlyEarnings,
     evidenceFiles,
     actionPlanItems,
     appointments,
@@ -93,7 +91,7 @@ export default async function ParticipantProfilePage({
 
   const gainfulChecklist = getGainfulChecklist({
     gainful,
-    earnings: monthlyEarnings,
+    incomeTrackerEntries,
     evidenceFiles,
     invoicesAvailable,
   });
@@ -104,7 +102,7 @@ export default async function ParticipantProfilePage({
     hmrc,
     digitalPresence,
     fundingRecords,
-    earnings: monthlyEarnings,
+    incomeTrackerEntries,
     manualGatewayItems: gatewayChecklist,
   });
 
@@ -122,7 +120,7 @@ export default async function ParticipantProfilePage({
     evidenceFiles,
     manualGatewayItems: gatewayChecklist,
     fundingRecords,
-    earnings: monthlyEarnings,
+    incomeTrackerEntries,
     actionItems: actionPlanItems,
     appointments,
     gainful,
@@ -146,6 +144,11 @@ export default async function ParticipantProfilePage({
               <h1 className="text-2xl font-semibold text-slate-900">
                 {participant.ptp_name}
               </h1>
+              {participant.iconi_id && (
+                <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                  Iconi ID: {participant.iconi_id}
+                </span>
+              )}
               <StatusBadge status={participant.status} />
               {health && <HealthBadge tone={health.tone} label={health.label} />}
             </div>
@@ -288,16 +291,6 @@ export default async function ParticipantProfilePage({
               id: "funding",
               label: "Funding",
               content: <FundingTab participantId={id} records={fundingRecords} />,
-            },
-            {
-              id: "monthly-earnings",
-              label: "Monthly Performance",
-              content: (
-                <MonthlyEarningsTab
-                  participantId={id}
-                  earnings={monthlyEarnings}
-                />
-              ),
             },
             {
               id: "income-tracker",

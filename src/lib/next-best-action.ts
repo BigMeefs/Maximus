@@ -8,7 +8,7 @@ import type {
   GainfulAssessment,
   GatewayChecklistItem,
   HmrcBusinessInfo,
-  MonthlyEarning,
+  IncomeTrackerEntry,
   Participant,
 } from "@/types/database";
 import {
@@ -27,7 +27,7 @@ export type NextBestActionContext = {
   evidenceFiles: EvidenceFile[];
   manualGatewayItems: GatewayChecklistItem[];
   fundingRecords: FundingRecord[];
-  earnings: MonthlyEarning[];
+  incomeTrackerEntries: IncomeTrackerEntry[];
   actionItems: ActionPlanItem[];
   appointments: Appointment[];
   gainful: GainfulAssessment | null;
@@ -154,7 +154,7 @@ export function getNextBestAction(ctx: NextBestActionContext): NextBestAction {
   ) {
     const gainful = getGainfulChecklist({
       gainful: ctx.gainful,
-      earnings: ctx.earnings,
+      incomeTrackerEntries: ctx.incomeTrackerEntries,
       evidenceFiles: ctx.evidenceFiles,
       invoicesAvailable:
         gateway.entries.find((e) => e.label === "Invoices Available")?.complete ?? false,

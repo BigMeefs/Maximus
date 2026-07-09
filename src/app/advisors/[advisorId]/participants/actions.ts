@@ -10,6 +10,7 @@ export type ParticipantFormState = {
 
 function readParticipantFields(formData: FormData) {
   const ptpName = formData.get("ptp_name")?.toString().trim() ?? "";
+  const iconiId = formData.get("iconi_id")?.toString().trim() || null;
   const businessName = formData.get("business_name")?.toString().trim() ?? "";
   const businessSector = formData.get("business_sector")?.toString().trim() || null;
   const email = formData.get("email")?.toString().trim() || null;
@@ -24,6 +25,7 @@ function readParticipantFields(formData: FormData) {
 
   return {
     ptpName,
+    iconiId,
     businessName,
     businessSector,
     email,
@@ -58,6 +60,7 @@ export async function createParticipant(
     .insert({
       advisor_id: advisorId,
       ptp_name: fields.ptpName,
+      iconi_id: fields.iconiId,
       business_name: fields.businessName,
       business_sector: fields.businessSector,
       email: fields.email,
@@ -71,7 +74,11 @@ export async function createParticipant(
     .single();
 
   if (error || !participant) {
-    return { error: error?.message ?? "Failed to create participant." };
+    return {
+      error: error?.message.includes("duplicate")
+        ? "That Iconi ID is already in use by another participant."
+        : (error?.message ?? "Failed to create participant."),
+    };
   }
 
   await supabase
@@ -100,6 +107,7 @@ export async function updateParticipant(
     .from("participants")
     .update({
       ptp_name: fields.ptpName,
+      iconi_id: fields.iconiId,
       business_name: fields.businessName,
       business_sector: fields.businessSector,
       email: fields.email,
@@ -112,7 +120,11 @@ export async function updateParticipant(
     .eq("id", participantId);
 
   if (error) {
-    return { error: error.message };
+    return {
+      error: error.message.includes("duplicate")
+        ? "That Iconi ID is already in use by another participant."
+        : error.message,
+    };
   }
 
   revalidateAdvisor(advisorId);

@@ -39,7 +39,7 @@ export default function ParticipantFilters({
       <input
         type="search"
         defaultValue={defaultQuery}
-        placeholder="Search by name or business..."
+        placeholder="Search by name, Iconi ID, business or email..."
         onChange={(e) => updateParam("q", e.target.value)}
         className="w-full max-w-sm rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
       />

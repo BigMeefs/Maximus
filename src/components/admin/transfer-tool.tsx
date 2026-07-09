@@ -7,6 +7,8 @@ import { transferParticipants, type TransferFormState } from "@/lib/actions/tran
 type ParticipantRow = {
   id: string;
   ptp_name: string;
+  iconi_id: string | null;
+  email: string | null;
   business_name: string;
   advisor_id: string;
 };
@@ -46,7 +48,10 @@ export default function TransferTool({
     const matchesSearch =
       !needle ||
       p.ptp_name.toLowerCase().includes(needle) ||
-      p.business_name.toLowerCase().includes(needle);
+      p.business_name.toLowerCase().includes(needle) ||
+      (p.iconi_id ?? "").toLowerCase().includes(needle) ||
+      (p.email ?? "").toLowerCase().includes(needle) ||
+      (advisorNameById.get(p.advisor_id) ?? "").toLowerCase().includes(needle);
     return matchesAdvisor && matchesSearch;
   });
 
@@ -84,7 +89,7 @@ export default function TransferTool({
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search participants..."
+          placeholder="Search by name, Iconi ID, email, business or advisor..."
           className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
         />
         <select
@@ -114,6 +119,7 @@ export default function TransferTool({
                 />
               </th>
               <th className="px-4 py-3">PTP Name</th>
+              <th className="px-4 py-3">Iconi ID</th>
               <th className="px-4 py-3">Business</th>
               <th className="px-4 py-3">Current advisor</th>
             </tr>
@@ -130,6 +136,7 @@ export default function TransferTool({
                   />
                 </td>
                 <td className="px-4 py-3 font-medium text-slate-900">{p.ptp_name}</td>
+                <td className="px-4 py-3 text-slate-600">{p.iconi_id || "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{p.business_name}</td>
                 <td className="px-4 py-3 text-slate-600">
                   {advisorNameById.get(p.advisor_id) ?? "Unknown"}
@@ -138,7 +145,7 @@ export default function TransferTool({
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-500">
+                <td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-500">
                   No participants match.
                 </td>
               </tr>

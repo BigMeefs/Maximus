@@ -1,11 +1,13 @@
-# Self Employment Caseload Manager
+# Max Self Employment Hub
 
 A specialist Self Employment Toolkit for Restart Scheme advisors — built on
 top of a CRM-style caseload manager that scales to any number of offices and
-advisors. It complements ICONi (which handles standard Restart
-administration) by helping advisors progress participants from referral
-through Gateway to a well-evidenced Gainful Self Employment decision. Built
-with Next.js (App Router), TypeScript, Tailwind CSS and Supabase.
+advisors. It complements Iconi (which handles standard Restart
+administration, appointments, and general case notes) by helping advisors
+progress participants from referral through Gateway to a well-evidenced
+Gainful Self Employment decision, and by automating Trading Start / In Work
+Tracking / Outcome tracking. Built with Next.js (App Router), TypeScript,
+Tailwind CSS and Supabase.
 
 ## Organisation structure
 
@@ -29,7 +31,9 @@ office or an advisor never requires a code change or redeploy.
   office (or transferring a participant to an advisor in a different office)
   updates every affected participant's effective office automatically, with
   no sync code involved.
-- Participant profiles: PTP name, business name, business sector, assigned
+- Participant profiles: PTP name, **Iconi ID** (the participant's reference
+  number in Iconi — free text, unique if set, shown as a badge next to the
+  name at the top of the profile), business name, business sector, assigned
   advisor + office (read-only here — see Transfer Participant below), email
   (also used to match the client income tracker), previous advisor
   (freeform — may be someone outside this CRM), scheme start date, Gateway
@@ -42,7 +46,8 @@ office or an advisor never requires a code change or redeploy.
   advisor on an appointment can differ from the participant's currently
   assigned advisor (e.g. someone covering).
 - Searchable, filterable, responsive participant list, scoped to that
-  workspace, with RAG and stage badges.
+  workspace, with RAG and stage badges. Search matches Participant Name,
+  Iconi ID, Email and Business Name.
 
 ## Administration panel
 
@@ -60,9 +65,12 @@ throughout the app comes from these tables.
   assigned to them) alongside the edit form. There are no individual advisor
   logins in this CRM, so there's no password to reset.
 - **Transfer participants** (`/admin/transfer`) — move one or many
-  participants to a different advisor in a few clicks: search/filter the
-  full participant list, select any number of rows, choose the destination
-  advisor, and confirm. Every transfer is logged (`participant_transfers`:
+  participants to a different advisor in a few clicks: search the full,
+  company-wide participant list by Participant Name, Iconi ID, Email,
+  Business Name or current Advisor, optionally filter by advisor too,
+  select any number of rows, choose the destination advisor, and confirm.
+  This is the only screen that lists every participant across every office
+  at once, so it's the natural home for company-wide participant search. Every transfer is logged (`participant_transfers`:
   previous advisor, new advisor, previous/new office, timestamp, optional
   note) for audit purposes, and a participant's office updates automatically
   if the destination advisor is in a different office. Nothing else about
@@ -72,16 +80,45 @@ throughout the app comes from these tables.
 - **Programme Settings** (`/admin/programme-settings`) — the configurable
   Trading Start / Outcome thresholds; see the dedicated section below.
 
-## Reports
+## Reports (the Manager Dashboard)
 
-`/reports` (same passcode gate) gives managers company-wide breakdowns to
-compare performance across offices and advisors: participants and Gateway/
-Gainful readiness rates by office and by advisor, business sector, business
-stage, RAG distribution, Gateway status, Gainful status, funding status
-(with approved/received totals and outstanding amount), and a monthly
-income/expenses chart. Everything here is computed at read time from the
-same records the rest of the CRM manages — nothing is duplicated into a
-separate reporting table.
+`/reports` (same passcode gate) is the manager-facing dashboard: company-wide
+breakdowns to compare performance across offices and advisors. There is no
+separate "Manager Dashboard" page — `/reports` already served that purpose,
+so it was extended in place rather than duplicated.
+
+- **Filters** — Office, Advisor and Date Range, at the top of the page,
+  apply to every section below and refresh immediately on change (no "Apply"
+  button; a client component pushes the new query string and the page
+  re-renders). Picking an office narrows the advisor dropdown to that
+  office's advisors. There is no "Team" filter — no Team entity exists
+  anywhere in this app's data model (the hierarchy is Company → Office →
+  Advisor → Participants), and nothing else in the CRM references teams, so
+  this was intentionally left out rather than inventing a new entity and
+  admin UI for it.
+- **Office Overview** — total participants, Gateway/Gainful readiness,
+  funding approved/outstanding, a monthly income/expenses chart, and
+  breakdowns by office, by advisor, business sector, business stage, RAG
+  distribution, Gateway status, Gainful status and funding status.
+- **Office Reporting** — a dedicated per-office table: Trading Starts,
+  Outcomes, GSE / NGSE / Claim Closed participants (from each Trading
+  Start's recorded reason), Active IWT, Funding Requests/Approved/Rejected,
+  and Income Tracker Compliance (the % of that office's Active participants
+  who have logged an Income Tracker entry for the current calendar month).
+- **Funding Approval Queue** — a summary card linking to
+  `/admin/funding-approvals`, showing how many requests are currently
+  awaiting a manager decision.
+- **Trading Start, IWT & Outcomes** — Trading Starts and Outcomes for the
+  selected period, Forecast Outcomes (live participant progress, not manual
+  entry — see Forecasting below), IWT caseload, outcome conversion rate,
+  participants approaching the Outcome deadline, overdue reviews,
+  participants at risk, participants eligible for a Trading Start but not
+  yet processed, average days to Trading Start / Trading Start → Outcome, a
+  monthly trend chart, and a team leaderboard (attributed to the
+  **original** advisor — see Trading Start & IWT Visibility below).
+
+Everything here is computed at read time from the same records the rest of
+the CRM manages — nothing is duplicated into a separate reporting table.
 
 ## Self Employment Toolkit
 
@@ -97,9 +134,13 @@ Every participant profile now includes, above the original CRM tabs:
   and Gainful readiness %, days until Gateway, next appointment, outstanding
   actions and last contact date (the last two computed from Appointment
   History and the Action Plan, not stored separately).
-- **Business Health Score** — Planning, Finance, Marketing, Trading, Legal,
-  Digital Presence and Customer Acquisition are computed live from existing
-  data; Confidence is the one advisor judgement call (a slider).
+- **Business Health Score** — Planning, Finance, Marketing, Trading, Legal
+  and Digital Presence are computed live from existing data; Confidence is
+  the one advisor judgement call (a slider). (A Customer Acquisition
+  dimension existed while there was a separate Monthly Performance tab
+  tracking customer count/hours worked; it was removed along with that tab
+  — see "Removed: Monthly Performance" below — rather than left silently
+  stale with no data source.)
 - **Journey** — the 11-stage business journey (Idea → ... → Gainful
   Decision) as a visual timeline; advisors move participants forward with a
   click.
@@ -111,12 +152,11 @@ Every participant profile now includes, above the original CRM tabs:
   invoices, bank statements and customer base feed a readiness %; advisor
   recommendation, manager approval and an overall 🟢/🟡/🔴 recommendation.
 - **Funding** — funding source, requested/approved/received amounts (with
-  remaining computed automatically), purpose, status, dates, notes, and a
-  document upload per record.
-- **Monthly Performance** (extends the former Monthly Earnings tab) — income,
-  expenses, hours worked, customer count, largest customer and notes per
-  month; profit is computed, not entered. Chart views for income/expenses,
-  profit, customer growth and hours worked.
+  remaining computed automatically), purpose, dates, notes, a document
+  upload per record, and an approval workflow (see "Funding Approval
+  Workflow" below) — status is no longer a manual field; it's set
+  automatically from the requested amount and, above £100, from a manager's
+  decision.
 - **HMRC & Business** — structure, UTR, registration date, VAT/PAYE, bank
   account, insurance, accountant details, tax deadline notes.
 - **Digital Presence** — the 9 standard channels (Website, Facebook,
@@ -136,15 +176,30 @@ Every participant profile now includes, above the original CRM tabs:
   silently.
 - **Income Tracker** — populated automatically from the client-facing income
   tracker form (see `integrations/google-apps-script/`) via the
-  participant's Email field, one entry per calendar month. Kept separate
-  from Monthly Performance so the two data sources never overwrite each
-  other; Net Profit is computed live, not stored. Advisors can also add or
-  edit entries here directly.
+  participant's Email field, one entry per calendar month; Net Profit is
+  computed live, not stored. Advisors can also add or edit entries here
+  directly. This is now the CRM's single source of monthly earnings data —
+  see "Removed: Monthly Performance" below.
 
 Nothing here duplicates data that already exists elsewhere — readiness %,
 health scores, days-until-Gateway, next appointment, last contact and
 income/customer trends are all computed at read time from the same
 underlying records the other tabs already manage.
+
+### Removed: Monthly Performance
+
+The Monthly Performance tab (income, expenses, hours worked, customer count
+per month) was removed — the Income Tracker tab already provides the
+required monthly earnings data, so the two tabs were redundant. **The Income
+Tracker itself was not touched.** Everything that read from Monthly
+Performance was rewired onto the Income Tracker instead: the income trend
+used in the Gainful Decision checklist, the Business Health Score's Trading
+dimension, the Next Best Action engine, and the "Monthly progress" chart on
+Reports. The one thing with no equivalent in the Income Tracker — customer
+count / hours worked, and the Customer Acquisition health score dimension
+built on top of it — was removed cleanly rather than left silently frozen
+with stale data. The underlying `monthly_earnings` database table is left
+in place (unused, historical rows intact) rather than dropped.
 
 ## Trading Start, In Work Tracking & Outcomes
 
@@ -213,7 +268,24 @@ what happens *after* trading starts.
   stored) and shown on the profile header, the Trading Start tab, the Self
   Employment Dashboard and Reports. NGSE/Claim Closed compares actual vs.
   required monthly earnings pace against the Outcome target; GSE factors in
-  overdue reviews and missing income declarations.
+  overdue reviews and missing income declarations. This same health signal
+  is what "Forecast likelihood" and "Forecast Outcomes" mean everywhere else
+  in the app — Green/Amber both count as "forecast to achieve," Red doesn't
+  — deliberately reusing one scoring system rather than inventing a second,
+  parallel one.
+- **Transferred to IWT visibility** — once a Trading Start moves a
+  participant to a different IWT advisor, the **original** advisor keeps a
+  read-only "Transferred to IWT" section on their Self Employment Dashboard
+  (see below) showing that participant's Outcome progress, current
+  cumulative earnings, current status, IWT advisor, Outcome due date,
+  forecast likelihood and Outcome-achieved status — because their own
+  Trading Start / Outcome statistics still depend on how it turns out. This
+  is built as a separate, non-interactive display component with no edit
+  affordances and no links into the editable profile, rather than adding a
+  read-only mode to every existing tab — only the specific fields listed
+  above are shown, not the full participant record. The **IWT advisor**
+  remains the only one who can edit the participant after transfer; a
+  Manager/Admin can always edit (see Permissions below).
 - **Company-wide reporting** — `/reports` adds a Trading Start / IWT /
   Outcome section: Trading Starts and Outcomes for a selectable date range,
   Trading Starts by reason, Outcome conversion rate, IWT caseload, average
@@ -250,6 +322,31 @@ Health) reads these four values live from the `programme_settings` table —
 none of them are hard-coded. Saving a change takes effect on the very next
 page load, everywhere.
 
+## Funding Approval Workflow
+
+Every funding request's `application_status` is now set automatically
+rather than picked from a dropdown:
+
+- **£100 or below** — approves itself immediately (`Approved`), no manager
+  involvement.
+- **Above £100** — set to `Pending Manager Approval` and appears in the
+  **Funding Approval Queue** (`/admin/funding-approvals`, same passcode gate
+  as the rest of Administration), listing every pending request across
+  every office with the participant, advisor, office, amount and purpose.
+  A manager can approve or reject with optional notes; the decision records
+  who made it, when, and the notes (`approved_by`, `approved_at`,
+  `manager_notes` on the funding record) — captured as a free-text name
+  field on the approval form, consistent with this CRM's no-login model,
+  rather than inventing a manager account system just for this. Approving
+  or rejecting updates the participant's funding record immediately (no
+  separate sync step), and the advisor sees it surface on their dashboard's
+  Funding widget (see below) — "notify the advisor" is in-app dashboard
+  surfacing, not email/push/SMS, consistent with this CRM's existing
+  no-messaging design (see Self Employment Dashboard below).
+- Once a request has a manager decision, further advisor edits to that
+  record no longer recompute its status — a manager's decision is never
+  silently overwritten by a later edit.
+
 ## Self Employment Dashboard
 
 **This CRM is not a replacement for Iconi.** Iconi remains the organisation's
@@ -269,10 +366,20 @@ general CRM dashboard, focused entirely on this:
   Starts, Active Trading Starts (the last two are the same eligibility queue
   and IWT caseload respectively, labelled from the "what's pending my
   confirmation vs. what's already live" angle).
-- **Advisor Performance** — all-time Trading Starts achieved and Outcomes
-  achieved (attributed to this advisor as the *original* advisor, per the
-  Trading Start section above), and a live count of participants requiring
-  action today.
+- **Advisor Performance & Forecasting** — Active participants, all-time
+  Trading Starts achieved, participants Transferred to IWT, Forecast
+  Outcomes and Confirmed Outcomes (all attributed to this advisor as the
+  *original* advisor, per the Trading Start section above), plus a live
+  count of participants requiring action today. Forecast Outcomes is
+  **never manually entered** — it's a live count of this advisor's active
+  Trading Starts (their own and their Transferred-to-IWT ones) whose
+  Participant Health isn't Red, recomputed on every page load from current
+  participant progress.
+- **Transferred to IWT** — every participant this advisor originated whose
+  Trading Start later moved them to a different IWT advisor, read-only (see
+  "Transferred to IWT visibility" above): status, IWT advisor, Outcome
+  progress or Outcome-achieved result, and forecast likelihood for the ones
+  still in progress.
 - **Today's Work** — a single queue combining overdue IWT reviews, missing
   income declarations, participants approaching their Outcome deadline,
   participants whose Outcome is ready to process, and participants newly
@@ -296,6 +403,14 @@ general CRM dashboard, focused entirely on this:
   highest/lowest monthly net profit, total cumulative profit, profit since
   Trading Start, profit towards the Outcome target, and a combined income/
   expenses/net-profit chart.
+
+The **general** advisor dashboard (`/advisors/<id>/dashboard`) — My
+Caseload, expiring participants, missing business plans, outstanding
+actions — also shows two more live widgets: **Funding**, this advisor's
+own participants' funding requests currently awaiting manager approval plus
+recently-decided ones; and **Income Tracker alerts**, Active participants
+who haven't logged an Income Tracker entry for the current calendar month.
+Both link straight into the relevant participant tab.
 
 ## Data Sync
 
@@ -347,6 +462,40 @@ instead of entering each participant by hand.
 participants for this feature. It's a sensitive UK identifier — see the
 Security model section below, since it carries the same open-access tradeoff
 as every other field in this database.
+
+## Permissions model
+
+This app has no login (see Security model below), so "permissions" here
+means **UI-level guidance, not enforcement** — a deliberate choice, since
+building real per-advisor access control would mean adding an entire
+authentication system this app has never had. Concretely:
+
+- **Advisor** — their own dashboard and participant list only ever show
+  their own caseload (`participants.advisor_id`); a transferred-away
+  participant simply stops appearing there. They can see participants they
+  originally supported who transferred to IWT via the read-only
+  "Transferred to IWT" section (see above), which has no edit controls and
+  no links into the editable profile — so there is no path *within the
+  UI* from that view into editing a transferred participant.
+- **IWT Advisor** — once a Trading Start transfers a participant, the
+  participant appears in the new advisor's own caseload, editable exactly
+  like any other participant of theirs.
+- **Manager/Admin** — full access via the existing `/admin` and `/reports`
+  passcode gate: approve/reject funding, transfer participants between
+  advisors, view all offices, filter every report, manage Programme
+  Settings.
+
+**What this does not do:** consistent with this app's existing, deliberate
+"any advisor can open any other advisor's workspace" design (e.g. to cover
+a colleague's caseload while they're away — see Organisation structure
+above), nothing stops an advisor from directly navigating to
+`/advisors/<other-advisor-id>/participants/<id>` and editing a participant
+that isn't theirs, transferred or not — there was no such restriction in
+this app before this feature set, and adding one selectively for
+transferred participants only would be inconsistent with how every other
+participant in the app already works. Enforcing "cannot edit transferred
+participants" as a hard rule would require the same real authentication
+system called out in the Security model below.
 
 ## Security model
 
@@ -460,21 +609,26 @@ existing deployment won't pick up new values on its own.
   `getAdvisorCaseloadCounts`. Every part of the app that needs to know about
   advisors or offices goes through this file.
 - `src/app/admin` — the Administration panel (offices, advisors, transfer
-  participants), gated by `src/components/admin-gate.tsx` /
-  `src/lib/admin-auth.ts`. Server actions in `src/lib/actions/admin.ts` and
-  `src/lib/actions/transfer.ts`.
-- `src/app/reports`, `src/lib/data/reports.ts` — the company-wide reporting
-  dashboard; same passcode gate as `/admin`.
+  participants, Funding Approval Queue), gated by
+  `src/components/admin-gate.tsx` / `src/lib/admin-auth.ts`. Server actions
+  in `src/lib/actions/admin.ts`, `src/lib/actions/transfer.ts` and
+  `src/lib/actions/funding.ts` (approve/reject); data layer in
+  `src/lib/data/funding-approvals.ts`.
+- `src/app/reports`, `src/lib/data/reports.ts` — the Manager Dashboard
+  (company-wide reporting, Office Reporting, the Office/Advisor/Date Range
+  filters in `src/components/reports/report-filters.tsx`); same passcode
+  gate as `/admin`.
 - `src/lib/business-rules.ts` — Gateway/Gainful checklist %, business health
-  scores, RAG suggestion, and appointment/action-derived facts (next
-  appointment, last contact, days until Gateway) — all computed, nothing
-  stored twice. Reused by both individual participant profiles and the
-  company-wide Reports page.
+  scores, RAG suggestion, income trend (from the Income Tracker) and
+  appointment/action-derived facts (next appointment, last contact, days
+  until Gateway) — all computed, nothing stored twice. Reused by both
+  individual participant profiles and the company-wide Reports page.
 - `src/lib/next-best-action.ts` — the deterministic Next Best Action engine.
 - `src/lib/actions` — server actions for participants, business plans,
-  monthly performance, evidence, action plan items, appointments, the
+  the Income Tracker, evidence, action plan items, appointments, the
   business journey stage, RAG/health confidence, Gateway/Gainful checklists,
-  funding, HMRC info, digital presence, and the AI assistant.
+  funding (including the approval workflow), HMRC info, digital presence,
+  and the AI assistant.
 - `src/lib/data-sync` — the source-agnostic import engine: file parsing
   (`.xlsx`/`.csv`), field-mapping suggestions, date normalization, row
   validation, and participant matching. `src/lib/actions/data-sync.ts` wraps

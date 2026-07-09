@@ -62,14 +62,20 @@ export default async function SelfEmploymentDashboardPage({
 
       <section className="space-y-3">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">Advisor Performance</h2>
+          <h2 className="text-sm font-semibold text-slate-900">Advisor Performance &amp; Forecasting</h2>
           <p className="text-xs text-slate-500">
-            All-time totals attributed to {advisor.full_name} as the original advisor.
+            All-time totals attributed to {advisor.full_name} as the original advisor. Forecast Outcomes is
+            computed live from current participant progress, not manually entered.
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          <StatCard label="Active participants" value={stats.activeParticipants} />
           <StatCard label="Trading Starts achieved" value={stats.tradingStartsAchieved} />
-          <StatCard label="Outcomes achieved" value={stats.outcomesAchieved} />
+          <StatCard label="Transferred to IWT" value={stats.participantsTransferredToIwt} />
+          <StatCard label="Forecast Outcomes" value={stats.forecastOutcomes} />
+          <StatCard label="Confirmed Outcomes" value={stats.outcomesAchieved} />
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-1">
           <StatCard
             label="Participants requiring action today"
             value={stats.actionsToday}
@@ -263,6 +269,74 @@ export default async function SelfEmploymentDashboardPage({
                   </p>
                 )}
               </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900">Transferred to IWT</h2>
+          <p className="text-xs text-slate-500">
+            Participants {advisor.full_name} originated whose Trading Start moved them to a different IWT
+            advisor. Read-only — {advisor.full_name}&apos;s own Trading Start and Outcome statistics still
+            depend on how these turn out, but only the IWT advisor (or a manager) can edit them.
+          </p>
+        </div>
+        {stats.transferredToIwt.length === 0 ? (
+          <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
+            No participants currently transferred to another IWT advisor.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {stats.transferredToIwt.map((row) => (
+              <div
+                key={row.tradingStart.id}
+                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-medium text-slate-900">{row.participantName}</p>
+                  <div className="flex items-center gap-2">
+                    <Badge tone="slate">{row.participantStatus}</Badge>
+                    {row.outcome ? (
+                      <Badge tone={row.outcome.outcome_achieved ? "green" : "red"}>
+                        {row.outcome.outcome_achieved ? "Outcome Achieved" : "Outcome Not Achieved"}
+                      </Badge>
+                    ) : (
+                      row.forecast && <HealthBadge tone={row.forecast.tone} label={`Forecast: ${row.forecast.label}`} />
+                    )}
+                  </div>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">IWT Advisor: {row.iwtAdvisorName}</p>
+
+                {row.monetary && (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center justify-between text-xs text-slate-600">
+                      <span>
+                        {currency.format(row.monetary.cumulativeProfit)} of {currency.format(row.monetary.target)}
+                      </span>
+                      <span className="font-semibold text-slate-900">{row.monetary.percentComplete}%</span>
+                    </div>
+                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className={clsx(
+                          "h-full rounded-full",
+                          row.monetary.isAchieved ? "bg-emerald-500" : "bg-indigo-500",
+                        )}
+                        style={{ width: `${row.monetary.percentComplete}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500">Outcome due {new Date(row.monetary.deadlineDate).toLocaleDateString("en-GB")}</p>
+                  </div>
+                )}
+
+                {row.gse && (
+                  <p className="mt-3 text-xs text-slate-500">
+                    {row.gse.monthsElapsed} of {settings.gse_outcome_period_months} months complete · Outcome due{" "}
+                    {new Date(row.gse.deadlineDate).toLocaleDateString("en-GB")}
+                  </p>
+                )}
+              </div>
             ))}
           </div>
         )}

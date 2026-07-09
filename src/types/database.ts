@@ -38,6 +38,7 @@ export type TradingStartReason = (typeof TRADING_START_REASONS)[number];
 export const FUNDING_APPLICATION_STATUSES = [
   "Draft",
   "Applied",
+  "Pending Manager Approval",
   "Approved",
   "Declined",
   "Received",
@@ -131,6 +132,7 @@ export type Participant = {
   id: string;
   advisor_id: string;
   ptp_name: string;
+  iconi_id: string | null;
   business_name: string;
   previous_advisor: string | null;
   scheme_start_date: string;
@@ -223,19 +225,6 @@ export type BusinessPlan = {
   updated_at: string;
 };
 
-export type MonthlyEarning = {
-  id: string;
-  participant_id: string;
-  month: string;
-  amount: number;
-  expenses: number;
-  hours_worked: number | null;
-  customer_count: number | null;
-  largest_customer: string | null;
-  notes: string | null;
-  created_at: string;
-};
-
 export type EvidenceFile = {
   id: string;
   participant_id: string;
@@ -281,6 +270,9 @@ export type FundingRecord = {
   file_path: string | null;
   file_name: string | null;
   notes: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  manager_notes: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -424,16 +416,6 @@ export type Database = {
         Row: BusinessPlan;
         Insert: Partial<BusinessPlan> & { participant_id: string };
         Update: Partial<BusinessPlan>;
-        Relationships: [];
-      };
-      monthly_earnings: {
-        Row: MonthlyEarning;
-        Insert: Partial<MonthlyEarning> & {
-          participant_id: string;
-          month: string;
-          amount: number;
-        };
-        Update: Partial<MonthlyEarning>;
         Relationships: [];
       };
       evidence_files: {

@@ -9,7 +9,6 @@ export async function getParticipantDetail(participantId: string) {
   const [
     participantRes,
     businessPlanRes,
-    monthlyEarningsRes,
     evidenceFilesRes,
     actionPlanRes,
     appointmentsRes,
@@ -34,11 +33,6 @@ export async function getParticipantDetail(participantId: string) {
       .select("*")
       .eq("participant_id", participantId)
       .maybeSingle(),
-    supabase
-      .from("monthly_earnings")
-      .select("*")
-      .eq("participant_id", participantId)
-      .order("month", { ascending: true }),
     supabase
       .from("evidence_files")
       .select("*")
@@ -126,7 +120,6 @@ export async function getParticipantDetail(participantId: string) {
     assignedAdvisor,
     advisors,
     businessPlan: businessPlanRes.data,
-    monthlyEarnings: monthlyEarningsRes.data ?? [],
     evidenceFiles: evidenceFilesRes.data ?? [],
     actionPlanItems: actionPlanRes.data ?? [],
     appointments: appointmentsRes.data ?? [],

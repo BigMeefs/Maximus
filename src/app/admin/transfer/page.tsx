@@ -9,7 +9,7 @@ export default async function AdminTransferPage() {
   const [{ data: participants }, activeAdvisors, allAdvisors, transfers] = await Promise.all([
     supabase
       .from("participants")
-      .select("id, ptp_name, business_name, advisor_id")
+      .select("id, ptp_name, iconi_id, email, business_name, advisor_id")
       .order("ptp_name", { ascending: true }),
     listAdvisors({ activeOnly: true }),
     listAdvisors(),

@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState, useRef, useState, useTransition } from "react";
-import type { FundingRecord } from "@/types/database";
-import { FUNDING_APPLICATION_STATUSES } from "@/types/database";
+import type { FundingApplicationStatus, FundingRecord } from "@/types/database";
+import Badge from "@/components/badge";
 import {
   createFundingRecord,
   deleteFundingRecord,
@@ -18,6 +18,20 @@ const currency = new Intl.NumberFormat("en-GB", {
 });
 
 const initialState: FundingFormState = {};
+
+function fundingStatusTone(status: FundingApplicationStatus) {
+  switch (status) {
+    case "Approved":
+    case "Received":
+      return "green" as const;
+    case "Pending Manager Approval":
+      return "amber" as const;
+    case "Declined":
+      return "red" as const;
+    default:
+      return "slate" as const;
+  }
+}
 
 export default function FundingTab({
   participantId,
@@ -72,20 +86,11 @@ export default function FundingTab({
           <Field label="Funding Source" required>
             <input name="funding_source" required className={inputClass} />
           </Field>
-          <Field label="Application Status">
-            <select name="application_status" defaultValue="Draft" className={inputClass}>
-              {FUNDING_APPLICATION_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </Field>
           <Field label="Amount Requested (£)">
             <input name="amount_requested" type="number" step="0.01" min="0" className={inputClass} />
-          </Field>
-          <Field label="Amount Approved (£)">
-            <input name="amount_approved" type="number" step="0.01" min="0" className={inputClass} />
+            <p className="mt-1 text-xs text-slate-500">
+              £100 or below approves automatically; above £100 goes to a manager for approval.
+            </p>
           </Field>
           <Field label="Amount Received (£)">
             <input name="amount_received" type="number" step="0.01" min="0" className={inputClass} />
@@ -148,17 +153,16 @@ function FundingRecordCard({ record }: { record: FundingRecord }) {
             />
           </Field>
           <Field label="Application Status">
-            <select
-              name="application_status"
-              defaultValue={record.application_status}
-              className={inputClass}
-            >
-              {FUNDING_APPLICATION_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2 pt-1.5">
+              <Badge tone={fundingStatusTone(record.application_status)}>
+                {record.application_status}
+              </Badge>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              {record.application_status === "Pending Manager Approval"
+                ? "Awaiting a manager's decision in the Funding Approval Queue."
+                : "Set automatically from the amount requested, or by a manager's decision."}
+            </p>
           </Field>
           <Field label="Amount Requested (£)">
             <input
@@ -246,6 +250,17 @@ function FundingRecordCard({ record }: { record: FundingRecord }) {
           {state.error && <span className="text-sm text-red-600">{state.error}</span>}
         </div>
       </form>
+
+      {record.approved_by && (
+        <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3 text-xs text-slate-600">
+          <p>
+            {record.application_status === "Declined" ? "Declined" : "Approved"} by{" "}
+            <span className="font-medium text-slate-800">{record.approved_by}</span>
+            {record.approved_at && ` on ${new Date(record.approved_at).toLocaleDateString("en-GB")}`}
+          </p>
+          {record.manager_notes && <p className="mt-1">{record.manager_notes}</p>}
+        </div>
+      )}
 
       <div className="mt-3 border-t border-slate-100 pt-3">
         {record.file_path && record.file_name ? (
