@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { calculateMileageCost } from "@/lib/mileage";
 
 export type IncomeTrackerFormState = {
   error?: string;
@@ -24,7 +25,7 @@ export async function upsertIncomeTrackerEntry(
   const entryDate = formData.get("entry_date")?.toString() ?? "";
   const income = numberOrZero(formData.get("income"));
   const expense = numberOrZero(formData.get("expense"));
-  const mileageCost = numberOrZero(formData.get("mileage_cost"));
+  const miles = numberOrZero(formData.get("miles"));
   const notes = formData.get("notes")?.toString().trim() || null;
 
   if (!entryDate) {
@@ -32,6 +33,7 @@ export async function upsertIncomeTrackerEntry(
   }
 
   const month = `${entryDate.slice(0, 7)}-01`;
+  const mileageCost = calculateMileageCost(miles);
   const supabase = await createClient();
 
   const { error } = await supabase.from("income_tracker_entries").upsert(
@@ -41,6 +43,7 @@ export async function upsertIncomeTrackerEntry(
       entry_date: entryDate,
       income,
       expense,
+      miles,
       mileage_cost: mileageCost,
       notes,
       source: "manual",

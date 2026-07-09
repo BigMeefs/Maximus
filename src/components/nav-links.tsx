@@ -4,13 +4,25 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 
-export default function NavLinks({ advisorId }: { advisorId: string }) {
+export default function NavLinks({
+  advisorId,
+  unreadCount = 0,
+}: {
+  advisorId: string;
+  unreadCount?: number;
+}) {
   const pathname = usePathname();
 
   const workspaceLinks = [
     { href: `/advisors/${advisorId}/dashboard`, label: "Dashboard", icon: "▦" },
     { href: `/advisors/${advisorId}/self-employment`, label: "Self Employment", icon: "📈" },
     { href: `/advisors/${advisorId}/participants`, label: "Participants", icon: "▤" },
+    {
+      href: `/advisors/${advisorId}/notifications`,
+      label: "Notifications",
+      icon: "🔔",
+      badge: unreadCount > 0 ? unreadCount : undefined,
+    },
     { href: `/advisors/${advisorId}/data-sync`, label: "Data Sync", icon: "⇅" },
   ];
 
@@ -36,7 +48,7 @@ function NavLink({
   link,
   pathname,
 }: {
-  link: { href: string; label: string; icon: string };
+  link: { href: string; label: string; icon: string; badge?: number };
   pathname: string;
 }) {
   const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
@@ -53,7 +65,17 @@ function NavLink({
       <span aria-hidden className="text-base">
         {link.icon}
       </span>
-      {link.label}
+      <span className="flex-1">{link.label}</span>
+      {link.badge !== undefined && (
+        <span
+          className={clsx(
+            "rounded-full px-2 py-0.5 text-xs font-semibold",
+            active ? "bg-white/20 text-white" : "bg-red-100 text-red-700",
+          )}
+        >
+          {link.badge}
+        </span>
+      )}
     </Link>
   );
 }

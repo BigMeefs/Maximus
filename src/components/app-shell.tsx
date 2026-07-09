@@ -8,9 +8,11 @@ import type { AdvisorWithOffice } from "@/lib/data/advisor";
 
 export default function AppShell({
   advisor,
+  unreadCount = 0,
   children,
 }: {
   advisor: AdvisorWithOffice;
+  unreadCount?: number;
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -30,7 +32,7 @@ export default function AppShell({
             Employment Hub
           </span>
         </Link>
-        <NavLinks advisorId={advisor.id} />
+        <NavLinks advisorId={advisor.id} unreadCount={unreadCount} />
         <div className="mt-auto flex items-center justify-between border-t border-slate-200 px-4 pt-4">
           <div className="text-sm">
             <p className="font-medium text-slate-900">{advisor.full_name}</p>
@@ -67,7 +69,7 @@ export default function AppShell({
 
         {mobileOpen && (
           <div className="border-b border-slate-200 bg-white px-3 pb-4 md:hidden">
-            <NavLinks advisorId={advisor.id} />
+            <NavLinks advisorId={advisor.id} unreadCount={unreadCount} />
             <div className="mt-3 flex items-center justify-between border-t border-slate-200 px-3 pt-3">
               <div className="text-sm">
                 <p className="font-medium text-slate-900">{advisor.full_name}</p>

@@ -3,9 +3,11 @@ import clsx from "clsx";
 import { getAdvisorOrNotFound } from "@/lib/data/advisor";
 import { getSelfEmploymentDashboard, type WorkQueueItemType } from "@/lib/data/self-employment";
 import { getProgrammeSettings } from "@/lib/data/programme-settings";
+import { getIncomeSubmissions } from "@/lib/data/notifications";
 import StatCard from "@/components/stat-card";
 import HealthBadge from "@/components/participant/health-badge";
 import Badge from "@/components/badge";
+import PortalQrCard from "@/components/self-employment/portal-qr-card";
 
 const currency = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
 
@@ -24,9 +26,10 @@ export default async function SelfEmploymentDashboardPage({
 }) {
   const { advisorId } = await params;
   const advisor = await getAdvisorOrNotFound(advisorId);
-  const [stats, settings] = await Promise.all([
+  const [stats, settings, unreviewedSubmissions] = await Promise.all([
     getSelfEmploymentDashboard(advisorId, advisor.full_name),
     getProgrammeSettings(),
+    getIncomeSubmissions({ advisorId, reviewed: false }),
   ]);
 
   const participantsHref = `/advisors/${advisorId}/participants`;
@@ -41,6 +44,8 @@ export default async function SelfEmploymentDashboardPage({
           caseload.
         </p>
       </div>
+
+      <PortalQrCard />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         <StatCard label="Active Participants" value={stats.activeParticipants} href={participantsHref} />
@@ -92,6 +97,45 @@ export default async function SelfEmploymentDashboardPage({
         />
         <StatCard label="Active Trading Starts" value={stats.activeTradingStarts} />
       </div>
+
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">Income Tracker Submissions</h2>
+            <p className="text-xs text-slate-500">
+              New submissions from the Participant Income Tracker Portal, awaiting your review.
+            </p>
+          </div>
+          <Link
+            href={`/advisors/${advisorId}/notifications`}
+            className="text-sm font-medium text-indigo-600 hover:underline"
+          >
+            View all →
+          </Link>
+        </div>
+        {unreviewedSubmissions.length === 0 ? (
+          <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
+            No submissions awaiting review.
+          </p>
+        ) : (
+          <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white shadow-sm">
+            {unreviewedSubmissions.slice(0, 5).map((row) => (
+              <li key={row.entry.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                <div>
+                  <p className="font-medium text-slate-800">{row.participantName}</p>
+                  <p className="text-xs text-slate-500">
+                    {row.participantEmail} ·{" "}
+                    {new Date(row.entry.entry_date).toLocaleDateString("en-GB")}
+                  </p>
+                </div>
+                <Badge tone="amber">
+                  Net {new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(row.netProfit)}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="space-y-3">
         <div>

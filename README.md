@@ -174,12 +174,14 @@ Every participant profile now includes, above the original CRM tabs:
   participant's live stage and readiness data. Requires `ANTHROPIC_API_KEY`
   (see below); without it, the tab explains what to add rather than failing
   silently.
-- **Income Tracker** — populated automatically from the client-facing income
-  tracker form (see `integrations/google-apps-script/`) via the
-  participant's Email field, one entry per calendar month; Net Profit is
-  computed live, not stored. Advisors can also add or edit entries here
-  directly. This is now the CRM's single source of monthly earnings data —
-  see "Removed: Monthly Performance" below.
+- **Income Tracker** — one entry per calendar month, from three sources:
+  the client-facing Google Form (see `integrations/google-apps-script/`),
+  the public **Participant Income Tracker Portal** (see below), or an
+  advisor adding/editing an entry directly on this tab — all matched to a
+  participant by their Email field, all landing in the same table, all
+  showing Miles and a live-calculated mileage deduction. Net Profit is
+  computed live, not stored. This is the CRM's single source of monthly
+  earnings data — see "Removed: Monthly Performance" below.
 
 Nothing here duplicates data that already exists elsewhere — readiness %,
 health scores, days-until-Gateway, next appointment, last contact and
@@ -412,6 +414,93 @@ recently-decided ones; and **Income Tracker alerts**, Active participants
 who haven't logged an Income Tracker entry for the current calendar month.
 Both link straight into the relevant participant tab.
 
+## Participant Income Tracker Portal
+
+`/portal` is a standalone public page — no login, no unique per-participant
+link, nothing else in the CRM reachable from it. It's meant to be reached
+via a QR code or a shared URL, not by navigating the CRM.
+
+- **Email-only lookup.** A participant enters their email; the CRM matches
+  it against `participants.email` (case-insensitive, exact match — same
+  matching rule as the Google Apps Script Income Tracker sync). On a match
+  it greets them by first name and shows the form. On no match it shows
+  "We couldn't find an account using that email address. Please contact
+  your Self Employment Advisor." and nothing else — no hint about *why* it
+  didn't match, no participant data of any kind.
+- **The form**: Date, Gross Income, Business Expenses, Business Mileage
+  (Miles), Notes (optional), and an optional Earnings Declaration upload.
+  There's no manual mileage cost field — mileage is converted to a cost
+  automatically:
+  - `miles ≤ 833` → `miles × £0.45`
+  - `miles > 833` → `(833 × £0.45) + ((miles − 833) × £0.25)`
+
+  The 833-mile threshold is a *per-submission* (monthly) figure — a twelfth
+  of HMRC's real 10,000-mile *annual* threshold — matching this CRM's
+  month-by-month Income Tracker model rather than tracking a rolling annual
+  mileage total. The mileage deduction and the resulting Net Profit
+  (`Gross Income − Business Expenses − Mileage Cost`) are shown live as the
+  participant types, then recalculated server-side on submit — the server
+  never trusts a client-computed figure.
+- **Submitting** upserts an `income_tracker_entries` row for that
+  participant/month exactly like every other Income Tracker source (manual
+  advisor entry, the Google Apps Script sync), with `source = 'Participant
+  Portal'`, `miles`, the calculated `mileage_cost`, and the uploaded
+  declaration (if any) in a private `income-tracker-declarations` storage
+  bucket. **Net Profit is not stored as its own column** — like every other
+  computed figure in this CRM (health scores, readiness %, income trend),
+  it's computed live from income/expense/mileage_cost wherever it's shown,
+  so it can never drift out of sync with those numbers if they're edited
+  later. `submitted_at` is `created_at` — not a separate duplicate column.
+- **The manual (advisor-facing) Income Tracker entry form was also
+  switched** from a raw "Mileage Cost" input to the same Miles field with
+  the same live-calculated deduction, so `miles`/`mileage_cost` mean the
+  same thing everywhere in the table regardless of source, rather than only
+  the portal path having real mileage data.
+
+### Advisor-facing review
+
+"Notifications" here means **unreviewed Participant Portal submissions**,
+computed live from `income_tracker_entries` filtered to
+`source = 'Participant Portal'` — there's no separate notifications table
+to keep in sync with the entries themselves.
+
+- A **Notifications** link in the sidebar nav shows a live unread badge
+  (this advisor's own unreviewed submissions) and opens
+  `/advisors/<id>/notifications` — every Portal submission, newest first,
+  filterable by Advisor, Office, Date and Reviewed/Unreviewed status (the
+  same Office/Advisor filter pattern as Reports). Each row shows the
+  participant, email, submission date, Net Profit and status, with
+  **Mark as Reviewed**, **Open submission** (into the participant's Income
+  Tracker tab) and **View declaration** (a signed URL, if one was uploaded).
+  Marking a submission reviewed records who (the advisor whose workspace
+  you're viewing it from — this route already carries that context, same
+  as the rest of the advisor-scoped app) and when.
+- The **Self Employment Dashboard** also shows a compact "Income Tracker
+  Submissions" list of this advisor's own unreviewed submissions, and a
+  **Participant Income Tracker Portal** card at the top with a QR code
+  (generated server-side from the request's own host, so it doesn't need a
+  hardcoded production URL) and a copyable link — print it or email it to
+  participants.
+- On the participant's own profile, the existing **Income Tracker** tab is
+  where every submission "automatically appears" — it already lists every
+  entry with month, date, income, expense, and now Miles, a Status badge
+  (Awaiting advisor review / Reviewed by X) and a declaration link where
+  present, rather than a separate new cross-cutting "Participant Timeline"
+  view merging every event type in the app (appointments, status changes,
+  income entries, etc.) — that would have been a much larger, separately-
+  scoped feature than what was asked for here.
+
+### Security caveat
+
+This does **not** add real access control beyond what already exists (or
+doesn't) in this project — see "Security model" below. The portal page and
+its server actions are written to only ever return the minimum a
+participant should see (a first name on match, nothing on no match, and
+the lookup/submit actions never return a participant record), but RLS is
+disabled and the anon key is public by design, so anyone calling Supabase's
+REST API directly still has the same full read/write access they always
+did, independent of this page's own restraint.
+
 ## Data Sync
 
 A "Data Sync" section in the nav (`/advisors/<id>/data-sync`) lets advisors
@@ -543,7 +632,7 @@ supabase db push
 ```
 
 This creates all tables and the `business-plans` / `evidence-files` /
-`funding-documents` storage buckets.
+`funding-documents` / `income-tracker-declarations` storage buckets.
 
 Migration `0009_org_structure.sql` also **auto-migrates any pre-existing
 participants** onto the new structure: it creates a placeholder office
@@ -637,6 +726,16 @@ existing deployment won't pick up new values on its own.
   `advisors` table.
 - `src/app/advisors/[advisorId]/data-sync` — Sync Dashboard, Import wizard,
   Import History (+ per-batch detail), and Field Mappings pages.
+- `src/app/portal`, `src/components/portal` — the standalone, public
+  Participant Income Tracker Portal. Deliberately outside every other
+  layout (no AppShell, no nav) — this is the one part of the app a
+  participant should ever reach. Server actions in
+  `src/lib/actions/portal.ts`; mileage calculation in `src/lib/mileage.ts`.
+- `src/app/advisors/[advisorId]/notifications`,
+  `src/lib/data/notifications.ts` — the advisor-facing review queue for
+  Portal submissions (computed from `income_tracker_entries`, not a
+  separate table); the nav sidebar's unread badge reads from the same data
+  layer.
 - `src/lib/supabase` — Supabase client helpers.
 - `integrations/google-apps-script` — reference copy of the Apps Script
   function that syncs the external client income tracker form into the

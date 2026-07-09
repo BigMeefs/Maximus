@@ -334,6 +334,12 @@ export type IncomeTrackerEntry = {
   income: number;
   expense: number;
   mileage_cost: number;
+  miles: number;
+  declaration_file_path: string | null;
+  declaration_file_name: string | null;
+  reviewed: boolean;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
   notes: string | null;
   source: string;
   created_at: string;
