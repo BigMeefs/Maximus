@@ -67,3 +67,31 @@ alongside your current `doPost`.
 - Never throws back into your `doPost`: any Supabase/network failure is
   caught and logged, so the existing Sheets/Drive write always succeeds
   regardless of CRM sync outcome.
+- `syncToCrm(...)` returns `{ status, detail }`, where `status` is one of
+  `"synced"`, `"skipped_no_email"`, `"skipped_no_match"` or `"error"`. Use
+  this in your `doPost` if you want visibility (write it to a spare column
+  on the row, email yourself on `"error"`, etc.) without opening Apps
+  Script's Executions log each time.
+
+## Troubleshooting: submissions aren't showing up in the CRM
+
+1. **Run `testSyncToCrm()` directly.** In the Apps Script editor, put a real
+   participant's email (from their CRM profile) into `testSyncToCrm()` at
+   the top of `income-tracker-sync.gs`, select it in the function dropdown,
+   and click Run. Check View → Logs for the result. This exercises the
+   exact same code path as a real form submission, so it tells you
+   immediately whether the problem is in the CRM sync code, or somewhere
+   upstream of it (your `doPost`/form).
+2. **Redeploy after any edit.** Editing the script does **not** update what
+   a live "Web app" deployment URL runs — you have to go to Deploy → Manage
+   deployments → Edit the active deployment → select "New version" → Deploy.
+   This is the single most common reason a working `syncToCrm(...)` call
+   never actually runs against real submissions: it was added to the
+   script, but the deployment serving the form was never updated.
+3. **Check the participant has an email set in the CRM.** Matching is
+   strictly by email (Participants → the participant → Edit → Email) — a
+   submission from an address that doesn't match any participant is
+   silently skipped by design (`status: "skipped_no_match"`), not an error.
+4. **Check Executions** (View → Executions) after a real form submission,
+   if the above two don't explain it — filter to `doPost` and look for
+   whether `syncToCrm` ran at all and what it logged.
