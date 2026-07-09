@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useTransition } from "react";
-import type { IncomeTrackerEntry, TradingStart } from "@/types/database";
+import type { IncomeTrackerEntry, ProgrammeSettings, TradingStart } from "@/types/database";
 import {
   deleteIncomeTrackerEntry,
   upsertIncomeTrackerEntry,
@@ -33,10 +33,12 @@ export default function IncomeTrackerTab({
   participantId,
   entries,
   tradingStart,
+  settings,
 }: {
   participantId: string;
   entries: IncomeTrackerEntry[];
   tradingStart?: TradingStart | null;
+  settings: ProgrammeSettings;
 }) {
   const boundUpsert = upsertIncomeTrackerEntry.bind(null, participantId);
   const [state, formAction, pending] = useActionState(boundUpsert, initialState);
@@ -57,7 +59,7 @@ export default function IncomeTrackerTab({
     : null;
   const outcomeProgress =
     tradingStart && tradingStart.reason !== "GSE"
-      ? computeMonetaryOutcomeProgress(tradingStart.trading_start_date, entries)
+      ? computeMonetaryOutcomeProgress(tradingStart.trading_start_date, entries, settings)
       : null;
 
   return (

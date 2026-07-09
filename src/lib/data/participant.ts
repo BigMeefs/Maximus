@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { listAdvisors } from "@/lib/data/advisor";
+import { getProgrammeSettings } from "@/lib/data/programme-settings";
 
 export async function getParticipantDetail(participantId: string) {
   const supabase = await createClient();
@@ -21,6 +22,7 @@ export async function getParticipantDetail(participantId: string) {
     statusHistoryRes,
     tradingStartsRes,
     advisors,
+    programmeSettings,
   ] = await Promise.all([
     supabase
       .from("participants")
@@ -91,6 +93,7 @@ export async function getParticipantDetail(participantId: string) {
       .eq("participant_id", participantId)
       .order("created_at", { ascending: false }),
     listAdvisors(),
+    getProgrammeSettings(),
   ]);
 
   if (!participantRes.data) {
@@ -138,5 +141,6 @@ export async function getParticipantDetail(participantId: string) {
     currentTradingStart,
     iwtReviews: iwtReviewsRes.data ?? [],
     outcome: outcomeRes.data,
+    programmeSettings,
   };
 }

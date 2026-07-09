@@ -1,13 +1,14 @@
 import StatCard from "@/components/stat-card";
 import Badge from "@/components/badge";
 import MonthlyProgressChart from "@/components/reports/monthly-progress-chart";
+import TradingStartTrendsChart from "@/components/reports/trading-start-trends-chart";
 import { getCompanyReportStats, getTradingStartReportStats } from "@/lib/data/reports";
 
 const currency = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
 
 const REASON_LABEL: Record<string, string> = {
   GSE: "GSE",
-  NGSE: "NGSE",
+  NGSE: "NGSE (2 Month Average)",
   "Claim Closed Whilst Self Employed": "Claim Closed",
 };
 
@@ -190,7 +191,7 @@ export default async function ReportsPage({
             value={`${tsStats.outcomeConversionRate}%`}
           />
           <StatCard
-            label="Approaching 6-month deadline"
+            label="Approaching Outcome deadline"
             value={tsStats.approachingDeadline}
             tone={tsStats.approachingDeadline > 0 ? "warning" : "default"}
           />
@@ -245,29 +246,33 @@ export default async function ReportsPage({
         </div>
 
         <Section
-          title="Advisor performance — Trading Starts &amp; Outcomes"
-          subtitle="Attributed to the original advisor, even after the participant transfers to an IWT advisor."
+          title="Team leaderboard — Trading Starts &amp; Outcomes by advisor"
+          subtitle="Sorted by Trading Starts, attributed to the original advisor even after the participant transfers to an IWT advisor."
         >
           {tsStats.byAdvisor.length === 0 ? (
-            <p className="text-sm text-slate-500">No Trading Starts recorded yet.</p>
+            <p className="text-sm text-slate-500">No advisors found.</p>
           ) : (
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   <tr>
+                    <th className="px-4 py-3">#</th>
                     <th className="px-4 py-3">Advisor</th>
+                    <th className="px-4 py-3">Active caseload</th>
                     <th className="px-4 py-3">Trading Starts</th>
                     <th className="px-4 py-3">Outcomes achieved</th>
                     <th className="px-4 py-3">Outcomes not achieved</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {tsStats.byAdvisor.map((row) => (
+                  {tsStats.byAdvisor.map((row, index) => (
                     <tr key={row.advisorId}>
+                      <td className="px-4 py-3 text-slate-400">{index + 1}</td>
                       <td className="px-4 py-3">
                         <p className="font-medium text-slate-900">{row.label}</p>
                         <p className="text-xs text-slate-500">{row.officeLabel}</p>
                       </td>
+                      <td className="px-4 py-3 text-slate-600">{row.activeCaseload}</td>
                       <td className="px-4 py-3 text-slate-600">{row.tradingStarts}</td>
                       <td className="px-4 py-3 text-slate-600">{row.outcomesAchieved}</td>
                       <td className="px-4 py-3 text-slate-600">{row.outcomesNotAchieved}</td>
@@ -277,6 +282,10 @@ export default async function ReportsPage({
               </table>
             </div>
           )}
+        </Section>
+
+        <Section title="Monthly trends" subtitle="Trading Starts and Outcomes recorded per month, company-wide.">
+          <TradingStartTrendsChart points={tsStats.monthlyTrends} />
         </Section>
       </div>
     </div>

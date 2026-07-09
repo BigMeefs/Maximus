@@ -68,6 +68,7 @@ export default async function ParticipantProfilePage({
     currentTradingStart,
     iwtReviews,
     outcome,
+    programmeSettings,
   } = await getParticipantDetail(id);
 
   const daysRemaining = getDaysRemaining(participant.scheme_start_date);
@@ -75,7 +76,7 @@ export default async function ParticipantProfilePage({
 
   const health =
     currentTradingStart && !outcome
-      ? computeParticipantHealth(currentTradingStart, incomeTrackerEntries, iwtReviews)
+      ? computeParticipantHealth(currentTradingStart, incomeTrackerEntries, iwtReviews, programmeSettings)
       : null;
 
   const gateway = getGatewayChecklist({
@@ -246,10 +247,12 @@ export default async function ParticipantProfilePage({
                   participantId={id}
                   advisorId={advisorId}
                   advisors={advisors}
+                  participant={participant}
                   incomeTrackerEntries={incomeTrackerEntries}
                   currentTradingStart={currentTradingStart}
                   iwtReviews={iwtReviews}
                   outcome={outcome}
+                  settings={programmeSettings}
                 />
               ),
             },
@@ -304,6 +307,7 @@ export default async function ParticipantProfilePage({
                   participantId={id}
                   entries={incomeTrackerEntries}
                   tradingStart={currentTradingStart}
+                  settings={programmeSettings}
                 />
               ),
             },

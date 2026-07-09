@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
-import type { IncomeTrackerEntry, IwtReview, OutcomeRecord, TradingStart } from "@/types/database";
+import type { IncomeTrackerEntry, IwtReview, OutcomeRecord, TradingStart, TradingStartReason } from "@/types/database";
+import { getProgrammeSettings } from "@/lib/data/programme-settings";
 import {
   computeGseOutcomeProgress,
   computeMonetaryOutcomeProgress,
-  detectNgseEligibility,
+  evaluateTradingStartEligibility,
   isDeclarationMissing,
   isReviewOverdue,
   type GseOutcomeProgress,
@@ -17,8 +18,9 @@ function isThisMonth(dateStr: string, now: Date): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Trading Start Intelligence — participants auto-detected as eligible for an
-// NGSE Trading Start from two consecutive months over £900 net profit.
+// Trading Start Intelligence — Active participants auto-detected as eligible
+// for an NGSE Trading Start (two-month average net profit at/above the
+// configured threshold).
 // ---------------------------------------------------------------------------
 export type TsIntelligenceRow = {
   participantId: string;
@@ -29,6 +31,15 @@ export type TsIntelligenceRow = {
   month1NetProfit: number;
   month2NetProfit: number;
   dateEligible: string;
+};
+
+// GSE / Claim Closed eligibility doesn't have a month-pair shape — a simple
+// reason + detail row is enough for the queue and the work list.
+export type SimpleEligibleRow = {
+  participantId: string;
+  participantName: string;
+  reason: TradingStartReason;
+  detail: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -80,7 +91,14 @@ export type SelfEmploymentDashboard = {
   eligibleForTradingStart: number;
   participantsNearOutcome: number;
   participantsAtRisk: number;
+  // Distinct labels for the same concepts, per spec — in this architecture a
+  // Trading Start transfers straight into IWT, so "pending" (awaiting
+  // advisor confirmation) and "active" (live, no Outcome yet) map onto the
+  // eligibility queue and the IWT caseload respectively.
+  pendingTradingStarts: number;
+  activeTradingStarts: number;
   tsIntelligence: TsIntelligenceRow[];
+  gseClaimEligible: SimpleEligibleRow[];
   outcomeIntelligence: OutcomeIntelligenceRow[];
   workQueue: WorkQueueItem[];
   // Advisor performance (all-time, attributed to this advisor as the
@@ -103,10 +121,11 @@ export async function getSelfEmploymentDashboard(
 ): Promise<SelfEmploymentDashboard> {
   const supabase = await createClient();
   const now = new Date();
+  const settings = await getProgrammeSettings();
 
   const { data: participants } = await supabase
     .from("participants")
-    .select("id, ptp_name, status")
+    .select("id, ptp_name, status, is_gse, claim_closed")
     .eq("advisor_id", advisorId);
 
   const rows = participants ?? [];
@@ -163,9 +182,11 @@ export async function getSelfEmploymentDashboard(
     const entries = entriesByParticipant.get(ts.participant_id) ?? [];
     const reviews = reviewsByTsId.get(ts.id) ?? [];
     const isMonetary = ts.reason !== "GSE";
-    const monetary = isMonetary ? computeMonetaryOutcomeProgress(ts.trading_start_date, entries, now) : null;
-    const gse = !isMonetary ? computeGseOutcomeProgress(ts.trading_start_date, now) : null;
-    const health = computeParticipantHealth(ts, entries, reviews, now);
+    const monetary = isMonetary
+      ? computeMonetaryOutcomeProgress(ts.trading_start_date, entries, settings, now)
+      : null;
+    const gse = !isMonetary ? computeGseOutcomeProgress(ts.trading_start_date, settings, now) : null;
+    const health = computeParticipantHealth(ts, entries, reviews, settings, now);
     const isOutcomeReady = monetary?.isAchieved || gse?.readyToConfirm || false;
 
     return {
@@ -180,23 +201,42 @@ export async function getSelfEmploymentDashboard(
   });
 
   // ---- Trading Start Intelligence: Active participants with no Trading Start yet ----
-  const tsIntelligence: TsIntelligenceRow[] = rows
-    .filter((p) => p.status === "Active")
-    .map((p) => {
-      const eligibility = detectNgseEligibility(entriesByParticipant.get(p.id) ?? []);
-      if (!eligibility.eligible) return null;
-      return {
+  const activeParticipantsWithoutTs = rows.filter((p) => p.status === "Active");
+  const tsIntelligence: TsIntelligenceRow[] = [];
+  const gseClaimEligible: SimpleEligibleRow[] = [];
+
+  for (const p of activeParticipantsWithoutTs) {
+    const results = evaluateTradingStartEligibility({
+      participant: p,
+      entries: entriesByParticipant.get(p.id) ?? [],
+      settings,
+    });
+
+    const ngse = results.find((r) => r.reason === "NGSE" && r.eligible);
+    if (ngse?.ngse) {
+      tsIntelligence.push({
         participantId: p.id,
         participantName: p.ptp_name,
         advisorName,
-        month1: eligibility.qualifyingMonths[0],
-        month2: eligibility.qualifyingMonths[1],
-        month1NetProfit: eligibility.month1NetProfit ?? 0,
-        month2NetProfit: eligibility.month2NetProfit ?? 0,
-        dateEligible: eligibility.dateEligible ?? "",
-      } satisfies TsIntelligenceRow;
-    })
-    .filter((row): row is TsIntelligenceRow => row !== null);
+        month1: ngse.ngse.month1!,
+        month2: ngse.ngse.month2!,
+        month1NetProfit: ngse.ngse.month1NetProfit ?? 0,
+        month2NetProfit: ngse.ngse.month2NetProfit ?? 0,
+        dateEligible: ngse.ngse.dateEligible ?? "",
+      });
+    }
+
+    for (const result of results) {
+      if (result.reason !== "NGSE" && result.eligible) {
+        gseClaimEligible.push({
+          participantId: p.id,
+          participantName: p.ptp_name,
+          reason: result.reason,
+          detail: result.detail,
+        });
+      }
+    }
+  }
 
   // ---- Today's Work queue ----
   const workQueue: WorkQueueItem[] = [];
@@ -208,7 +248,17 @@ export async function getSelfEmploymentDashboard(
       participantId: row.participantId,
       participantName: row.participantName,
       label: "Eligible for Trading Start",
-      detail: `Two consecutive months over £900 net profit (${row.month1} and ${row.month2}).`,
+      detail: `Two-month average net profit at or above £${settings.ngse_average_threshold.toLocaleString("en-GB")} (${row.month1} and ${row.month2}).`,
+    });
+  }
+  for (const row of gseClaimEligible) {
+    workQueue.push({
+      type: "eligible_for_ts",
+      urgency: URGENCY.eligible_for_ts,
+      participantId: row.participantId,
+      participantName: row.participantName,
+      label: "Eligible for Trading Start",
+      detail: row.detail,
     });
   }
 
@@ -244,8 +294,8 @@ export async function getSelfEmploymentDashboard(
         participantName: row.participantName,
         label: "Outcome ready to process",
         detail: row.monetary
-          ? "Cumulative net profit has reached £5,300 within 6 months."
-          : "The full 6-month gainful period is complete.",
+          ? `Cumulative net profit has reached £${settings.outcome_target.toLocaleString("en-GB")} within ${settings.outcome_period_months} months.`
+          : `The full ${settings.gse_outcome_period_months}-month gainful period is complete.`,
       });
     } else if (row.monetary && !row.monetary.isOverdue && row.monetary.monthsRemaining <= 1) {
       workQueue.push({
@@ -254,7 +304,7 @@ export async function getSelfEmploymentDashboard(
         participantId: row.participantId,
         participantName: row.participantName,
         label: "Approaching Outcome deadline",
-        detail: `${row.monetary.monthsRemaining} month(s) left to reach £5,300 (currently ${row.monetary.percentComplete}%).`,
+        detail: `${row.monetary.monthsRemaining} month(s) left to reach £${settings.outcome_target.toLocaleString("en-GB")} (currently ${row.monetary.percentComplete}%).`,
       });
     } else if (row.gse && !row.gse.readyToConfirm && row.gse.monthsRemaining <= 1) {
       workQueue.push({
@@ -263,7 +313,7 @@ export async function getSelfEmploymentDashboard(
         participantId: row.participantId,
         participantName: row.participantName,
         label: "Approaching Outcome deadline",
-        detail: `${row.gse.monthsRemaining} month(s) left in the 6-month gainful period.`,
+        detail: `${row.gse.monthsRemaining} month(s) left in the gainful period.`,
       });
     }
   }
@@ -278,15 +328,20 @@ export async function getSelfEmploymentDashboard(
     (o, index, all) => all.findIndex((x) => x.id === o.id) === index && isThisMonth(o.outcome_date, now),
   ).length;
 
+  const eligibleForTradingStart = tsIntelligence.length + gseClaimEligible.length;
+
   return {
     activeParticipants: rows.filter((p) => p.status === "Active").length,
     tradingStartsThisMonth,
     participantsInIwt: activeTradingStarts.length,
     outcomesThisMonth,
-    eligibleForTradingStart: tsIntelligence.length,
+    eligibleForTradingStart,
     participantsNearOutcome: outcomeIntelligence.filter(isNearOutcome).length,
     participantsAtRisk: outcomeIntelligence.filter((r) => r.health.tone === "red").length,
+    pendingTradingStarts: eligibleForTradingStart,
+    activeTradingStarts: activeTradingStarts.length,
     tsIntelligence,
+    gseClaimEligible,
     outcomeIntelligence,
     workQueue,
     tradingStartsAchieved: (originalTradingStarts ?? []).length,

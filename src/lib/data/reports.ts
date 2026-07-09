@@ -1,8 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { listAdvisors } from "@/lib/data/advisor";
 import { getGatewayChecklist } from "@/lib/business-rules";
-import { detectNgseEligibility, getOutcomeDeadline, isReviewOverdue } from "@/lib/trading-start-rules";
+import {
+  evaluateTradingStartEligibility,
+  getOutcomeDeadline,
+  isReviewOverdue,
+  outcomePeriodMonthsFor,
+} from "@/lib/trading-start-rules";
 import { computeParticipantHealth } from "@/lib/participant-health";
+import { getProgrammeSettings } from "@/lib/data/programme-settings";
 import { FUNDING_APPLICATION_STATUSES, TRADING_START_REASONS } from "@/types/database";
 import type {
   BusinessPlan,
@@ -267,6 +273,13 @@ export type TradingStartAdvisorRow = {
   tradingStarts: number;
   outcomesAchieved: number;
   outcomesNotAchieved: number;
+  activeCaseload: number;
+};
+
+export type MonthlyTrendPoint = {
+  month: string;
+  tradingStarts: number;
+  outcomes: number;
 };
 
 export type TradingStartReportStats = {
@@ -286,6 +299,7 @@ export type TradingStartReportStats = {
   eligibleNotProcessed: number;
   participantsAtRisk: number;
   byAdvisor: TradingStartAdvisorRow[];
+  monthlyTrends: MonthlyTrendPoint[];
 };
 
 function inRange(dateStr: string, range?: ReportDateRange): boolean {
@@ -316,14 +330,15 @@ export async function getTradingStartReportStats(
 ): Promise<TradingStartReportStats> {
   const supabase = await createClient();
 
-  const [advisors, { data: tradingStarts }, { data: outcomes }, { data: iwtReviews }, { data: participants }, { data: incomeEntries }] =
+  const [advisors, { data: tradingStarts }, { data: outcomes }, { data: iwtReviews }, { data: participants }, { data: incomeEntries }, settings] =
     await Promise.all([
       listAdvisors(),
       supabase.from("trading_starts").select("*"),
       supabase.from("outcome_records").select("*"),
       supabase.from("iwt_reviews").select("*").order("review_date", { ascending: false }),
-      supabase.from("participants").select("id, advisor_id, status, scheme_start_date"),
+      supabase.from("participants").select("id, advisor_id, status, scheme_start_date, is_gse, claim_closed"),
       supabase.from("income_tracker_entries").select("*"),
+      getProgrammeSettings(),
     ]);
 
   const now = new Date();
@@ -397,7 +412,7 @@ export async function getTradingStartReportStats(
   let overdueReviews = 0;
   let participantsAtRisk = 0;
   for (const ts of activeTradingStarts) {
-    const deadline = getOutcomeDeadline(ts.trading_start_date, now);
+    const deadline = getOutcomeDeadline(ts.trading_start_date, outcomePeriodMonthsFor(ts.reason, settings), now);
     if (!deadline.isOverdue && deadline.monthsRemaining <= 1) approachingDeadline += 1;
 
     const nextReviewDate = latestReviewByTsId.get(ts.id)?.next_review_date ?? null;
@@ -407,13 +422,20 @@ export async function getTradingStartReportStats(
       ts,
       entriesByParticipant.get(ts.participant_id) ?? [],
       reviewsByTsId.get(ts.id) ?? [],
+      settings,
       now,
     );
     if (health.tone === "red") participantsAtRisk += 1;
   }
 
   const eligibleNotProcessed = (participants ?? []).filter(
-    (p) => p.status === "Active" && detectNgseEligibility(entriesByParticipant.get(p.id) ?? []).eligible,
+    (p) =>
+      p.status === "Active" &&
+      evaluateTradingStartEligibility({
+        participant: p,
+        entries: entriesByParticipant.get(p.id) ?? [],
+        settings,
+      }).some((r) => r.eligible),
   ).length;
 
   const advisorStats = new Map<
@@ -442,6 +464,18 @@ export async function getTradingStartReportStats(
     advisorStats.set(ts.original_advisor_id, existing);
   }
 
+  const caseloadByAdvisor = new Map<string, number>();
+  for (const p of participants ?? []) {
+    caseloadByAdvisor.set(p.advisor_id, (caseloadByAdvisor.get(p.advisor_id) ?? 0) + 1);
+  }
+  // Advisors with no Trading Starts or Outcomes yet still belong on the
+  // leaderboard so their caseload is visible.
+  for (const advisor of advisors) {
+    if (!advisorStats.has(advisor.id)) {
+      advisorStats.set(advisor.id, { tradingStarts: 0, outcomesAchieved: 0, outcomesNotAchieved: 0 });
+    }
+  }
+
   const byAdvisor: TradingStartAdvisorRow[] = [...advisorStats.entries()]
     .map(([advisorId, stats]) => {
       const advisor = advisorById.get(advisorId);
@@ -449,10 +483,29 @@ export async function getTradingStartReportStats(
         advisorId,
         label: advisor?.full_name ?? "Unknown advisor",
         officeLabel: advisor?.office_name ?? "Unknown office",
+        activeCaseload: caseloadByAdvisor.get(advisorId) ?? 0,
         ...stats,
       };
     })
     .sort((a, b) => b.tradingStarts - a.tradingStarts);
+
+  const monthlyTotals = new Map<string, { tradingStarts: number; outcomes: number }>();
+  for (const ts of tradingStarts ?? []) {
+    const key = ts.trading_start_date.slice(0, 7);
+    const existing = monthlyTotals.get(key) ?? { tradingStarts: 0, outcomes: 0 };
+    existing.tradingStarts += 1;
+    monthlyTotals.set(key, existing);
+  }
+  for (const o of outcomes ?? []) {
+    const key = o.outcome_date.slice(0, 7);
+    const existing = monthlyTotals.get(key) ?? { tradingStarts: 0, outcomes: 0 };
+    existing.outcomes += 1;
+    monthlyTotals.set(key, existing);
+  }
+  const monthlyTrends: MonthlyTrendPoint[] = [...monthlyTotals.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-12)
+    .map(([month, totals]) => ({ month, ...totals }));
 
   return {
     totalTradingStarts: (tradingStarts ?? []).length,
@@ -471,5 +524,6 @@ export async function getTradingStartReportStats(
     eligibleNotProcessed,
     participantsAtRisk,
     byAdvisor,
+    monthlyTrends,
   };
 }

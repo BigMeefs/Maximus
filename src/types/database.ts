@@ -151,6 +151,12 @@ export type Participant = {
   date_of_birth: string | null;
   national_insurance_number: string | null;
   status: ParticipantStatus;
+  is_gse: boolean;
+  gse_marked_at: string | null;
+  gse_marked_by: string | null;
+  claim_closed: boolean;
+  claim_closed_at: string | null;
+  claim_closed_by: string | null;
 };
 
 export type ParticipantStatusHistoryEntry = {
@@ -196,6 +202,16 @@ export type OutcomeRecord = {
   advisor_notes: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type ProgrammeSettings = {
+  id: string;
+  ngse_average_threshold: number;
+  outcome_target: number;
+  outcome_period_months: number;
+  gse_outcome_period_months: number;
+  updated_at: string;
+  updated_by: string | null;
 };
 
 export type BusinessPlan = {
@@ -566,6 +582,12 @@ export type Database = {
           outcome_achieved: boolean;
         };
         Update: Partial<OutcomeRecord>;
+        Relationships: [];
+      };
+      programme_settings: {
+        Row: ProgrammeSettings;
+        Insert: Partial<ProgrammeSettings>;
+        Update: Partial<ProgrammeSettings>;
         Relationships: [];
       };
     };

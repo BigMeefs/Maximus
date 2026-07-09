@@ -75,7 +75,10 @@ export async function setParticipantStatus(
 
 // ---------------------------------------------------------------------------
 // Create Trading Start — always a manual, advisor-confirmed action, even
-// when the participant was auto-flagged as eligible.
+// when the participant was auto-flagged as eligible (GSE / NGSE two-month
+// average / Claim Closed). Never creates a duplicate: if this participant
+// already has an active Trading Start (no Outcome recorded yet), it's
+// updated in place instead of inserting a second row.
 // ---------------------------------------------------------------------------
 export async function createTradingStart(
   participantId: string,
@@ -107,22 +110,56 @@ export async function createTradingStart(
 
   const originalAdvisorId = participant.advisor_id;
 
-  const { data: tradingStart, error } = await supabase
+  const { data: existingTradingStarts } = await supabase
     .from("trading_starts")
-    .insert({
-      participant_id: participantId,
-      trading_start_date: tradingStartDate,
-      reason,
-      original_advisor_id: originalAdvisorId,
-      iwt_advisor_id: iwtAdvisorId,
-      transfer_date: transferDate,
-      evidence_notes: evidenceNotes,
-    })
     .select("id")
-    .single();
+    .eq("participant_id", participantId)
+    .order("created_at", { ascending: false });
 
-  if (error || !tradingStart) {
-    return { error: error?.message ?? "Failed to create the Trading Start." };
+  let activeTradingStartId: string | null = null;
+  if (existingTradingStarts && existingTradingStarts.length > 0) {
+    const ids = existingTradingStarts.map((t) => t.id);
+    const { data: outcomes } = await supabase
+      .from("outcome_records")
+      .select("trading_start_id")
+      .in("trading_start_id", ids);
+    const outcomeTsIds = new Set((outcomes ?? []).map((o) => o.trading_start_id));
+    activeTradingStartId = existingTradingStarts.find((t) => !outcomeTsIds.has(t.id))?.id ?? null;
+  }
+
+  if (activeTradingStartId) {
+    const { error } = await supabase
+      .from("trading_starts")
+      .update({
+        trading_start_date: tradingStartDate,
+        reason,
+        iwt_advisor_id: iwtAdvisorId,
+        transfer_date: transferDate,
+        evidence_notes: evidenceNotes,
+      })
+      .eq("id", activeTradingStartId);
+
+    if (error) {
+      return { error: error.message };
+    }
+  } else {
+    const { data: tradingStart, error } = await supabase
+      .from("trading_starts")
+      .insert({
+        participant_id: participantId,
+        trading_start_date: tradingStartDate,
+        reason,
+        original_advisor_id: originalAdvisorId,
+        iwt_advisor_id: iwtAdvisorId,
+        transfer_date: transferDate,
+        evidence_notes: evidenceNotes,
+      })
+      .select("id")
+      .single();
+
+    if (error || !tradingStart) {
+      return { error: error?.message ?? "Failed to create the Trading Start." };
+    }
   }
 
   // Move the participant into the IWT advisor's caseload, exactly like a
@@ -155,15 +192,47 @@ export async function createTradingStart(
 
   // Record both transitions the spec describes: momentarily "Trading Start",
   // then immediately "In Work Tracking" — the ongoing state for the rest of
-  // this workflow.
-  await supabase.from("participants").update({ status: "Trading Start" }).eq("id", participantId);
-  await logStatusChange(supabase, participantId, participant.status, "Trading Start", advisorName, `Trading Start created (${reason}).`);
+  // this workflow. Skipped if this participant is already past that point
+  // (e.g. updating an existing active Trading Start's details).
+  if (participant.status !== "In Work Tracking") {
+    await supabase.from("participants").update({ status: "Trading Start" }).eq("id", participantId);
+    await logStatusChange(supabase, participantId, participant.status, "Trading Start", advisorName, `Trading Start ${activeTradingStartId ? "updated" : "created"} (${reason}).`);
 
-  await supabase.from("participants").update({ status: "In Work Tracking" }).eq("id", participantId);
-  await logStatusChange(supabase, participantId, "Trading Start", "In Work Tracking", advisorName);
+    await supabase.from("participants").update({ status: "In Work Tracking" }).eq("id", participantId);
+    await logStatusChange(supabase, participantId, "Trading Start", "In Work Tracking", advisorName);
+  }
 
   revalidateParticipant();
   return {};
+}
+
+// ---------------------------------------------------------------------------
+// GSE / Claim Closed markers — simple, advisor-triggered assertions that
+// feed the Trading Start eligibility engine. Kept separate from the
+// generic participant status field.
+// ---------------------------------------------------------------------------
+export async function markAsGse(participantId: string, advisorId: string) {
+  const supabase = await createClient();
+  const advisorName = await getAdvisorName(supabase, advisorId);
+
+  await supabase
+    .from("participants")
+    .update({ is_gse: true, gse_marked_at: new Date().toISOString(), gse_marked_by: advisorName })
+    .eq("id", participantId);
+
+  revalidateParticipant();
+}
+
+export async function closeClaim(participantId: string, advisorId: string) {
+  const supabase = await createClient();
+  const advisorName = await getAdvisorName(supabase, advisorId);
+
+  await supabase
+    .from("participants")
+    .update({ claim_closed: true, claim_closed_at: new Date().toISOString(), claim_closed_by: advisorName })
+    .eq("id", participantId);
+
+  revalidateParticipant();
 }
 
 // ---------------------------------------------------------------------------

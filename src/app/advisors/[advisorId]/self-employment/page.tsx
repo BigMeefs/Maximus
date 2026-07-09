@@ -2,6 +2,7 @@ import Link from "next/link";
 import clsx from "clsx";
 import { getAdvisorOrNotFound } from "@/lib/data/advisor";
 import { getSelfEmploymentDashboard, type WorkQueueItemType } from "@/lib/data/self-employment";
+import { getProgrammeSettings } from "@/lib/data/programme-settings";
 import StatCard from "@/components/stat-card";
 import HealthBadge from "@/components/participant/health-badge";
 import Badge from "@/components/badge";
@@ -23,7 +24,10 @@ export default async function SelfEmploymentDashboardPage({
 }) {
   const { advisorId } = await params;
   const advisor = await getAdvisorOrNotFound(advisorId);
-  const stats = await getSelfEmploymentDashboard(advisorId, advisor.full_name);
+  const [stats, settings] = await Promise.all([
+    getSelfEmploymentDashboard(advisorId, advisor.full_name),
+    getProgrammeSettings(),
+  ]);
 
   const participantsHref = `/advisors/${advisorId}/participants`;
   const tradingStartTabHref = (participantId: string) => `${participantsHref}/${participantId}?tab=trading-start`;
@@ -74,6 +78,15 @@ export default async function SelfEmploymentDashboardPage({
         </div>
       </section>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <StatCard
+          label="Pending Trading Starts"
+          value={stats.pendingTradingStarts}
+          tone={stats.pendingTradingStarts > 0 ? "warning" : "default"}
+        />
+        <StatCard label="Active Trading Starts" value={stats.activeTradingStarts} />
+      </div>
+
       <section className="space-y-3">
         <div>
           <h2 className="text-sm font-semibold text-slate-900">Today&apos;s Work</h2>
@@ -109,8 +122,9 @@ export default async function SelfEmploymentDashboardPage({
         <div>
           <h2 className="text-sm font-semibold text-slate-900">Eligible for NGSE Trading Start</h2>
           <p className="text-xs text-slate-500">
-            Detected automatically from two consecutive months over £900 net profit — a Trading Start is
-            never created automatically, an advisor must confirm.
+            Detected automatically when the average net profit across any two consecutive Income Tracker
+            months reaches £{settings.ngse_average_threshold.toLocaleString("en-GB")} (configurable in
+            Programme Settings) — a Trading Start is never created automatically, an advisor must confirm.
           </p>
         </div>
         {stats.tsIntelligence.length === 0 ? (
@@ -152,6 +166,40 @@ export default async function SelfEmploymentDashboardPage({
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900">Eligible for GSE / Claim Closed Trading Start</h2>
+          <p className="text-xs text-slate-500">
+            Participants marked as Gainfully Self Employed or with a Claim Closed while self-employed — an
+            advisor must still confirm before a Trading Start is created.
+          </p>
+        </div>
+        {stats.gseClaimEligible.length === 0 ? (
+          <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
+            No participants currently marked as GSE or Claim Closed.
+          </p>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <ul className="divide-y divide-slate-100">
+              {stats.gseClaimEligible.map((row) => (
+                <li key={`${row.participantId}-${row.reason}`} className="p-3">
+                  <Link
+                    href={tradingStartTabHref(row.participantId)}
+                    className="flex flex-wrap items-center justify-between gap-2 text-sm hover:text-indigo-600"
+                  >
+                    <span>
+                      <span className="font-medium text-slate-800">{row.participantName}</span>
+                      <span className="ml-2 text-slate-500">{row.detail}</span>
+                    </span>
+                    <Badge tone="indigo">{row.reason === "GSE" ? "GSE" : "Claim Closed"}</Badge>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </section>
@@ -210,7 +258,8 @@ export default async function SelfEmploymentDashboardPage({
 
                 {row.gse && (
                   <p className="mt-3 text-xs text-slate-500">
-                    {row.gse.monthsElapsed} of 6 months complete · {row.gse.monthsRemaining} month(s) remaining
+                    {row.gse.monthsElapsed} of {settings.gse_outcome_period_months} months complete ·{" "}
+                    {row.gse.monthsRemaining} month(s) remaining
                   </p>
                 )}
               </Link>

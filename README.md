@@ -69,6 +69,8 @@ throughout the app comes from these tables.
   the participant changes — notes, documents, funding records, AI summaries,
   Gateway/Gainful progress and every other record stay exactly as they were,
   since they all key off the participant's ID, not their advisor.
+- **Programme Settings** (`/admin/programme-settings`) — the configurable
+  Trading Start / Outcome thresholds; see the dedicated section below.
 
 ## Reports
 
@@ -159,47 +161,94 @@ what happens *after* trading starts.
   distinct from `business_stage` (the Journey tab), which is unaffected.
 - **Trading Starts** — a dedicated "Trading Start & IWT" tab records the
   Trading Start Date, Reason (GSE / NGSE / Claim Closed Whilst Self
-  Employed), the Assigned IWT Advisor, Transfer Date and Evidence/Notes.
-  Confirming one moves the participant to In Work Tracking, reassigns
-  `advisor_id` to the IWT advisor (via the same `participant_transfers` audit
-  trail as a normal transfer), and permanently records the **original
-  advisor** on the Trading Start row itself — so original advisors keep
-  ownership of their Trading Start and outcome statistics even after the
-  handoff.
-- **Automatic eligibility detection** — the Income Tracker is scanned for two
-  *consecutive* calendar months with net profit (income − expense − mileage
-  cost) above £900. When found, the tab shows an "Eligible for NGSE Trading
-  Start" banner with a pre-filled "Create Trading Start" form — nothing is
-  ever created automatically; an advisor always confirms.
-- **In Work Tracking** — once a Trading Start exists, the tab shows months
-  since/remaining against the 6-month outcome window, the current IWT
-  advisor, and a review log (date, next review date, notes); overdue reviews
-  are flagged in red.
+  Employed), the Trading Start Advisor, Assigned IWT Advisor, Transfer Date
+  and Evidence/Notes. Confirming one moves the participant to In Work
+  Tracking, reassigns `advisor_id` to the IWT advisor (via the same
+  `participant_transfers` audit trail as a normal transfer), and permanently
+  records the **original advisor** on the Trading Start row itself — so
+  original advisors keep ownership of their Trading Start and outcome
+  statistics even after the handoff. A participant is never left with two
+  active Trading Starts — creating one while an unresolved one already
+  exists updates it in place instead of inserting a duplicate.
+- **Three eligibility paths, all advisor-confirmed** — a rules engine
+  (`src/lib/trading-start-rules.ts`) evaluates every Active participant
+  against three rules, each of which can be extended or added to later
+  without touching the others:
+  - **GSE** — an advisor marks a participant "Gainfully Self Employed"
+    directly on the Trading Start tab; that's the whole rule.
+  - **NGSE (2 Month Average)** — every *consecutive* pair of Income Tracker
+    months is checked; if the **average** net profit across the pair meets
+    the configured threshold (default £900 — see Programme Settings below),
+    the participant is eligible. This is an average, not "both months
+    individually above the threshold" — e.g. £950 and £850 (average £900)
+    qualifies.
+  - **Claim Closed** — an advisor marks a participant's claim "Closed" while
+    they remain self-employed; kept as its own flag, separate from the
+    generic participant status "Closed" (which means "outcome not
+    achieved").
+  
+  Whichever rule fires, the tab shows a banner with the detail (for NGSE:
+  both months' net profit, the average, and the date eligible) and a
+  pre-filled "Create Trading Start" form — **nothing is ever created
+  automatically; an advisor always confirms.** The tab also always shows the
+  current two-month average and eligibility live, even before any threshold
+  is met.
+- **In Work Tracking** — once a Trading Start exists, the tab shows the IWT
+  Start Date, months since/remaining and Outcome Due Date against the
+  configured monitoring period, the current IWT advisor, and a review log
+  (date, next review date, notes); overdue reviews are flagged in red.
 - **Outcome rules** — GSE just needs the participant to remain gainfully
-  self-employed for the full 6 months post-Trading Start (advisor-confirmed,
-  no monetary target). NGSE and Claim Closed both require cumulative net
-  profit from the Income Tracker to reach **£5,300 within 6 months** of the
-  Trading Start date — tracked live with a progress bar, and auto-flagged
-  once the target is hit (still requires advisor confirmation to record).
+  self-employed for the configured GSE monitoring period post-Trading Start
+  (advisor-confirmed, no monetary target). NGSE and Claim Closed both require
+  cumulative net profit from the Income Tracker to reach the configured
+  target within the configured monitoring period of the Trading Start date —
+  tracked live with a progress bar (days *and* months remaining shown), and
+  auto-flagged "Outcome Ready" once the target is hit (still requires
+  advisor confirmation to record).
 - **Outcome record** — Outcome Date, Outcome Type, Achieved (Yes/No),
   Evidence and Advisor Notes; recording one sets status to Outcome Achieved
   or Closed and logs it in the status history.
-- **Dashboards** — each advisor's dashboard has a Trading Start/IWT/Outcome
-  section (Trading Starts this month, Eligible for Trading Start, In Work
-  Tracking caseload, Upcoming/Overdue reviews, Outcome caseload). `/reports`
-  adds a company-wide section: Trading Starts and Outcomes for a selectable
-  date range, Trading Starts by reason, Outcome conversion rate, IWT
-  caseload, average days to Trading Start, average days Trading Start →
-  Outcome, participants approaching the 6-month deadline, overdue reviews,
-  participants eligible but not yet processed, and an Advisor Performance
-  table attributed to the **original** advisor.
+- **Participant Health** — every IWT participant gets a Green (On Track) /
+  Amber (Needs Attention) / Red (At Risk) indicator, computed live (nothing
+  stored) and shown on the profile header, the Trading Start tab, the Self
+  Employment Dashboard and Reports. NGSE/Claim Closed compares actual vs.
+  required monthly earnings pace against the Outcome target; GSE factors in
+  overdue reviews and missing income declarations.
+- **Company-wide reporting** — `/reports` adds a Trading Start / IWT /
+  Outcome section: Trading Starts and Outcomes for a selectable date range,
+  Trading Starts by reason, Outcome conversion rate, IWT caseload, average
+  days to Trading Start, average days Trading Start → Outcome, participants
+  approaching the Outcome deadline, overdue reviews, participants at risk,
+  participants eligible but not yet processed, a monthly Trading
+  Starts/Outcomes trend chart, and a team leaderboard (active caseload,
+  Trading Starts, Outcomes achieved/not achieved per advisor, ranked and
+  attributed to the **original** advisor).
 
 This extends the existing schema (`trading_starts`, `iwt_reviews`,
-`outcome_records`, `participant_status_history`) and reuses the existing
-advisor-scoped workspace model and `/reports` passcode gate — there's no new
-authentication or role system: any advisor can still open any workspace (see
-Security model below), and "managers only see org-wide reporting" is
-satisfied by the existing Reports passcode gate exactly as it already was.
+`outcome_records`, `participant_status_history`, plus `participants.is_gse`
+/ `claim_closed` and the new `programme_settings` table) and reuses the
+existing advisor-scoped workspace model and `/reports` passcode gate —
+there's no new authentication or role system: any advisor can still open any
+workspace (see Security model below), and "managers only see org-wide
+reporting" is satisfied by the existing Reports passcode gate exactly as it
+already was.
+
+## Programme Settings
+
+`/admin/programme-settings` (same passcode gate as the rest of Administration)
+lets managers change the four thresholds the Trading Start / Outcome rules
+engine reads, with no code change or redeploy required:
+
+- **NGSE two-month average threshold** (default £900)
+- **Outcome cumulative profit target** (default £5,300)
+- **Outcome monitoring period** (default 6 months — NGSE / Claim Closed)
+- **GSE Outcome monitoring period** (default 6 months — GSE)
+
+Every eligibility check and Outcome progress calculation throughout the CRM
+(the Trading Start tab, the Self Employment Dashboard, Reports, Participant
+Health) reads these four values live from the `programme_settings` table —
+none of them are hard-coded. Saving a change takes effect on the very next
+page load, everywhere.
 
 ## Self Employment Dashboard
 
@@ -214,36 +263,35 @@ generic case notes anywhere in this codebase.
 `/advisors/<id>/self-employment` is a dedicated dashboard, separate from the
 general CRM dashboard, focused entirely on this:
 
-- **Seven headline cards** — Active Participants, Trading Starts This Month,
+- **Nine headline cards** — Active Participants, Trading Starts This Month,
   Participants in IWT, Outcomes This Month, Participants Eligible for Trading
-  Start, Participants Near Outcome, Participants At Risk.
+  Start, Participants Near Outcome, Participants At Risk, Pending Trading
+  Starts, Active Trading Starts (the last two are the same eligibility queue
+  and IWT caseload respectively, labelled from the "what's pending my
+  confirmation vs. what's already live" angle).
 - **Advisor Performance** — all-time Trading Starts achieved and Outcomes
   achieved (attributed to this advisor as the *original* advisor, per the
   Trading Start section above), and a live count of participants requiring
   action today.
 - **Today's Work** — a single queue combining overdue IWT reviews, missing
-  income declarations, participants approaching their 6-month Outcome
-  deadline, participants whose Outcome is ready to process, and participants
-  newly eligible for a Trading Start — sorted most-urgent first. Nothing in
-  this queue is a real notification (no email/push/SMS): it's a live,
-  computed worklist, consistent with "no messaging" above.
+  income declarations, participants approaching their Outcome deadline,
+  participants whose Outcome is ready to process, and participants newly
+  eligible for a Trading Start (via any of the three rules) — sorted
+  most-urgent first. Nothing in this queue is a real notification (no
+  email/push/SMS): it's a live, computed worklist, consistent with "no
+  messaging" above.
 - **Trading Start Intelligence** — every Active participant auto-detected as
-  eligible for an NGSE Trading Start (two consecutive Income Tracker months
-  over £900 net profit), shown with both qualifying months' net profit and
-  the date they became eligible. A "Create Trading Start" button opens the
-  real creation form on their profile — this is never created automatically.
+  eligible for an NGSE Trading Start (see the two-month-average rule above),
+  shown with both months' net profit, the average, and the date eligible,
+  plus a separate list for participants eligible via GSE or Claim Closed. A
+  "Create Trading Start" button opens the real creation form on their
+  profile — this is never created automatically.
 - **Outcome Intelligence** — every IWT participant's live progress bar
-  (cumulative profit / £5,300 target / % complete / remaining / months left
-  for NGSE and Claim Closed; the 6-month gainful window for GSE), each
-  flagged "Outcome Ready" the moment the criteria are met — again, this only
-  flags readiness; the Outcome record itself is always advisor-confirmed.
-- **Participant Health** — every IWT participant gets a Green (On Track) /
-  Amber (Needs Attention) / Red (At Risk) indicator, shown here, on the
-  participant profile header, and in Reports. For NGSE/Claim Closed it
-  compares actual vs. required monthly earnings pace against the £5,300
-  deadline; for GSE it factors in overdue reviews and missing income
-  declarations. This is computed live, like every other status in this app —
-  nothing is stored.
+  (cumulative profit / target / % complete / remaining / months left for
+  NGSE and Claim Closed; the gainful window for GSE), each flagged "Outcome
+  Ready" the moment the criteria are met — again, this only flags readiness;
+  the Outcome record itself is always advisor-confirmed. Health badges are
+  shown alongside every row.
 - **Income Analytics** — the Income Tracker tab now also shows average/
   highest/lowest monthly net profit, total cumulative profit, profit since
   Trading Start, profit towards the Outcome target, and a combined income/

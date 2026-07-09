@@ -1,11 +1,13 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useState, useTransition } from "react";
 import clsx from "clsx";
 import type {
   IncomeTrackerEntry,
   IwtReview,
   OutcomeRecord,
+  Participant,
+  ProgrammeSettings,
   TradingStart,
   TradingStartReason,
 } from "@/types/database";
@@ -13,16 +15,21 @@ import type { AdvisorWithOffice } from "@/lib/data/advisor";
 import {
   computeGseOutcomeProgress,
   computeMonetaryOutcomeProgress,
-  detectNgseEligibility,
+  evaluateTradingStartEligibility,
+  getLatestTwoMonthAverage,
   getOutcomeDeadline,
   isReviewOverdue,
+  outcomePeriodMonthsFor,
+  type TradingStartEligibility,
 } from "@/lib/trading-start-rules";
 import { computeParticipantHealth, type ParticipantHealth } from "@/lib/participant-health";
 import HealthBadge from "@/components/participant/health-badge";
 import Badge from "@/components/badge";
 import {
   addIwtReview,
+  closeClaim,
   createTradingStart,
+  markAsGse,
   recordOutcome,
   type TradingStartFormState,
 } from "@/lib/actions/trading-start";
@@ -32,26 +39,30 @@ const initialState: TradingStartFormState = {};
 
 const REASON_LABEL: Record<TradingStartReason, string> = {
   GSE: "Gainfully Self Employed (GSE)",
-  NGSE: "Non-Gainfully Self Employed (NGSE)",
-  "Claim Closed Whilst Self Employed": "Claim Closed Whilst Self Employed",
+  NGSE: "NGSE (2 Month Average)",
+  "Claim Closed Whilst Self Employed": "Claim Closed",
 };
 
 export default function TradingStartTab({
   participantId,
   advisorId,
   advisors,
+  participant,
   incomeTrackerEntries,
   currentTradingStart,
   iwtReviews,
   outcome,
+  settings,
 }: {
   participantId: string;
   advisorId: string;
   advisors: AdvisorWithOffice[];
+  participant: Pick<Participant, "is_gse" | "claim_closed">;
   incomeTrackerEntries: IncomeTrackerEntry[];
   currentTradingStart: TradingStart | null;
   iwtReviews: IwtReview[];
   outcome: OutcomeRecord | null;
+  settings: ProgrammeSettings;
 }) {
   const advisorNameById = useMemo(
     () => new Map(advisors.map((a) => [a.id, a.full_name])),
@@ -64,13 +75,15 @@ export default function TradingStartTab({
         participantId={participantId}
         advisorId={advisorId}
         advisors={advisors}
+        participant={participant}
         incomeTrackerEntries={incomeTrackerEntries}
+        settings={settings}
       />
     );
   }
 
   const health = !outcome
-    ? computeParticipantHealth(currentTradingStart, incomeTrackerEntries, iwtReviews)
+    ? computeParticipantHealth(currentTradingStart, incomeTrackerEntries, iwtReviews, settings)
     : null;
 
   return (
@@ -86,6 +99,7 @@ export default function TradingStartTab({
         advisorId={advisorId}
         reviews={iwtReviews}
         advisorNameById={advisorNameById}
+        settings={settings}
       />
 
       <OutcomeSection
@@ -94,6 +108,7 @@ export default function TradingStartTab({
         tradingStart={currentTradingStart}
         incomeTrackerEntries={incomeTrackerEntries}
         outcome={outcome}
+        settings={settings}
       />
     </div>
   );
@@ -103,15 +118,29 @@ function NoTradingStart({
   participantId,
   advisorId,
   advisors,
+  participant,
   incomeTrackerEntries,
+  settings,
 }: {
   participantId: string;
   advisorId: string;
   advisors: AdvisorWithOffice[];
+  participant: Pick<Participant, "is_gse" | "claim_closed">;
   incomeTrackerEntries: IncomeTrackerEntry[];
+  settings: ProgrammeSettings;
 }) {
   const [showForm, setShowForm] = useState(false);
-  const eligibility = detectNgseEligibility(incomeTrackerEntries);
+  const [markingGse, startMarkGse] = useTransition();
+  const [closingClaim, startCloseClaim] = useTransition();
+
+  const eligibility = evaluateTradingStartEligibility({
+    participant,
+    entries: incomeTrackerEntries,
+    settings,
+  });
+  const eligibleResult = eligibility.find((r) => r.eligible) ?? null;
+  const latestAverage = getLatestTwoMonthAverage(incomeTrackerEntries);
+
   const boundAction = createTradingStart.bind(null, participantId, advisorId);
   const [state, formAction, pending] = useActionState(boundAction, initialState);
 
@@ -122,18 +151,51 @@ function NoTradingStart({
         Tracking and is assigned to an IWT advisor.
       </p>
 
-      {eligibility.eligible && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-          <p className="text-sm font-semibold text-emerald-800">
-            Eligible for NGSE Trading Start
-          </p>
-          <p className="mt-1 text-sm text-emerald-700">
-            Net profit exceeded £900 in two consecutive months (
-            {eligibility.qualifyingMonths.join(" and ")}), from the Income Tracker. Confirm below
-            if a Trading Start should be created.
-          </p>
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <h3 className="text-sm font-semibold text-slate-900">Trading Start eligibility</h3>
+        <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
+          <Info label="Current two month average">
+            {latestAverage
+              ? `${currency.format(latestAverage.averageNetProfit)} (${latestAverage.month1} & ${latestAverage.month2})`
+              : "Not enough data yet"}
+          </Info>
+          <Info label="Current eligibility">
+            {eligibleResult ? (
+              <Badge tone="green">{REASON_LABEL[eligibleResult.reason]}</Badge>
+            ) : (
+              <Badge tone="slate">Not yet eligible</Badge>
+            )}
+          </Info>
+          <Info label="Marked GSE / Claim Closed">
+            {participant.is_gse ? "GSE" : participant.claim_closed ? "Claim Closed" : "—"}
+          </Info>
+        </dl>
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            type="button"
+            disabled={participant.is_gse || markingGse}
+            onClick={() => startMarkGse(() => markAsGse(participantId, advisorId))}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-white disabled:opacity-50"
+          >
+            {participant.is_gse ? "Marked as GSE" : markingGse ? "Marking..." : "Mark as GSE"}
+          </button>
+          <button
+            type="button"
+            disabled={participant.claim_closed || closingClaim}
+            onClick={() => startCloseClaim(() => closeClaim(participantId, advisorId))}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-white disabled:opacity-50"
+          >
+            {participant.claim_closed ? "Claim Closed" : closingClaim ? "Closing..." : "Close Claim"}
+          </button>
         </div>
-      )}
+      </div>
+
+      {eligibility
+        .filter((r) => r.eligible)
+        .map((r) => (
+          <EligibilityBanner key={r.reason} result={r} />
+        ))}
 
       {!showForm ? (
         <button
@@ -151,7 +213,9 @@ function NoTradingStart({
                 type="date"
                 name="trading_start_date"
                 required
-                defaultValue={eligibility.qualifyingMonths[1] ? `${eligibility.qualifyingMonths[1]}-01` : ""}
+                defaultValue={
+                  eligibleResult?.ngse?.month2 ? `${eligibleResult.ngse.month2}-01` : ""
+                }
                 className={inputClass}
               />
             </Field>
@@ -159,7 +223,7 @@ function NoTradingStart({
               <select
                 name="reason"
                 required
-                defaultValue={eligibility.eligible ? "NGSE" : ""}
+                defaultValue={eligibleResult?.reason ?? ""}
                 className={inputClass}
               >
                 <option value="" disabled>
@@ -215,6 +279,27 @@ function NoTradingStart({
   );
 }
 
+function EligibilityBanner({ result }: { result: TradingStartEligibility }) {
+  return (
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+      <p className="text-sm font-semibold text-emerald-800">
+        Eligible for {REASON_LABEL[result.reason]} Trading Start
+      </p>
+      <p className="mt-1 text-sm text-emerald-700">{result.detail}</p>
+      {result.ngse && (
+        <dl className="mt-2 grid grid-cols-2 gap-3 text-xs text-emerald-700 sm:grid-cols-4">
+          <Info label="Month 1 Net Profit">{currency.format(result.ngse.month1NetProfit ?? 0)}</Info>
+          <Info label="Month 2 Net Profit">{currency.format(result.ngse.month2NetProfit ?? 0)}</Info>
+          <Info label="Date Eligible">
+            {result.ngse.dateEligible ? new Date(result.ngse.dateEligible).toLocaleDateString("en-GB") : "—"}
+          </Info>
+        </dl>
+      )}
+      <p className="mt-2 text-xs text-emerald-700">Confirm below if a Trading Start should be created.</p>
+    </div>
+  );
+}
+
 function TradingStartDetailsPanel({
   tradingStart,
   advisorNameById,
@@ -242,13 +327,13 @@ function TradingStartDetailsPanel({
           {new Date(tradingStart.trading_start_date).toLocaleDateString("en-GB")}
         </Info>
         <Info label="Reason">{REASON_LABEL[tradingStart.reason]}</Info>
-        <Info label="Original Advisor">
+        <Info label="Trading Start Advisor">
           {advisorNameById.get(tradingStart.original_advisor_id) ?? "Unknown"}
         </Info>
         <Info label="Assigned IWT Advisor">
           {advisorNameById.get(tradingStart.iwt_advisor_id) ?? "Unknown"}
         </Info>
-        <Info label="Transfer Date">
+        <Info label="Date transferred to IWT">
           {new Date(tradingStart.transfer_date).toLocaleDateString("en-GB")}
         </Info>
         <Info label="Evidence / Notes" className="col-span-2 sm:col-span-3">
@@ -264,13 +349,15 @@ function IwtPanel({
   advisorId,
   reviews,
   advisorNameById,
+  settings,
 }: {
   tradingStart: TradingStart;
   advisorId: string;
   reviews: IwtReview[];
   advisorNameById: Map<string, string>;
+  settings: ProgrammeSettings;
 }) {
-  const deadline = getOutcomeDeadline(tradingStart.trading_start_date);
+  const deadline = getOutcomeDeadline(tradingStart.trading_start_date, outcomePeriodMonthsFor(tradingStart.reason, settings));
   const nextReviewDate = reviews[0]?.next_review_date ?? null;
   const overdue = isReviewOverdue(nextReviewDate);
 
@@ -281,11 +368,15 @@ function IwtPanel({
     <div className="rounded-lg border border-slate-200 p-4">
       <h3 className="text-sm font-semibold text-slate-900">In Work Tracking</h3>
       <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
+        <Info label="IWT Start Date">
+          {new Date(tradingStart.transfer_date).toLocaleDateString("en-GB")}
+        </Info>
         <Info label="Months since TS">{deadline.monthsElapsed}</Info>
         <Info label="Months remaining">{deadline.monthsRemaining}</Info>
         <Info label="Current IWT Advisor">
           {advisorNameById.get(tradingStart.iwt_advisor_id) ?? "Unknown"}
         </Info>
+        <Info label="Outcome Due Date">{new Date(deadline.deadlineDate).toLocaleDateString("en-GB")}</Info>
         <Info label="Next Review Date">
           {nextReviewDate ? (
             <span className={clsx(overdue && "font-semibold text-red-600")}>
@@ -346,18 +437,20 @@ function OutcomeSection({
   tradingStart,
   incomeTrackerEntries,
   outcome,
+  settings,
 }: {
   participantId: string;
   advisorId: string;
   tradingStart: TradingStart;
   incomeTrackerEntries: IncomeTrackerEntry[];
   outcome: OutcomeRecord | null;
+  settings: ProgrammeSettings;
 }) {
   const isMonetary = tradingStart.reason !== "GSE";
   const monetary = isMonetary
-    ? computeMonetaryOutcomeProgress(tradingStart.trading_start_date, incomeTrackerEntries)
+    ? computeMonetaryOutcomeProgress(tradingStart.trading_start_date, incomeTrackerEntries, settings)
     : null;
-  const gse = !isMonetary ? computeGseOutcomeProgress(tradingStart.trading_start_date) : null;
+  const gse = !isMonetary ? computeGseOutcomeProgress(tradingStart.trading_start_date, settings) : null;
 
   const boundAction = recordOutcome.bind(null, tradingStart.id, participantId, advisorId);
   const [state, formAction, pending] = useActionState(boundAction, initialState);
@@ -387,9 +480,9 @@ function OutcomeSection({
           </div>
           <div className="grid grid-cols-2 gap-3 text-xs text-slate-500 sm:grid-cols-4">
             <span>Remaining: {currency.format(monetary.remaining)}</span>
-            <span>Months elapsed: {monetary.monthsElapsed}</span>
+            <span>Days remaining: {monetary.daysRemaining}</span>
             <span>Months remaining: {monetary.monthsRemaining}</span>
-            <span>Deadline: {new Date(monetary.deadlineDate).toLocaleDateString("en-GB")}</span>
+            <span>Outcome due date: {new Date(monetary.deadlineDate).toLocaleDateString("en-GB")}</span>
           </div>
         </div>
       )}
@@ -397,23 +490,26 @@ function OutcomeSection({
       {gse && (
         <div className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
           <Info label="Months elapsed">{gse.monthsElapsed}</Info>
-          <Info label="Months remaining">{gse.monthsRemaining}</Info>
-          <Info label="Deadline">{new Date(gse.deadlineDate).toLocaleDateString("en-GB")}</Info>
-          <Info label="6-month period complete">{gse.readyToConfirm ? "Yes" : "No"}</Info>
+          <Info label="Days remaining">{gse.daysRemaining}</Info>
+          <Info label="Outcome due date">{new Date(gse.deadlineDate).toLocaleDateString("en-GB")}</Info>
+          <Info label={`${settings.gse_outcome_period_months}-month period complete`}>
+            {gse.readyToConfirm ? "Yes" : "No"}
+          </Info>
         </div>
       )}
 
       {autoAchieved && (
         <div className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
           <Badge tone="green">Outcome Ready</Badge>
-          Cumulative net profit hit £5,300 within 6 months. Confirm the outcome below.
+          Cumulative net profit hit {currency.format(settings.outcome_target)} within {settings.outcome_period_months}{" "}
+          months. Confirm the outcome below.
         </div>
       )}
 
       {!outcome && !isMonetary && gse?.readyToConfirm && (
         <div className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
           <Badge tone="green">Outcome Ready</Badge>
-          The full 6-month gainful period is complete. Confirm the outcome below.
+          The full {settings.gse_outcome_period_months}-month gainful period is complete. Confirm the outcome below.
         </div>
       )}
 
