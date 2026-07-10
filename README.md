@@ -174,13 +174,10 @@ Every participant profile now includes, above the original CRM tabs:
   tracking customer count/hours worked; it was removed along with that tab
   — see "Removed: Monthly Performance" below — rather than left silently
   stale with no data source.)
-- **Journey** — the 10-stage business journey (Idea → ... → Gainful
-  Decision) as a visual timeline; advisors move participants forward with a
-  click. There's no separate "Gainful Assessment" stage — a Gateway now
-  covers that assessment, so the stage most participants at that point in
-  the journey used to sit at is retired; nothing else about the timeline
-  changed, and no participant currently sits on the retired stage (verified
-  before removing it — the underlying Postgres enum was rebuilt without it).
+- **Journey** — now the **Participant Journey Timeline**, a case-management
+  view distinct from the underlying Business Readiness Stage tracker (see
+  the dedicated section below for the full picture, including what happened
+  to the old 10-stage stepper).
 - **Gateway** — one combined page (previously two separate tabs: "Gateway"
   and "Gainful Decision"), presented as two clearly separated cards so it
   reads as a single workflow:
@@ -255,6 +252,56 @@ count / hours worked, and the Customer Acquisition health score dimension
 built on top of it — was removed cleanly rather than left silently frozen
 with stale data. The underlying `monthly_earnings` database table is left
 in place (unused, historical rows intact) rather than dropped.
+
+## Participant Journey Timeline
+
+The Journey tab (`src/components/participant/journey-tab.tsx`) is now a true
+chronological timeline — the primary visual element on every participant
+profile — rather than a single stage stepper. A badge next to the
+participant's Status/Health badges in the profile header always shows the
+current milestone and links straight to the tab.
+
+Eight milestones ship out of the box, each computed live from existing data
+(nothing new is stored):
+
+1. **Referral Received** — earliest `participant_status_history` row with
+   `to_status = "Referral"`, falling back to the participant's created date.
+2. **Initial Appointment** — earliest logged appointment.
+3. **Business Plan** — the Business Plan record reaching `Complete`.
+4. **Gateway** — the same live Gateway readiness % used on the Gateway tab
+   reaching 100%.
+5. **Trading Start** — a confirmed Trading Start record.
+6. **Transfer to IWT** — the Trading Start's IWT advisor differing from the
+   original advisor. Participants who are never transferred show this
+   milestone as **Not required** rather than stuck "upcoming" forever.
+7. **In Work Tracking** — begins the moment Trading Start is confirmed, per
+   this CRM's existing IWT model.
+8. **Outcome Achieved** — an Outcome record exists. If one exists but wasn't
+   achieved, the milestone shows a distinct "not achieved" state instead of
+   silently looking incomplete.
+
+Each milestone is one of **completed** (✓), **current** (the first
+not-yet-done milestone, hollow indigo ring), or **upcoming** (hollow slate
+ring) — decided by a single left-to-right pass, so the status of every
+milestone always stays internally consistent as data changes elsewhere in
+the app. Clicking any milestone expands its detail: the date, a summary
+line, and any notes/evidence already on record for that stage (e.g. the
+Gateway checklist's Advisor Notes, the Trading Start date and rule used,
+Outcome notes) — nothing is duplicated, it's read from the same records the
+rest of the toolkit already manages.
+
+Future milestones (e.g. a new stage a contract wants to insert between
+Gateway and Trading Start) only require adding one function to the
+`MILESTONE_BUILDERS` array in `src/lib/journey-timeline.ts` — the
+sequencing, rendering and click-to-expand behaviour need no changes.
+
+**The original 10-stage Business Readiness Stage stepper was not removed.**
+It's still the only advisor-editable "move this participant forward"
+control, and it still feeds the Business Health Score's Trading dimension,
+Next Best Action, and the Reports "by stage" breakdown — none of which have
+an equivalent signal in the new timeline. It now lives in a collapsed
+"Business Readiness Stage (internal tracking)" section beneath the timeline,
+functionally unchanged.
 
 ## Trading Start, In Work Tracking & Outcomes
 
@@ -360,6 +407,57 @@ workspace (see Security model below), and "managers only see org-wide
 reporting" is satisfied by the existing Reports passcode gate exactly as it
 already was.
 
+## Organisation Branding Settings
+
+`/admin/organisation-settings` (same passcode gate as the rest of
+Administration) lets an admin rebrand the app for a different organisation
+or contract without touching code or redeploying:
+
+- **Organisation Name** and **Application Name** — shown throughout the
+  shared chrome (page titles, the home screen, the sidebar/mobile header,
+  the admin login screen, the public Income Tracker Portal) instead of the
+  hard-coded "Max Self Employment Hub" / "Maximus UK" text that used to be
+  scattered across those components.
+- **Organisation Logo** — uploaded to a dedicated `organisation-branding`
+  Supabase Storage bucket and shown everywhere the old fixed "SE" badge
+  used to appear; removing it reverts every one of those spots to the same
+  "SE" badge as a sensible default rather than a broken image.
+- **Primary Colour** and **Secondary Colour** — injected as CSS custom
+  properties (`--brand-primary` / `--brand-secondary`) on the root
+  `<html>` element and consumed by the logo badge, active nav-link
+  highlighting, and the primary buttons on the shell/login screens.
+
+All five values live in a single-row `organisation_settings` table (mirroring
+the existing `programme_settings` pattern), seeded with `Max Self Employment
+Hub` / `Maximus UK` / the CRM's existing indigo (`#4f46e5`) and slate
+(`#0f172a`) as defaults — so this ships with the exact same look it already
+had, and a rebrand is a form submission, not a deploy.
+
+Two scope decisions worth being explicit about:
+
+- **Colour theming is intentionally scoped to shared chrome, not every
+  button in the app.** Recolouring all ~80 components' individual
+  indigo-accented buttons/badges/links would be a large, risky change for
+  a CRM this size and isn't what "future-proof the platform" requires;
+  the brand colours consistently appear wherever an organisation's identity
+  is actually visible (logo, primary nav, primary actions on shell/login
+  screens), while the rest of the toolkit keeps its existing indigo styling
+  unchanged, exactly as required ("maintain the current UI style").
+- **The `organisation-branding` Storage bucket is public**, unlike every
+  other bucket in this app (Evidence Vault, Funding documents, Portal
+  declarations, all of which are private with signed URLs). A logo isn't
+  sensitive, and it needs to render on the public, unauthenticated `/portal`
+  page — a public bucket avoids a signed-URL round trip on every page load
+  for something that carries no confidentiality requirement.
+
+Because organisation settings can change at any time and must be reflected
+immediately (no redeploy), the root layout (`src/app/layout.tsx`) is now
+`export const dynamic = "force-dynamic"`. This intentionally trades static
+prerendering on four routes (`/`, `/select-advisor`, `/portal`,
+`/_not-found`) for always-current branding — confirmed via `npm run build`,
+which now correctly shows those routes as `ƒ (Dynamic)` rather than
+`○ (Static)`.
+
 ## Programme Settings
 
 `/admin/programme-settings` (same passcode gate as the rest of Administration)
@@ -459,13 +557,45 @@ general CRM dashboard, focused entirely on this:
   Trading Start, profit towards the Outcome target, and a combined income/
   expenses/net-profit chart.
 
-The **general** advisor dashboard (`/advisors/<id>/dashboard`) — My
-Caseload, expiring participants, missing business plans, outstanding
-actions — also shows two more live widgets: **Funding**, this advisor's
-own participants' funding requests currently awaiting manager approval plus
-recently-decided ones; and **Income Tracker alerts**, Active participants
-who haven't logged an Income Tracker entry for the current calendar month.
-Both link straight into the relevant participant tab.
+### The general Advisor Dashboard (action-focused work queue)
+
+The **general** advisor dashboard (`/advisors/<id>/dashboard`) is a
+different page from the Self Employment Dashboard above — it's an
+action-focused worklist rather than a stats page, so an advisor can open it
+and immediately see what needs doing rather than reading passive numbers.
+Every card links straight into the relevant participant or queue:
+
+- **Headline counts** — Caseload size, Requiring a Gateway, Funding awaiting
+  approval, Due for contact, Approaching Trading Start, Notifications.
+- **Participants requiring a Gateway** — Active participants whose live
+  Gateway readiness % (the same calculation used on the Gateway tab) is
+  below 100%, worst-first.
+- **Funding** — this advisor's funding requests currently awaiting manager
+  approval, plus recently-decided ones (unchanged from before).
+- **Income submitted since you were last here** — every Income Tracker entry
+  logged since the advisor's last dashboard visit. There is no login in this
+  CRM, so "last visit" is tracked with a simple, explicitly non-authenticating
+  browser cookie (`last_visit_<advisorId>`, set on page load) rather than a
+  real session — it's a convenience marker, not a security or audit
+  mechanism, and falls back to "the last 3 days" the first time an advisor
+  opens the page.
+- **Due for contact** — Active participants with no logged appointment in the
+  last 30 days (or none at all), most-overdue first.
+- **Approaching Trading Start** and **Transferred to IWT** — reuse the exact
+  eligibility and transfer detection already built for the Self Employment
+  Dashboard (`getSelfEmploymentDashboard`), so the two dashboards never
+  disagree about who's eligible or transferred.
+- **Recently achieved Trading Starts** — this advisor's Trading Starts
+  confirmed in the last 14 days.
+- **Income Tracker alerts**, **expiring participants**, **missing business
+  plans** and **outstanding actions** — unchanged from before.
+- **Notifications and announcements** — the existing Portal-submission
+  notification bell, plus a new lightweight **Announcements** feature
+  (`announcements` table, managed at `/admin/announcements`): short
+  organisation-wide messages a manager can post/hide/delete, shown at the
+  top of every advisor's dashboard while active. This is separate from the
+  participant-notification queue — announcements are for the team, not
+  about a specific participant.
 
 ## Participant Income Tracker Portal
 
@@ -762,13 +892,33 @@ existing deployment won't pick up new values on its own.
   `getAdvisorCaseloadCounts`. Every part of the app that needs to know about
   advisors or offices goes through this file.
 - `src/app/admin` — the Admin Dashboard (offices, advisors, transfer
-  participants, Funding Approval Queue, Programme Settings), gated by
-  `src/components/admin-gate.tsx` / `src/lib/admin-auth.ts`. Shares
-  `src/components/admin-shell.tsx` (now just two nav items: Admin
-  Dashboard, Reports) with `/reports` — together these two routes are the
-  Management Portal. Server actions in `src/lib/actions/admin.ts`,
-  `src/lib/actions/transfer.ts` and `src/lib/actions/funding.ts`
-  (approve/reject); data layer in `src/lib/data/funding-approvals.ts`.
+  participants, Funding Approval Queue, Programme Settings, Announcements,
+  Organisation Settings), gated by `src/components/admin-gate.tsx` /
+  `src/lib/admin-auth.ts`. Shares `src/components/admin-shell.tsx` (now just
+  two nav items: Admin Dashboard, Reports) with `/reports` — together these
+  two routes are the Management Portal. Server actions in
+  `src/lib/actions/admin.ts`, `src/lib/actions/transfer.ts` and
+  `src/lib/actions/funding.ts` (approve/reject); data layer in
+  `src/lib/data/funding-approvals.ts`.
+- `src/lib/journey-timeline.ts`, `src/components/participant/journey-timeline.tsx`
+  — the Participant Journey Timeline's milestone computation engine
+  (`computeJourneyTimeline`, `MILESTONE_BUILDERS`) and its click-to-expand
+  UI; composed into `src/components/participant/journey-tab.tsx` alongside
+  the preserved (collapsed) Business Readiness Stage stepper.
+- `src/lib/data/advisor-workqueue.ts`, `src/lib/actions/last-visit.ts`,
+  `src/components/touch-last-visit.tsx` — the general Advisor Dashboard's
+  work-queue data layer (`getAdvisorWorkQueue`) and the "since last visit"
+  cookie proxy (explicitly not a login/session mechanism — see Self
+  Employment Dashboard above).
+- `src/lib/data/announcements.ts`, `src/lib/actions/announcements.ts`,
+  `src/components/admin/announcements-manager.tsx`,
+  `src/app/admin/announcements` — the Announcements feature.
+- `src/lib/data/organisation-settings.ts`, `src/lib/actions/organisation-settings.ts`,
+  `src/components/admin/organisation-settings-form.tsx`,
+  `src/app/admin/organisation-settings`, `src/components/brand-mark.tsx` —
+  Organisation Branding Settings: data layer, server actions (including logo
+  upload/removal), the admin form, and the shared logo component used
+  throughout the app's chrome.
 - `src/app/reports`, `src/lib/data/reports.ts` — the Manager Dashboard
   (company-wide reporting, Office Reporting, the Office/Advisor/Date Range
   filters in `src/components/reports/report-filters.tsx`); same passcode

@@ -35,6 +35,7 @@ import {
   getSuggestedRag,
 } from "@/lib/business-rules";
 import { getNextBestAction } from "@/lib/next-best-action";
+import { computeJourneyTimeline } from "@/lib/journey-timeline";
 
 export default async function ParticipantProfilePage({
   params,
@@ -87,6 +88,17 @@ export default async function ParticipantProfilePage({
 
   const invoicesAvailable =
     gateway.entries.find((e) => e.label === "Invoices Available")?.complete ?? false;
+
+  const journeyMilestones = computeJourneyTimeline({
+    participant,
+    statusHistory,
+    appointments,
+    businessPlan,
+    gatewayPercent: gateway.percent,
+    gatewayChecklistItems: gatewayChecklist,
+    currentTradingStart,
+    outcome,
+  });
 
   const gainfulChecklist = getGainfulChecklist({
     gainful,
@@ -150,6 +162,13 @@ export default async function ParticipantProfilePage({
               )}
               <StatusBadge status={participant.status} />
               {health && <HealthBadge tone={health.tone} label={health.label} />}
+              <Link
+                href={`${basePath}/${id}?tab=journey`}
+                className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
+              >
+                Journey: {journeyMilestones.find((m) => m.status === "current")?.label ??
+                  journeyMilestones[journeyMilestones.length - 1].label}
+              </Link>
             </div>
             <p className="text-sm text-slate-500">{participant.business_name}</p>
           </div>
@@ -238,6 +257,7 @@ export default async function ParticipantProfilePage({
                   participantId={id}
                   currentStage={participant.business_stage}
                   stageUpdatedAt={participant.business_stage_updated_at}
+                  milestones={journeyMilestones}
                 />
               ),
             },

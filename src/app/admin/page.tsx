@@ -86,6 +86,24 @@ export default async function AdminOverviewPage() {
             Configure the Trading Start / Outcome thresholds the eligibility rules use.
           </p>
         </Link>
+        <Link
+          href="/admin/announcements"
+          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+        >
+          <h2 className="text-sm font-semibold text-slate-900">Announcements</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Post short notices that appear on every advisor&apos;s dashboard.
+          </p>
+        </Link>
+        <Link
+          href="/admin/organisation-settings"
+          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+        >
+          <h2 className="text-sm font-semibold text-slate-900">Organisation Settings</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Rebrand the app: organisation/application name, logo, and brand colours.
+          </p>
+        </Link>
       </div>
     </div>
   );

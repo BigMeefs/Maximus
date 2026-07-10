@@ -224,6 +224,28 @@ export type ProgrammeSettings = {
   updated_by: string | null;
 };
 
+export type Announcement = {
+  id: string;
+  title: string;
+  body: string;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OrganisationSettings = {
+  id: string;
+  org_name: string;
+  app_name: string;
+  logo_path: string | null;
+  logo_name: string | null;
+  primary_color: string;
+  secondary_color: string;
+  updated_at: string;
+  updated_by: string | null;
+};
+
 export type BusinessPlan = {
   id: string;
   participant_id: string;
@@ -585,6 +607,18 @@ export type Database = {
         Row: ProgrammeSettings;
         Insert: Partial<ProgrammeSettings>;
         Update: Partial<ProgrammeSettings>;
+        Relationships: [];
+      };
+      announcements: {
+        Row: Announcement;
+        Insert: Partial<Announcement> & { title: string; body: string };
+        Update: Partial<Announcement>;
+        Relationships: [];
+      };
+      organisation_settings: {
+        Row: OrganisationSettings;
+        Insert: Partial<OrganisationSettings>;
+        Update: Partial<OrganisationSettings>;
         Relationships: [];
       };
     };

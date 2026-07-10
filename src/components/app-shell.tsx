@@ -4,15 +4,20 @@ import { useState } from "react";
 import Link from "next/link";
 import NavLinks from "@/components/nav-links";
 import BackToAdvisorsLink from "@/components/back-to-advisors-link";
+import BrandMark from "@/components/brand-mark";
 import type { AdvisorWithOffice } from "@/lib/data/advisor";
 
 export default function AppShell({
   advisor,
   unreadCount = 0,
+  appName,
+  logoUrl,
   children,
 }: {
   advisor: AdvisorWithOffice;
   unreadCount?: number;
+  appName: string;
+  logoUrl: string | null;
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -23,14 +28,8 @@ export default function AppShell({
       {/* Desktop sidebar */}
       <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white py-6 md:flex">
         <Link href={dashboardHref} className="mb-6 flex items-center gap-2 px-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
-            SE
-          </div>
-          <span className="text-sm font-semibold leading-tight text-slate-900">
-            Max Self
-            <br />
-            Employment Hub
-          </span>
+          <BrandMark logoUrl={logoUrl} size="md" />
+          <span className="text-sm font-semibold leading-tight text-slate-900">{appName}</span>
         </Link>
         <NavLinks advisorId={advisor.id} unreadCount={unreadCount} />
         <div className="mt-auto flex items-center justify-between border-t border-slate-200 px-4 pt-4">
@@ -50,12 +49,8 @@ export default function AppShell({
       <div className="flex flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
           <Link href={dashboardHref} className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-xs font-bold text-white">
-              SE
-            </div>
-            <span className="text-sm font-semibold text-slate-900">
-              Max Self Employment Hub
-            </span>
+            <BrandMark logoUrl={logoUrl} size="sm" />
+            <span className="text-sm font-semibold text-slate-900">{appName}</span>
           </Link>
           <button
             type="button"

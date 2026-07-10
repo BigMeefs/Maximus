@@ -49,7 +49,7 @@ function NavLink({
       className={clsx(
         "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
         active
-          ? "bg-indigo-600 text-white shadow-sm"
+          ? "bg-[var(--brand-primary)] text-white shadow-sm"
           : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
       )}
     >

@@ -4,13 +4,18 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { AdvisorWithOffice } from "@/lib/data/advisor";
 import type { Office } from "@/types/database";
+import BrandMark from "@/components/brand-mark";
 
 export default function AdvisorSelector({
   advisors,
   offices,
+  appName,
+  logoUrl,
 }: {
   advisors: AdvisorWithOffice[];
   offices: Office[];
+  appName: string;
+  logoUrl: string | null;
 }) {
   const [search, setSearch] = useState("");
   const [officeId, setOfficeId] = useState("all");
@@ -27,12 +32,10 @@ export default function AdvisorSelector({
   return (
     <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/50">
       <div className="mb-8 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-lg font-bold text-white">
-          SE
+        <div className="mx-auto mb-4 flex justify-center">
+          <BrandMark logoUrl={logoUrl} size="lg" />
         </div>
-        <h1 className="text-xl font-semibold text-slate-900">
-          Max Self Employment Hub
-        </h1>
+        <h1 className="text-xl font-semibold text-slate-900">{appName}</h1>
         <p className="mt-1 text-sm text-slate-500">
           Select an advisor to open their workspace
         </p>

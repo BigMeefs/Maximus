@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { listAdvisors, listOffices } from "@/lib/data/advisor";
+import { getOrganisationLogoUrl, getOrganisationSettings } from "@/lib/data/organisation-settings";
 import AdvisorSelector from "@/components/advisor-selector";
 
 export default async function SelectAdvisorPage() {
-  const [advisors, offices] = await Promise.all([
+  const [advisors, offices, orgSettings, logoUrl] = await Promise.all([
     listAdvisors({ activeOnly: true }),
     listOffices({ activeOnly: true }),
+    getOrganisationSettings(),
+    getOrganisationLogoUrl(),
   ]);
 
   return (
@@ -16,7 +19,12 @@ export default async function SelectAdvisorPage() {
       >
         Admin Login
       </Link>
-      <AdvisorSelector advisors={advisors} offices={offices} />
+      <AdvisorSelector
+        advisors={advisors}
+        offices={offices}
+        appName={orgSettings.app_name}
+        logoUrl={logoUrl}
+      />
     </div>
   );
 }

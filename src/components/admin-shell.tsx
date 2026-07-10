@@ -5,12 +5,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { logoutAdmin } from "@/lib/actions/admin-auth";
+import BrandMark from "@/components/brand-mark";
 
 export default function AdminShell({
   section,
+  appName,
+  logoUrl,
   children,
 }: {
   section: "admin" | "reports";
+  appName: string;
+  logoUrl: string | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -27,10 +32,8 @@ export default function AdminShell({
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-6">
             <Link href="/admin" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-xs font-bold text-white">
-                SE
-              </div>
-              <span className="text-sm font-semibold text-slate-900">Management Portal</span>
+              <BrandMark logoUrl={logoUrl} size="sm" />
+              <span className="text-sm font-semibold text-slate-900">{appName} — Management Portal</span>
             </Link>
             <nav className="flex gap-1">
               {links.map((link) => {
@@ -42,7 +45,7 @@ export default function AdminShell({
                     className={clsx(
                       "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                       active
-                        ? "bg-indigo-600 text-white"
+                        ? "bg-[var(--brand-primary)] text-white"
                         : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
                     )}
                   >

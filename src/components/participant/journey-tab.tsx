@@ -4,8 +4,46 @@ import { useTransition } from "react";
 import clsx from "clsx";
 import { BUSINESS_STAGES, type BusinessStage } from "@/types/database";
 import { updateBusinessStage } from "@/lib/actions/participant-attributes";
+import type { JourneyMilestone } from "@/lib/journey-timeline";
+import JourneyTimeline from "@/components/participant/journey-timeline";
 
 export default function JourneyTab({
+  participantId,
+  currentStage,
+  stageUpdatedAt,
+  milestones,
+}: {
+  participantId: string;
+  currentStage: BusinessStage;
+  stageUpdatedAt: string;
+  milestones: JourneyMilestone[];
+}) {
+  return (
+    <div className="max-w-3xl space-y-8">
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <JourneyTimeline milestones={milestones} />
+      </div>
+
+      <details className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+          Business Readiness Stage (internal tracking)
+        </summary>
+        <p className="mt-2 text-xs text-slate-500">
+          A separate, more granular stage advisors set manually — feeds the Business Health Score
+          and Next Best Action suggestions elsewhere in the CRM. The Participant Journey above is
+          the primary view of where this participant stands.
+        </p>
+        <BusinessStageStepper
+          participantId={participantId}
+          currentStage={currentStage}
+          stageUpdatedAt={stageUpdatedAt}
+        />
+      </details>
+    </div>
+  );
+}
+
+function BusinessStageStepper({
   participantId,
   currentStage,
   stageUpdatedAt,
@@ -18,16 +56,11 @@ export default function JourneyTab({
   const currentIndex = BUSINESS_STAGES.indexOf(currentStage);
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <div>
-        <h3 className="text-sm font-semibold text-slate-900">
-          Business Journey
-        </h3>
-        <p className="mt-1 text-sm text-slate-500">
-          Currently at <span className="font-medium text-slate-800">{currentStage}</span>{" "}
-          since {new Date(stageUpdatedAt).toLocaleDateString()}.
-        </p>
-      </div>
+    <div className="mt-4">
+      <p className="mb-3 text-sm text-slate-500">
+        Currently at <span className="font-medium text-slate-800">{currentStage}</span>{" "}
+        since {new Date(stageUpdatedAt).toLocaleDateString()}.
+      </p>
 
       <ol className="space-y-1">
         {BUSINESS_STAGES.map((stage, index) => {
