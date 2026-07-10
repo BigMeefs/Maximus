@@ -30,6 +30,7 @@ export async function updateGainfulAssessment(
   values.overall_recommendation = formData.get(
     "overall_recommendation",
   ) as GainfulRecommendation;
+  values.decision_date = formData.get("decision_date")?.toString() || null;
 
   await supabase.from("gainful_assessments").upsert(
     { participant_id: participantId, ...values },

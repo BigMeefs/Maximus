@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState, useTransition } from "react";
-import type { FundingApplicationStatus, FundingRecord } from "@/types/database";
+import { FUNDING_SOURCES, type FundingApplicationStatus, type FundingRecord } from "@/types/database";
 import Badge from "@/components/badge";
 import {
   createFundingRecord,
@@ -84,7 +84,16 @@ export default function FundingTab({
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Funding Source" required>
-            <input name="funding_source" required className={inputClass} />
+            <select name="funding_source" required defaultValue="" className={inputClass}>
+              <option value="" disabled>
+                Select a funding source
+              </option>
+              {FUNDING_SOURCES.map((source) => (
+                <option key={source} value={source}>
+                  {source}
+                </option>
+              ))}
+            </select>
           </Field>
           <Field label="Amount Requested (£)">
             <input name="amount_requested" type="number" step="0.01" min="0" className={inputClass} />
@@ -145,12 +154,16 @@ function FundingRecordCard({ record }: { record: FundingRecord }) {
       <form action={formAction} className="space-y-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Funding Source" required>
-            <input
-              name="funding_source"
-              required
-              defaultValue={record.funding_source}
-              className={inputClass}
-            />
+            <select name="funding_source" required defaultValue={record.funding_source} className={inputClass}>
+              {!FUNDING_SOURCES.includes(record.funding_source as (typeof FUNDING_SOURCES)[number]) && (
+                <option value={record.funding_source}>{record.funding_source} (legacy value)</option>
+              )}
+              {FUNDING_SOURCES.map((source) => (
+                <option key={source} value={source}>
+                  {source}
+                </option>
+              ))}
+            </select>
           </Field>
           <Field label="Application Status">
             <div className="flex items-center gap-2 pt-1.5">

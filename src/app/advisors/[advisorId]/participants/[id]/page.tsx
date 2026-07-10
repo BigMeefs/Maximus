@@ -15,8 +15,7 @@ import StatusTimeline from "@/components/participant/status-timeline";
 import TradingStartTab from "@/components/participant/trading-start-tab";
 import HealthBadge from "@/components/participant/health-badge";
 import { computeParticipantHealth } from "@/lib/participant-health";
-import GatewayTab from "@/components/participant/gateway-tab";
-import GainfulTab from "@/components/participant/gainful-tab";
+import GatewayCombinedTab from "@/components/participant/gateway-combined-tab";
 import FundingTab from "@/components/participant/funding-tab";
 import HmrcTab from "@/components/participant/hmrc-tab";
 import DigitalPresenceTab from "@/components/participant/digital-presence-tab";
@@ -268,22 +267,16 @@ export default async function ParticipantProfilePage({
               id: "gateway",
               label: "Gateway",
               content: (
-                <GatewayTab
+                <GatewayCombinedTab
                   participantId={id}
-                  entries={gateway.entries}
-                  percent={gateway.percent}
-                />
-              ),
-            },
-            {
-              id: "gainful",
-              label: "Gainful Decision",
-              content: (
-                <GainfulTab
-                  participantId={id}
-                  entries={gainfulChecklist.entries}
-                  percent={gainfulChecklist.percent}
+                  gatewayEntries={gateway.entries}
+                  gatewayPercent={gateway.percent}
+                  gatewayTargetDate={participant.gateway_target_date}
+                  gatewayNotes={participant.gateway_notes}
+                  gainfulEntries={gainfulChecklist.entries}
+                  gainfulPercent={gainfulChecklist.percent}
                   gainful={gainful}
+                  evidenceFiles={evidenceFiles}
                 />
               ),
             },

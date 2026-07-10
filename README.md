@@ -141,22 +141,42 @@ Every participant profile now includes, above the original CRM tabs:
   tracking customer count/hours worked; it was removed along with that tab
   — see "Removed: Monthly Performance" below — rather than left silently
   stale with no data source.)
-- **Journey** — the 11-stage business journey (Idea → ... → Gainful
+- **Journey** — the 10-stage business journey (Idea → ... → Gainful
   Decision) as a visual timeline; advisors move participants forward with a
-  click.
-- **Gateway** — a 16-item readiness checklist. Eight items are auto-derived
-  from data you've already entered elsewhere (business plan, HMRC info,
-  website, evidence, trading stage); the rest are manual checkboxes. Shows
-  a live readiness %.
-- **Gainful Decision** — trading consistency, auto income trend, evidence,
-  invoices, bank statements and customer base feed a readiness %; advisor
-  recommendation, manager approval and an overall 🟢/🟡/🔴 recommendation.
-- **Funding** — funding source, requested/approved/received amounts (with
+  click. There's no separate "Gainful Assessment" stage — a Gateway now
+  covers that assessment, so the stage most participants at that point in
+  the journey used to sit at is retired; nothing else about the timeline
+  changed, and no participant currently sits on the retired stage (verified
+  before removing it — the underlying Postgres enum was rebuilt without it).
+- **Gateway** — one combined page (previously two separate tabs: "Gateway"
+  and "Gainful Decision"), presented as two clearly separated cards so it
+  reads as a single workflow:
+  - **Gateway Assessment** — the 16-item readiness checklist (eight
+    auto-derived from data entered elsewhere, the rest manual checkboxes)
+    with a live readiness %, the participant's Gateway target date, and a
+    free-text Advisor Notes field (new — previously nothing captured this).
+  - **Gainful Decision** — trading consistency, auto income trend,
+    evidence, invoices, bank statements and customer base feed a readiness
+    %; a Supporting Evidence list (reads from the same Evidence Vault
+    records, not a separate upload); advisor recommendation, manager
+    approval, manager notes, a Decision Date (new — previously only
+    implied by a last-updated timestamp), and the Gainful Outcome (the
+    overall 🟢/🟡/🔴 recommendation).
+
+  Nothing from either original tab was removed — every existing field,
+  checkbox and value carried over unchanged into its respective card.
+- **Funding** — funding source (a fixed dropdown: Business Card, BACS or
+  Voucher — no free text), requested/approved/received amounts (with
   remaining computed automatically), purpose, dates, notes, a document
   upload per record, and an approval workflow (see "Funding Approval
   Workflow" below) — status is no longer a manual field; it's set
   automatically from the requested amount and, above £100, from a manager's
-  decision.
+  decision. The dropdown restriction is enforced in the UI and in the
+  server action, not as a database constraint: a couple of existing
+  records predate it with other values (e.g. a historical "Maximus"
+  entry), and forcing those into one of the three new options would
+  misrepresent real data, so they're left exactly as they are and stay
+  selectable on their own record without being editable to free text.
 - **HMRC & Business** — structure, UTR, registration date, VAT/PAYE, bank
   account, insurance, accountant details, tax deadline notes.
 - **Digital Presence** — the 9 standard channels (Website, Facebook,
@@ -207,7 +227,7 @@ in place (unused, historical rows intact) rather than dropped.
 
 A case-management layer sits on top of the toolkit above, tracking a
 participant from Trading Start through to a confirmed outcome. This is a
-separate concept from the 11-stage business Journey and from the pre-Trading
+separate concept from the 10-stage business Journey and from the pre-Trading
 Start Gainful Decision tab — those track *readiness to trade*; this tracks
 what happens *after* trading starts.
 

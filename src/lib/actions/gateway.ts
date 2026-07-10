@@ -17,3 +17,11 @@ export async function toggleGatewayChecklistItem(
 
   revalidatePath("/advisors/[advisorId]", "layout");
 }
+
+export async function updateGatewayNotes(participantId: string, formData: FormData) {
+  const notes = formData.get("gateway_notes")?.toString().trim() || null;
+  const supabase = await createClient();
+  await supabase.from("participants").update({ gateway_notes: notes }).eq("id", participantId);
+
+  revalidatePath("/advisors/[advisorId]", "layout");
+}

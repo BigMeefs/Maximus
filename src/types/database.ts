@@ -11,7 +11,6 @@ export const BUSINESS_STAGES = [
   "Trading",
   "Gateway Preparation",
   "Gateway Complete",
-  "Gainful Assessment",
   "Gainful Decision",
 ] as const;
 export type BusinessStage = (typeof BUSINESS_STAGES)[number];
@@ -44,6 +43,14 @@ export const FUNDING_APPLICATION_STATUSES = [
   "Received",
 ] as const;
 export type FundingApplicationStatus = (typeof FUNDING_APPLICATION_STATUSES)[number];
+
+// The only three funding sources selectable going forward — enforced by a
+// <select>, not a free-text input (see funding-tab.tsx). Not a Postgres
+// enum: existing funding_records already contain other values (e.g.
+// "Maximus") that predate this restriction and must keep displaying
+// correctly, so funding_source itself stays a plain text column.
+export const FUNDING_SOURCES = ["Business Card", "BACS", "Voucher"] as const;
+export type FundingSource = (typeof FUNDING_SOURCES)[number];
 
 export type BusinessStructure = "Sole Trader" | "Limited Company";
 
@@ -146,6 +153,7 @@ export type Participant = {
   rag_status: RagStatus;
   rag_note: string | null;
   gateway_target_date: string | null;
+  gateway_notes: string | null;
   health_confidence: number | null;
   external_participant_id: string | null;
   email: string | null;
@@ -323,6 +331,7 @@ export type GainfulAssessment = {
   manager_approval: boolean;
   manager_notes: string | null;
   overall_recommendation: GainfulRecommendation;
+  decision_date: string | null;
   updated_at: string;
 };
 

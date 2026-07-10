@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { FundingApplicationStatus } from "@/types/database";
+import { FUNDING_SOURCES, type FundingApplicationStatus } from "@/types/database";
 
 export type FundingFormState = {
   error?: string;
@@ -51,8 +51,8 @@ export async function createFundingRecord(
 ): Promise<FundingFormState> {
   const fields = readFundingFields(formData);
 
-  if (!fields.fundingSource) {
-    return { error: "Funding source is required." };
+  if (!FUNDING_SOURCES.includes(fields.fundingSource as (typeof FUNDING_SOURCES)[number])) {
+    return { error: "Select a valid funding source." };
   }
 
   const status = autoStatus(fields.amountRequested);
@@ -88,11 +88,6 @@ export async function updateFundingRecord(
   formData: FormData,
 ): Promise<FundingFormState> {
   const fields = readFundingFields(formData);
-
-  if (!fields.fundingSource) {
-    return { error: "Funding source is required." };
-  }
-
   const supabase = await createClient();
 
   // Once a manager has decided a request (or it's auto-approved), an
@@ -102,9 +97,20 @@ export async function updateFundingRecord(
   // recomputed from the (possibly just-edited) amount requested.
   const { data: existing } = await supabase
     .from("funding_records")
-    .select("application_status, approved_by")
+    .select("application_status, approved_by, funding_source")
     .eq("id", recordId)
     .maybeSingle();
+
+  // The dropdown always offers the fixed set of sources plus (for records
+  // that predate this restriction) the record's own current value, so a
+  // legacy value like "Maximus" can be kept without forcing it into one of
+  // the three new options.
+  const isValidSource =
+    FUNDING_SOURCES.includes(fields.fundingSource as (typeof FUNDING_SOURCES)[number]) ||
+    fields.fundingSource === existing?.funding_source;
+  if (!isValidSource) {
+    return { error: "Select a valid funding source." };
+  }
 
   const isDecided = !!existing?.approved_by || existing?.application_status === "Received";
   const status = isDecided ? existing!.application_status : autoStatus(fields.amountRequested);
