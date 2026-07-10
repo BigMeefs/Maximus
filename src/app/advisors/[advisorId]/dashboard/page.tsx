@@ -7,7 +7,8 @@ import { getAdvisorOrNotFound } from "@/lib/data/advisor";
 import { getAdvisorWorkQueue } from "@/lib/data/advisor-workqueue";
 import { getSelfEmploymentDashboard } from "@/lib/data/self-employment";
 import { getActiveAnnouncements } from "@/lib/data/announcements";
-import { getUnreviewedCountForAdvisor } from "@/lib/data/notifications";
+import { getActiveNotificationCount, getActiveNotificationsForAdvisor } from "@/lib/data/notifications";
+import { syncAutoNotificationsForAdvisor } from "@/lib/data/notification-rules";
 import StatCard from "@/components/stat-card";
 import Badge, { statusTone } from "@/components/badge";
 import TouchLastVisit from "@/components/touch-last-visit";
@@ -27,6 +28,11 @@ export default async function DashboardPage({
   const cookieStore = await cookies();
   const lastVisitAt = cookieStore.get(`last_visit_${advisorId}`)?.value ?? null;
 
+  // The Dashboard is one of the two places (with the Notifications page
+  // itself) that refreshes the computed-condition notifications before
+  // reading them — see src/lib/data/notification-rules.ts.
+  await syncAutoNotificationsForAdvisor(advisorId);
+
   const { data: participants } = await supabase
     .from("participants")
     .select("id, ptp_name, business_name, scheme_start_date, status")
@@ -45,6 +51,7 @@ export default async function DashboardPage({
     selfEmployment,
     announcements,
     unreadNotifications,
+    activeNotifications,
   ] = await Promise.all([
     participantIds.length
       ? supabase
@@ -72,7 +79,8 @@ export default async function DashboardPage({
     getAdvisorWorkQueue(advisorId, lastVisitAt),
     getSelfEmploymentDashboard(advisorId, advisor.full_name),
     getActiveAnnouncements(),
-    getUnreviewedCountForAdvisor(advisorId),
+    getActiveNotificationCount(advisorId),
+    getActiveNotificationsForAdvisor(advisorId),
   ]);
 
   const businessPlanByParticipant = new Map(
@@ -196,6 +204,23 @@ export default async function DashboardPage({
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <WorkQueueCard title="Notifications" emptyText="You're all caught up. No notifications require your attention." className="lg:col-span-2">
+          {activeNotifications.slice(0, 6).map((n) => (
+            <Row
+              key={n.id}
+              href={n.participant_id ? `${participantsHref}/${n.participant_id}` : `/advisors/${advisorId}/notifications`}
+              name={n.title}
+            >
+              <Badge tone={n.status === "Action Required" ? "amber" : "indigo"}>{n.status}</Badge>
+            </Row>
+          ))}
+          {activeNotifications.length > 0 && (
+            <Link href={`/advisors/${advisorId}/notifications`} className="mt-3 block text-xs font-medium text-indigo-600 hover:underline">
+              View all {activeNotifications.length} in Notifications →
+            </Link>
+          )}
+        </WorkQueueCard>
+
         <WorkQueueCard title="Participants requiring a Gateway" emptyText="Everyone's Gateway is complete.">
           {workQueue.gatewayIncomplete.slice(0, 6).map((r) => (
             <Row key={r.participantId} href={`${participantsHref}/${r.participantId}?tab=gateway`} name={r.participantName}>

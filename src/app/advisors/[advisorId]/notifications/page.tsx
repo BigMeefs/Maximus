@@ -1,45 +1,49 @@
-import { getAdvisorOrNotFound, listAdvisors, listOffices } from "@/lib/data/advisor";
-import { getIncomeSubmissions } from "@/lib/data/notifications";
-import NotificationFilters from "@/components/notifications/notification-filters";
-import SubmissionList from "@/components/notifications/submission-list";
+import { getAdvisorOrNotFound } from "@/lib/data/advisor";
+import { getActiveNotificationsForAdvisor } from "@/lib/data/notifications";
+import { syncAutoNotificationsForAdvisor } from "@/lib/data/notification-rules";
+import { createClient } from "@/lib/supabase/server";
+import NotificationQueue, { type NotificationRow } from "@/components/notifications/notification-queue";
 
 export default async function NotificationsPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ advisorId: string }>;
-  searchParams: Promise<{ advisor?: string; office?: string; from?: string; to?: string; status?: string }>;
 }) {
   const { advisorId } = await params;
-  const { advisor: advisorFilter, office, from, to, status } = await searchParams;
   const currentAdvisor = await getAdvisorOrNotFound(advisorId);
 
-  const reviewed = status === "reviewed" ? true : status === "unreviewed" ? false : undefined;
+  // Refreshes the computed-condition notifications (Trading Start
+  // eligibility, contact required, upcoming reviews) before reading —
+  // event-driven ones (income, funding, transfers, outcomes) are already
+  // up to date since they're created the instant the underlying action
+  // happens. See src/lib/data/notification-rules.ts.
+  await syncAutoNotificationsForAdvisor(advisorId);
+  const notifications = await getActiveNotificationsForAdvisor(advisorId);
 
-  const [rows, advisors, offices] = await Promise.all([
-    getIncomeSubmissions({
-      advisorId: advisorFilter || undefined,
-      officeId: office || undefined,
-      from: from || undefined,
-      to: to || undefined,
-      reviewed,
-    }),
-    listAdvisors(),
-    listOffices(),
-  ]);
+  const participantIds = [...new Set(notifications.map((n) => n.participant_id).filter((id): id is string => !!id))];
+  const supabase = await createClient();
+  const { data: participants } = participantIds.length
+    ? await supabase.from("participants").select("id, ptp_name").in("id", participantIds)
+    : { data: [] };
+  const participantNameById = new Map((participants ?? []).map((p) => [p.id, p.ptp_name]));
+
+  const rows: NotificationRow[] = notifications.map((n) => ({
+    ...n,
+    participantName: n.participant_id ? (participantNameById.get(n.participant_id) ?? null) : null,
+  }));
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Income Tracker Submissions</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Notifications</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Submissions from the Participant Income Tracker Portal, newest first.
+          Your live work queue — everything below needs a look. Marking something reviewed removes it from
+          this list immediately; it isn&apos;t deleted, just moved to the audit trail (Admin Dashboard →
+          Notification History).
         </p>
       </div>
 
-      <NotificationFilters offices={offices} advisors={advisors} />
-
-      <SubmissionList rows={rows} reviewedByName={currentAdvisor.full_name} />
+      <NotificationQueue notifications={rows} advisorId={advisorId} reviewedByName={currentAdvisor.full_name} />
     </div>
   );
 }

@@ -2,7 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { ParticipantStatus, TradingStartReason } from "@/types/database";
+import type { NotificationType, ParticipantStatus, TradingStartReason } from "@/types/database";
+import {
+  createNotification,
+  resolveNotificationByRelatedId,
+  resolveNotificationsForParticipant,
+} from "@/lib/data/notifications";
+
+const TS_ELIGIBILITY_NOTIFICATION_TYPES: NotificationType[] = [
+  "trading_start_eligible_gse",
+  "trading_start_eligible_ngse",
+  "trading_start_eligible_claim_closed",
+];
 
 export type TradingStartFormState = {
   error?: string;
@@ -100,7 +111,7 @@ export async function createTradingStart(
 
   const { data: participant } = await supabase
     .from("participants")
-    .select("advisor_id, status")
+    .select("ptp_name, advisor_id, status")
     .eq("id", participantId)
     .maybeSingle();
 
@@ -126,6 +137,8 @@ export async function createTradingStart(
     const outcomeTsIds = new Set((outcomes ?? []).map((o) => o.trading_start_id));
     activeTradingStartId = existingTradingStarts.find((t) => !outcomeTsIds.has(t.id))?.id ?? null;
   }
+
+  let tradingStartId = activeTradingStartId;
 
   if (activeTradingStartId) {
     const { error } = await supabase
@@ -160,7 +173,13 @@ export async function createTradingStart(
     if (error || !tradingStart) {
       return { error: error?.message ?? "Failed to create the Trading Start." };
     }
+    tradingStartId = tradingStart.id;
   }
+
+  // A Trading Start being recorded is exactly what every eligibility
+  // notification for this participant was asking the advisor to do —
+  // resolve all of them at once, regardless of which rule(s) had matched.
+  await resolveNotificationsForParticipant(participantId, TS_ELIGIBILITY_NOTIFICATION_TYPES, "System (Trading Start recorded)");
 
   // Move the participant into the IWT advisor's caseload, exactly like a
   // normal Transfer Participant, so their office follows automatically and
@@ -186,6 +205,18 @@ export async function createTradingStart(
       transferred_by: "Trading Start",
       notes: `Automatic transfer to IWT advisor on Trading Start (${reason}).`,
     });
+
+    if (tradingStartId) {
+      await createNotification({
+        type: "transferred_to_iwt",
+        title: `${participant.ptp_name} transferred to your IWT caseload`,
+        body: `Participant ${participant.ptp_name} has been transferred to In Work Tracking under your caseload following their Trading Start (${reason}).`,
+        participantId,
+        advisorId: iwtAdvisorId,
+        relatedId: tradingStartId,
+        dedupeKey: `transferred_to_iwt:${tradingStartId}`,
+      });
+    }
   }
 
   const advisorName = await getAdvisorName(supabase, advisorId);
@@ -265,6 +296,13 @@ export async function addIwtReview(
     return { error: error.message };
   }
 
+  // A new review has just been logged, so any "review due soon / overdue"
+  // reminder pointing at the previous next_review_date is stale — the lazy
+  // sync (src/lib/data/notification-rules.ts) will create a fresh one next
+  // time it runs if the new next_review_date is itself within the window.
+  const reviewingAdvisorName = await getAdvisorName(supabase, advisorId);
+  await resolveNotificationByRelatedId(tradingStartId, "upcoming_review", `${reviewingAdvisorName} (review logged)`);
+
   revalidateParticipant();
   return {};
 }
@@ -307,11 +345,22 @@ export async function recordOutcome(
     return { error: error.message };
   }
 
-  const { data: participant } = await supabase
-    .from("participants")
-    .select("status")
-    .eq("id", participantId)
-    .maybeSingle();
+  const [{ data: participant }, { data: tradingStart }] = await Promise.all([
+    supabase.from("participants").select("ptp_name, status").eq("id", participantId).maybeSingle(),
+    supabase.from("trading_starts").select("original_advisor_id").eq("id", tradingStartId).maybeSingle(),
+  ]);
+
+  if (outcomeAchieved && participant && tradingStart?.original_advisor_id) {
+    await createNotification({
+      type: "outcome_achieved",
+      title: `${participant.ptp_name} achieved their Outcome`,
+      body: `Participant ${participant.ptp_name} has met the criteria for a ${outcomeType} Outcome, recorded ${new Date(outcomeDate).toLocaleDateString("en-GB")}.`,
+      participantId,
+      advisorId: tradingStart.original_advisor_id,
+      relatedId: tradingStartId,
+      dedupeKey: `outcome_achieved:${tradingStartId}`,
+    });
+  }
 
   const newStatus: ParticipantStatus = outcomeAchieved ? "Outcome Achieved" : "Closed";
   await supabase.from("participants").update({ status: newStatus }).eq("id", participantId);

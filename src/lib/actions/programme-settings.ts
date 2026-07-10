@@ -29,9 +29,10 @@ export async function updateProgrammeSettings(
   const outcomeTarget = toPositiveNumber(formData, "outcome_target");
   const outcomePeriodMonths = toPositiveInt(formData, "outcome_period_months");
   const gseOutcomePeriodMonths = toPositiveInt(formData, "gse_outcome_period_months");
+  const contactPeriodDays = toPositiveInt(formData, "contact_period_days");
 
-  if (!ngseAverageThreshold || !outcomeTarget || !outcomePeriodMonths || !gseOutcomePeriodMonths) {
-    return { error: "All four settings are required and must be positive numbers." };
+  if (!ngseAverageThreshold || !outcomeTarget || !outcomePeriodMonths || !gseOutcomePeriodMonths || !contactPeriodDays) {
+    return { error: "All five settings are required and must be positive numbers." };
   }
 
   const supabase = await createClient();
@@ -48,6 +49,7 @@ export async function updateProgrammeSettings(
     outcome_target: outcomeTarget,
     outcome_period_months: outcomePeriodMonths,
     gse_outcome_period_months: gseOutcomePeriodMonths,
+    contact_period_days: contactPeriodDays,
     updated_by: "admin",
   };
 

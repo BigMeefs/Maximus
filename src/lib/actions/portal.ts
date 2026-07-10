@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { calculateMileageCost } from "@/lib/mileage";
+import { createNotification, resolveNotificationByRelatedId } from "@/lib/data/notifications";
 
 // ---------------------------------------------------------------------------
 // Participant Income Tracker Portal — public, no login. Every function here
@@ -74,7 +75,7 @@ export async function submitPortalIncomeEntry(
   // an id that isn't a real participant.
   const { data: participant } = await supabase
     .from("participants")
-    .select("id")
+    .select("id, ptp_name, advisor_id")
     .eq("id", participantId)
     .maybeSingle();
 
@@ -100,28 +101,47 @@ export async function submitPortalIncomeEntry(
     declarationFileName = file.name;
   }
 
-  const { error } = await supabase.from("income_tracker_entries").upsert(
-    {
-      participant_id: participantId,
-      month,
-      entry_date: entryDate,
-      income: grossIncome,
-      expense: businessExpenses,
-      miles,
-      mileage_cost: mileageCost,
-      notes,
-      declaration_file_path: declarationFilePath,
-      declaration_file_name: declarationFileName,
-      source: "Participant Portal",
-      reviewed: false,
-      reviewed_by: null,
-      reviewed_at: null,
-    },
-    { onConflict: "participant_id,month" },
-  );
+  const { data: entry, error } = await supabase
+    .from("income_tracker_entries")
+    .upsert(
+      {
+        participant_id: participantId,
+        month,
+        entry_date: entryDate,
+        income: grossIncome,
+        expense: businessExpenses,
+        miles,
+        mileage_cost: mileageCost,
+        notes,
+        declaration_file_path: declarationFilePath,
+        declaration_file_name: declarationFileName,
+        source: "Participant Portal",
+        reviewed: false,
+        reviewed_by: null,
+        reviewed_at: null,
+      },
+      { onConflict: "participant_id,month" },
+    )
+    .select("id")
+    .single();
 
   if (error) {
     return { error: error.message };
+  }
+
+  // One notification per submission, not per edit — an advisor re-editing
+  // the same calendar month's entry (e.g. correcting a typo) re-uses the
+  // same row via the upsert above, so this only fires the first time.
+  if (entry && participant.advisor_id) {
+    await createNotification({
+      type: "income_submitted",
+      title: `${participant.ptp_name} submitted an Income Tracker entry`,
+      body: `Participant ${participant.ptp_name} submitted an Income Tracker entry for ${new Date(entryDate).toLocaleDateString("en-GB", { month: "long", year: "numeric" })} on ${new Date().toLocaleDateString("en-GB")}. Net profit: £${netProfit.toLocaleString("en-GB", { maximumFractionDigits: 2 })}.`,
+      participantId,
+      advisorId: participant.advisor_id,
+      relatedId: entry.id,
+      dedupeKey: `income_submitted:${entry.id}`,
+    });
   }
 
   revalidatePath("/advisors/[advisorId]", "layout");
@@ -149,6 +169,12 @@ export async function markSubmissionReviewed(
   if (error) {
     return { error: error.message };
   }
+
+  // Keep this in sync with the generic Notifications panel: reviewing a
+  // submission from the Income Tracker tab resolves the matching
+  // notification too (see markNotificationReviewed in actions/notifications.ts
+  // for the reverse direction).
+  await resolveNotificationByRelatedId(entryId, "income_submitted", reviewedBy);
 
   revalidatePath("/advisors/[advisorId]", "layout");
   return {};

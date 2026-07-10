@@ -62,6 +62,17 @@ export default function ProgrammeSettingsForm({ settings }: { settings: Programm
             className={inputClass}
           />
         </Field>
+        <Field label="Contact period — flag participants after (days)" required>
+          <input
+            name="contact_period_days"
+            type="number"
+            step="1"
+            min="1"
+            required
+            defaultValue={settings.contact_period_days}
+            className={inputClass}
+          />
+        </Field>
       </div>
 
       <div className="flex items-center gap-3">

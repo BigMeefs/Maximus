@@ -220,8 +220,55 @@ export type ProgrammeSettings = {
   outcome_target: number;
   outcome_period_months: number;
   gse_outcome_period_months: number;
+  contact_period_days: number;
   updated_at: string;
   updated_by: string | null;
+};
+
+// ---------------------------------------------------------------------------
+// Notifications — a live advisor work queue backed by a real table (see
+// supabase/migrations/0018_notifications.sql). Only New / Unread / Action
+// Required are "active" (shown in the Notifications panel); Reviewed and
+// Archived are terminal, audit-only states. Adding a new automatic
+// notification later only means adding one more value here plus a rule
+// that calls createNotification — nothing else needs to change.
+// ---------------------------------------------------------------------------
+export const NOTIFICATION_TYPES = [
+  "trading_start_eligible_gse",
+  "trading_start_eligible_ngse",
+  "trading_start_eligible_claim_closed",
+  "income_submitted",
+  "funding_approval_required",
+  "funding_approved",
+  "funding_declined",
+  "transferred_to_iwt",
+  "outcome_achieved",
+  "contact_required",
+  "upcoming_review",
+] as const;
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
+export const NOTIFICATION_STATUSES = ["New", "Unread", "Action Required", "Reviewed", "Archived"] as const;
+export type NotificationStatus = (typeof NOTIFICATION_STATUSES)[number];
+
+export const ACTIVE_NOTIFICATION_STATUSES: NotificationStatus[] = ["New", "Unread", "Action Required"];
+
+export type Notification = {
+  id: string;
+  type: NotificationType;
+  status: NotificationStatus;
+  title: string;
+  body: string;
+  participant_id: string | null;
+  advisor_id: string | null;
+  related_id: string | null;
+  dedupe_key: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  archived_by: string | null;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type Announcement = {
@@ -619,6 +666,12 @@ export type Database = {
         Row: OrganisationSettings;
         Insert: Partial<OrganisationSettings>;
         Update: Partial<OrganisationSettings>;
+        Relationships: [];
+      };
+      notifications: {
+        Row: Notification;
+        Insert: Partial<Notification> & { type: NotificationType; title: string; body: string };
+        Update: Partial<Notification>;
         Relationships: [];
       };
     };

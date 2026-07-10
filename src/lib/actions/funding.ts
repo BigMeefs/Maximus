@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { FUNDING_SOURCES, type FundingApplicationStatus } from "@/types/database";
+import { createNotification, resolveNotificationByRelatedId } from "@/lib/data/notifications";
 
 export type FundingFormState = {
   error?: string;
@@ -37,6 +38,10 @@ function readFundingFields(formData: FormData) {
   };
 }
 
+function currencyLabel(value: number): string {
+  return `£${value.toLocaleString("en-GB", { maximumFractionDigits: 2 })}`;
+}
+
 function numberOrNull(value: FormDataEntryValue | null) {
   const str = value?.toString().trim();
   if (!str) return null;
@@ -57,25 +62,62 @@ export async function createFundingRecord(
 
   const status = autoStatus(fields.amountRequested);
   const supabase = await createClient();
-  const { error } = await supabase.from("funding_records").insert({
-    participant_id: participantId,
-    funding_source: fields.fundingSource,
-    amount_requested: fields.amountRequested,
-    // A request that auto-approves is, by definition, approved for the
-    // amount requested.
-    amount_approved: status === "Approved" ? fields.amountRequested : fields.amountApproved,
-    amount_received: fields.amountReceived,
-    funding_purpose: fields.fundingPurpose,
-    application_status: status,
-    application_date: fields.applicationDate,
-    decision_date: status === "Approved" ? new Date().toISOString().slice(0, 10) : fields.decisionDate,
-    approved_by: status === "Approved" ? "Automatic (at or below £100)" : null,
-    approved_at: status === "Approved" ? new Date().toISOString() : null,
-    notes: fields.notes,
-  });
+
+  const { data: participant } = await supabase
+    .from("participants")
+    .select("ptp_name, advisor_id")
+    .eq("id", participantId)
+    .maybeSingle();
+
+  const { data: record, error } = await supabase
+    .from("funding_records")
+    .insert({
+      participant_id: participantId,
+      funding_source: fields.fundingSource,
+      amount_requested: fields.amountRequested,
+      // A request that auto-approves is, by definition, approved for the
+      // amount requested.
+      amount_approved: status === "Approved" ? fields.amountRequested : fields.amountApproved,
+      amount_received: fields.amountReceived,
+      funding_purpose: fields.fundingPurpose,
+      application_status: status,
+      application_date: fields.applicationDate,
+      decision_date: status === "Approved" ? new Date().toISOString().slice(0, 10) : fields.decisionDate,
+      approved_by: status === "Approved" ? "Automatic (at or below £100)" : null,
+      approved_at: status === "Approved" ? new Date().toISOString() : null,
+      notes: fields.notes,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (record && participant?.advisor_id) {
+    const amountLabel = fields.amountRequested !== null ? currencyLabel(fields.amountRequested) : "an unspecified amount";
+    if (status === "Approved") {
+      await createNotification({
+        type: "funding_approved",
+        title: `Funding request approved for ${participant.ptp_name}`,
+        body: `Funding request of ${amountLabel} (${fields.fundingSource}) for ${participant.ptp_name} was automatically approved (at or below £100).`,
+        participantId,
+        advisorId: participant.advisor_id,
+        relatedId: record.id,
+        dedupeKey: `funding_approved:${record.id}`,
+      });
+    } else {
+      await createNotification({
+        type: "funding_approval_required",
+        status: "Action Required",
+        title: `Funding request awaiting manager approval for ${participant.ptp_name}`,
+        body: `Funding request of ${amountLabel} (${fields.fundingSource}) for ${participant.ptp_name} was submitted and needs manager approval.`,
+        participantId,
+        advisorId: participant.advisor_id,
+        relatedId: record.id,
+        dedupeKey: `funding_approval_required:${record.id}`,
+      });
+    }
   }
 
   revalidateParticipant();
@@ -157,7 +199,7 @@ export async function approveFundingRequest(
 
   const { data: record } = await supabase
     .from("funding_records")
-    .select("amount_requested")
+    .select("participant_id, amount_requested, funding_source")
     .eq("id", recordId)
     .maybeSingle();
 
@@ -177,6 +219,27 @@ export async function approveFundingRequest(
     return { error: error.message };
   }
 
+  if (record) {
+    await resolveNotificationByRelatedId(recordId, "funding_approval_required", managerName);
+    const { data: participant } = await supabase
+      .from("participants")
+      .select("ptp_name, advisor_id")
+      .eq("id", record.participant_id)
+      .maybeSingle();
+    if (participant?.advisor_id) {
+      const amountLabel = record.amount_requested !== null ? currencyLabel(record.amount_requested) : "the requested amount";
+      await createNotification({
+        type: "funding_approved",
+        title: `Funding request approved for ${participant.ptp_name}`,
+        body: `${managerName} approved the ${amountLabel} funding request (${record.funding_source}) for ${participant.ptp_name}.`,
+        participantId: record.participant_id,
+        advisorId: participant.advisor_id,
+        relatedId: recordId,
+        dedupeKey: `funding_approved:${recordId}`,
+      });
+    }
+  }
+
   revalidateParticipant();
   return {};
 }
@@ -189,6 +252,12 @@ export async function rejectFundingRequest(
 ): Promise<FundingFormState> {
   const notes = formData.get("manager_notes")?.toString().trim() || null;
   const supabase = await createClient();
+
+  const { data: record } = await supabase
+    .from("funding_records")
+    .select("participant_id, amount_requested, funding_source")
+    .eq("id", recordId)
+    .maybeSingle();
 
   const { error } = await supabase
     .from("funding_records")
@@ -203,6 +272,27 @@ export async function rejectFundingRequest(
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (record) {
+    await resolveNotificationByRelatedId(recordId, "funding_approval_required", managerName);
+    const { data: participant } = await supabase
+      .from("participants")
+      .select("ptp_name, advisor_id")
+      .eq("id", record.participant_id)
+      .maybeSingle();
+    if (participant?.advisor_id) {
+      const amountLabel = record.amount_requested !== null ? currencyLabel(record.amount_requested) : "the requested amount";
+      await createNotification({
+        type: "funding_declined",
+        title: `Funding request declined for ${participant.ptp_name}`,
+        body: `${managerName} declined the ${amountLabel} funding request (${record.funding_source}) for ${participant.ptp_name}.`,
+        participantId: record.participant_id,
+        advisorId: participant.advisor_id,
+        relatedId: recordId,
+        dedupeKey: `funding_declined:${recordId}`,
+      });
+    }
   }
 
   revalidateParticipant();

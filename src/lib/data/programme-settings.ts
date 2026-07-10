@@ -6,6 +6,7 @@ const DEFAULTS: Omit<ProgrammeSettings, "id" | "updated_at" | "updated_by"> = {
   outcome_target: 5300,
   outcome_period_months: 6,
   gse_outcome_period_months: 6,
+  contact_period_days: 30,
 };
 
 // Falls back to the documented defaults if the singleton row is somehow

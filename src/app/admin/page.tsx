@@ -104,6 +104,16 @@ export default async function AdminOverviewPage() {
             Rebrand the app: organisation/application name, logo, and brand colours.
           </p>
         </Link>
+        <Link
+          href="/admin/notifications"
+          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+        >
+          <h2 className="text-sm font-semibold text-slate-900">Notification History</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Search, filter, restore or permanently delete every notification ever sent, across every
+            advisor.
+          </p>
+        </Link>
       </div>
     </div>
   );

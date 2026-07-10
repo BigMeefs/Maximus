@@ -589,13 +589,15 @@ Every card links straight into the relevant participant or queue:
   confirmed in the last 14 days.
 - **Income Tracker alerts**, **expiring participants**, **missing business
   plans** and **outstanding actions** — unchanged from before.
-- **Notifications and announcements** — the existing Portal-submission
-  notification bell, plus a new lightweight **Announcements** feature
-  (`announcements` table, managed at `/admin/announcements`): short
-  organisation-wide messages a manager can post/hide/delete, shown at the
-  top of every advisor's dashboard while active. This is separate from the
-  participant-notification queue — announcements are for the team, not
-  about a specific participant.
+- **Notifications and announcements** — a compact preview of this advisor's
+  live Notifications queue (see the dedicated "Notifications" section below
+  for the full design: eleven automatic notification types, not just Portal
+  submissions), plus a lightweight **Announcements** feature (`announcements`
+  table, managed at `/admin/announcements`): short organisation-wide messages
+  a manager can post/hide/delete, shown at the top of every advisor's
+  dashboard while active. Announcements are separate from the
+  participant-notification queue — they're for the team, not about a
+  specific participant.
 
 ## Participant Income Tracker Portal
 
@@ -642,36 +644,28 @@ via a QR code or a shared URL, not by navigating the CRM.
 
 ### Advisor-facing review
 
-"Notifications" here means **unreviewed Participant Portal submissions**,
-computed live from `income_tracker_entries` filtered to
-`source = 'Participant Portal'` — there's no separate notifications table
-to keep in sync with the entries themselves.
+Portal submissions feed two separate things, which used to be conflated:
 
-- A **Notifications** link in the sidebar nav shows a live unread badge
-  (this advisor's own unreviewed submissions) and opens
-  `/advisors/<id>/notifications` — every Portal submission, newest first,
-  filterable by Advisor, Office, Date and Reviewed/Unreviewed status (the
-  same Office/Advisor filter pattern as Reports). Each row shows the
-  participant, email, submission date, Net Profit and status, with
-  **Mark as Reviewed**, **Open submission** (into the participant's Income
-  Tracker tab) and **View declaration** (a signed URL, if one was uploaded).
-  Marking a submission reviewed records who (the advisor whose workspace
-  you're viewing it from — this route already carries that context, same
-  as the rest of the advisor-scoped app) and when.
-- The **Self Employment Dashboard** also shows a compact "Income Tracker
-  Submissions" list of this advisor's own unreviewed submissions, and a
-  **Participant Income Tracker Portal** card at the top with a QR code
-  (generated server-side from the request's own host, so it doesn't need a
-  hardcoded production URL) and a copyable link — print it or email it to
-  participants.
-- On the participant's own profile, the existing **Income Tracker** tab is
-  where every submission "automatically appears" — it already lists every
-  entry with month, date, income, expense, and now Miles, a Status badge
-  (Awaiting advisor review / Reviewed by X) and a declaration link where
-  present, rather than a separate new cross-cutting "Participant Timeline"
-  view merging every event type in the app (appointments, status changes,
-  income entries, etc.) — that would have been a much larger, separately-
-  scoped feature than what was asked for here.
+- The **Income Tracker tab** on the participant's own profile, where every
+  submission "automatically appears" regardless of source, with a Status
+  badge (Awaiting advisor review / Reviewed by X) and a declaration link
+  where present — this is the record itself, and `income_tracker_entries`
+  is still the single source of truth for it (see "Notifications" below for
+  why review state lives in two places that stay in sync).
+- A **notification** in the sidebar's Notifications work queue, prompting
+  the advisor to look at it — see the dedicated "Notifications" section
+  below for the full design (this used to be the entire meaning of
+  "Notifications" in this CRM; it's now one of eleven automatic notification
+  types feeding one unified queue).
+
+The **Self Employment Dashboard** also shows a compact "Income Tracker
+Submissions" list of this advisor's own unreviewed submissions (queried
+directly from `income_tracker_entries`, independent of the notifications
+table — see "Notifications" for why these two views can never disagree),
+and a **Participant Income Tracker Portal** card at the top with a QR code
+(generated server-side from the request's own host, so it doesn't need a
+hardcoded production URL) and a copyable link — print it or email it to
+participants.
 
 ### Security caveat
 
@@ -683,6 +677,81 @@ the lookup/submit actions never return a participant record), but RLS is
 disabled and the anon key is public by design, so anyone calling Supabase's
 REST API directly still has the same full read/write access they always
 did, independent of this page's own restraint.
+
+## Notifications
+
+The Notifications panel (`/advisors/<id>/notifications`, sidebar bell +
+badge) is a real, persisted work queue — a `notifications` table (see
+`supabase/migrations/0018_notifications.sql`), not just a computed view over
+another table. It's designed to be the advisor's daily task list: it shows
+only what still needs a look, and once something's been dealt with it
+disappears from the list immediately (no page refresh) without ever being
+deleted.
+
+- **Status lifecycle.** Every notification has one of five statuses: **New**,
+  **Unread**, **Action Required**, **Reviewed**, **Archived**. The first
+  three are "active" and shown in the panel; Reviewed and Archived are
+  terminal and hidden from it, but never removed from the database — they're
+  the audit trail. Clicking **Mark as Reviewed** sets status to Reviewed,
+  records who and when, and (client-side) removes the card from the list the
+  moment the action resolves — the same "server action + `revalidatePath`"
+  pattern this CRM already uses everywhere else for live updates without a
+  hard refresh (e.g. Funding approvals, Announcements). If nothing's active,
+  the panel shows "You're all caught up. No notifications require your
+  attention."
+- **Eleven automatic types, two different creation strategies:**
+  - **Event-driven** (created the instant the underlying action happens, by
+    the same server action that performs it): **Income submitted** (Portal
+    submissions only — see below), **Funding approval required / approved /
+    declined**, **Transferred to IWT**, **Outcome achieved**.
+  - **Lazy/computed** (an ongoing condition, not a one-off event — there's no
+    background job or cron in this deployment, so these are (re)computed
+    whenever an advisor opens their **Dashboard** or **Notifications** page):
+    **Trading Start eligible (GSE / NGSE / Claim Closed)**, **Participant
+    requires contact**, **Upcoming review** (an appointment or IWT review due
+    within 7 days, or an IWT review already overdue). See
+    `src/lib/data/notification-rules.ts` — it diffs the freshly computed set
+    of "true right now" conditions against whatever's already active and
+    reconciles both directions: creates anything newly true, auto-resolves
+    (never deletes) anything no longer true.
+- **No duplicates for the same unresolved event.** Every notification has an
+  optional `dedupe_key`; a partial unique index only enforces uniqueness
+  among *active* rows, so a second attempt to raise the same unresolved event
+  (e.g. re-running the eligibility check while last time's notification is
+  still sitting there un-actioned) is a silent no-op, while the same key
+  becomes available again the moment the earlier one is resolved.
+- **Auto-resolution.** Where the underlying action itself represents "this
+  has been handled," the notification resolves automatically rather than
+  waiting for the advisor to also click Mark as Reviewed: creating a Trading
+  Start resolves that participant's eligibility notification(s); approving
+  or declining a funding request resolves its "approval required"
+  notification; logging an appointment resolves "requires contact"; logging
+  a new IWT review resolves the stale "upcoming review" reminder for that
+  Trading Start.
+- **"Participant requires contact"** reads its threshold from Programme
+  Settings' new **Contact period** field (`programme_settings.contact_period_days`,
+  default 30 days) rather than a hard-coded number — configurable the same
+  way the NGSE/Outcome thresholds already are.
+- **Income Tracker submissions stay in sync in both directions**, but
+  deliberately only for **Portal** submissions, not every manual
+  advisor-entered row — an advisor typing in their own entry doesn't need a
+  notification telling them they just did that. Reviewing the notification
+  (from the panel) and reviewing the entry (from the Income Tracker tab, the
+  pre-existing flow — see "Participant Income Tracker Portal" above) each
+  update the other, so they never disagree about whether a submission's been
+  looked at.
+- **Notification History** (`/admin/notifications`, linked from the Admin
+  Dashboard, same passcode gate as the rest of Administration) is where
+  managers see everything, not just what's active: search, and filter by
+  Office, Advisor, Participant, Type, Status and Date Range (most recent 300
+  matching rows — this CRM's scale doesn't call for real pagination).
+  Archiving here is a distinct action from an advisor reviewing their own
+  queue — a manager can archive (and **Restore**) any notification
+  regardless of status, e.g. to tidy up old ones without them counting as
+  "reviewed by an advisor." **Permanently delete** is the one operation that
+  actually removes a row — gated the same way everything else in
+  Administration is (the section-wide passcode; this app has no separate
+  admin/manager role system — see "Permissions model").
 
 ## Data Sync
 
@@ -947,11 +1016,22 @@ existing deployment won't pick up new values on its own.
   layout (no AppShell, no nav) — this is the one part of the app a
   participant should ever reach. Server actions in
   `src/lib/actions/portal.ts`; mileage calculation in `src/lib/mileage.ts`.
-- `src/app/advisors/[advisorId]/notifications`,
-  `src/lib/data/notifications.ts` — the advisor-facing review queue for
-  Portal submissions (computed from `income_tracker_entries`, not a
-  separate table); the nav sidebar's unread badge reads from the same data
-  layer.
+- `src/app/advisors/[advisorId]/notifications`, `src/lib/data/notifications.ts`,
+  `src/lib/actions/notifications.ts`, `src/components/notifications/notification-queue.tsx`
+  — the live Notifications work queue (see the "Notifications" section
+  above): status lifecycle, dedupe-guarded creation, the panel itself. The
+  nav sidebar's badge reads `getActiveNotificationCount` from the same data
+  layer. `src/lib/data/notification-rules.ts` is the lazy/computed-condition
+  sync engine (Trading Start eligibility, contact required, upcoming
+  reviews), called from the Dashboard and Notifications pages. Event-driven
+  notification creation lives inside the server action that causes each
+  event: `src/lib/actions/portal.ts` (income submitted),
+  `src/lib/actions/funding.ts` (funding approval/decision),
+  `src/lib/actions/trading-start.ts` (transferred to IWT, outcome achieved,
+  eligibility auto-resolve), `src/lib/actions/appointments.ts` (contact
+  auto-resolve). Admin side: `src/app/admin/notifications`,
+  `src/components/admin/notification-history-filters.tsx`,
+  `src/components/admin/notification-history-list.tsx`.
 - `src/lib/supabase` — Supabase client helpers.
 - `integrations/google-apps-script` — reference copy of the Apps Script
   function that syncs the external client income tracker form into the
