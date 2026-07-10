@@ -26,18 +26,9 @@ export default function NavLinks({
     { href: `/advisors/${advisorId}/data-sync`, label: "Data Sync", icon: "⇅" },
   ];
 
-  const companyLinks = [
-    { href: "/reports", label: "Reports", icon: "📊" },
-    { href: "/admin", label: "Administration", icon: "⚙" },
-  ];
-
   return (
     <nav className="flex flex-1 flex-col gap-1 px-3">
       {workspaceLinks.map((link) => (
-        <NavLink key={link.href} link={link} pathname={pathname} />
-      ))}
-      <div className="my-2 border-t border-slate-100" />
-      {companyLinks.map((link) => (
         <NavLink key={link.href} link={link} pathname={pathname} />
       ))}
     </nav>

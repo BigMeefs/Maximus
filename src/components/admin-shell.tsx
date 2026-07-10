@@ -17,11 +17,7 @@ export default function AdminShell({
   const [loggingOut, startLogoutTransition] = useTransition();
 
   const links = [
-    { href: "/admin/offices", label: "Offices" },
-    { href: "/admin/advisors", label: "Advisors" },
-    { href: "/admin/transfer", label: "Transfer" },
-    { href: "/admin/funding-approvals", label: "Funding Approvals" },
-    { href: "/admin/programme-settings", label: "Programme Settings" },
+    { href: "/admin", label: "Admin Dashboard" },
     { href: "/reports", label: "Reports" },
   ];
 
@@ -34,7 +30,7 @@ export default function AdminShell({
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-xs font-bold text-white">
                 SE
               </div>
-              <span className="text-sm font-semibold text-slate-900">Administration</span>
+              <span className="text-sm font-semibold text-slate-900">Management Portal</span>
             </Link>
             <nav className="flex gap-1">
               {links.map((link) => {
@@ -58,7 +54,7 @@ export default function AdminShell({
           </div>
           <div className="flex items-center gap-3">
             <Link href="/select-advisor" className="text-sm text-slate-500 hover:text-indigo-600">
-              ← All advisors
+              ← Home
             </Link>
             <button
               type="button"

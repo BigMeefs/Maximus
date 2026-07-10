@@ -47,7 +47,7 @@ export default function AdminLoginForm({
         href="/select-advisor"
         className="mt-4 block text-center text-sm text-slate-500 hover:text-indigo-600"
       >
-        ← Back to advisor workspaces
+        ← Back to Home
       </a>
     </form>
   );

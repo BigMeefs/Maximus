@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AdminGate redirectTo="/admin" title="Administration">
+    <AdminGate redirectTo="/admin" title="Admin Login">
       <AdminShell section="admin">{children}</AdminShell>
     </AdminGate>
   );

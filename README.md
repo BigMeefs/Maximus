@@ -13,13 +13,35 @@ Tailwind CSS and Supabase.
 
 The CRM is organised **Company → Office → Advisor → Participants**. There's
 one company (this deployment); offices and advisors are rows in the
-database, managed entirely through the Administration panel — adding an
-office or an advisor never requires a code change or redeploy.
+database, managed entirely through the Admin Dashboard — adding an office
+or an advisor never requires a code change or redeploy.
 
-- No login. The home screen (`/select-advisor`) lists every active advisor
-  as a card, pulled live from the database, with a search box and an office
-  filter. Picking one opens `/advisors/<id>/dashboard` — that advisor's own
-  workspace.
+### Two portals from one home screen
+
+`/select-advisor` is the single landing page (`/` redirects here) and stays
+the main entry point for everyone — but it now leads to two separate
+experiences instead of one:
+
+- **Advisor Portal** — pick an advisor card to open `/advisors/<id>/dashboard`,
+  that advisor's own workspace (Dashboard, Self Employment, Participants,
+  Notifications, Data Sync in the sidebar). This is unchanged from before.
+- **Management Portal** — an **Admin Login** button in the top-right corner
+  of the home screen, separate from the advisor cards, goes straight to
+  `/admin` and its passcode gate (the same authentication this app has
+  always used for Administration/Reports — see Security model below). On
+  success it lands directly on the Admin Dashboard. A manager or admin
+  never has to open an advisor's workspace first to get there.
+
+The Advisor Portal's sidebar no longer links to Reports or Administration
+at all — those only exist inside the Management Portal now, reached via the
+Admin Login button. Nothing was deleted: every admin/reporting route,
+permission and piece of data is exactly what it was before, only the
+navigation path to it changed. See "Administration panel" below for what
+the Management Portal itself now looks like.
+
+- No login for the Advisor Portal. The home screen lists every active
+  advisor as a card, pulled live from the database, with a search box and
+  an office filter.
 - Each advisor's dashboard and participant list show only participants
   assigned to them (`participants.advisor_id`). There's a link back to the
   home screen from every page ("← All advisors" in the sidebar), and any
@@ -49,16 +71,27 @@ office or an advisor never requires a code change or redeploy.
   workspace, with RAG and stage badges. Search matches Participant Name,
   Iconi ID, Email and Business Name.
 
-## Administration panel
+## Administration panel (the Management Portal)
 
-`/admin` (passcode-gated — see Security model) is where offices and advisors
-are managed. Nothing here is hard-coded; every office and advisor shown
-throughout the app comes from these tables.
+`/admin` (passcode-gated — see Security model) is the Admin Dashboard, the
+landing page of the **Management Portal** — reached via the Admin Login
+button on the home screen, not through an advisor's workspace. Its own
+nav bar has just two items, **Admin Dashboard** and **Reports**, matching
+the two-portal split described above; every admin tool below still exists
+at its own URL and still does exactly what it did before, just reached via
+a card on the Admin Dashboard instead of its own top-level nav link. Two
+things named in earlier requirements for this dashboard — **Audit Logs**
+and **System Settings** — don't exist anywhere in this codebase and
+weren't added; everything else does, listed below with its new name where
+one was given (e.g. "User Management" for the Advisors screen).
 
-- **Offices** (`/admin/offices`) — create, rename, and archive/reactivate
+Nothing here is hard-coded; every office and advisor shown throughout the
+app comes from these tables.
+
+- **Office Management** (`/admin/offices`) — create, rename, and archive/reactivate
   offices. Archiving hides an office from new advisor assignments without
   touching advisors or participants already linked to it.
-- **Advisors** (`/admin/advisors`) — add advisors (full name, email, office,
+- **User Management** (`/admin/advisors`) — add advisors (full name, email, office,
   job title), edit their details, move them between offices, and
   archive/reactivate them. Each advisor's detail page
   (`/admin/advisors/<id>`) shows their current caseload (every participant
@@ -592,7 +625,13 @@ authentication system this app has never had. Concretely:
 - **Manager/Admin** — full access via the existing `/admin` and `/reports`
   passcode gate: approve/reject funding, transfer participants between
   advisors, view all offices, filter every report, manage Programme
-  Settings.
+  Settings. Reached from the home screen's Admin Login button, not by
+  opening an advisor's workspace first (see "Two portals from one home
+  screen" above) — the Advisor Portal's sidebar has never linked to
+  `/admin` or `/reports` since the nav was split, so an advisor going about
+  their normal work never sees those options. This is still nav-level
+  separation, not access control: the underlying passcode gate is exactly
+  as strict (or as loose) as it was before.
 
 **What this does not do:** consistent with this app's existing, deliberate
 "any advisor can open any other advisor's workspace" design (e.g. to cover
@@ -615,14 +654,18 @@ not an oversight. Row-level security is disabled on every table, so **the
 Supabase anon key (shipped in the browser bundle) has full read/write access
 to all participant data, independent of workspace-based navigation.**
 
-The Administration panel and Reports (`/admin`, `/reports`) sit behind a
-single **shared passcode** (`ADMIN_PASSCODE`, set once as an environment
-variable) rather than individual accounts — consistent with the rest of the
-app's no-login model, but keeping org-structure changes and cross-office
-reporting out of casual reach. Entering the correct passcode sets a signed,
-httpOnly, 8-hour session cookie; there's a "Log out" link in the admin
-header. If `ADMIN_PASSCODE` isn't set, the gate always rejects every
-passcode (rather than failing open).
+The Administration panel and Reports (`/admin`, `/reports` — together the
+Management Portal) sit behind a single **shared passcode**
+(`ADMIN_PASSCODE`, set once as an environment variable) rather than
+individual accounts — consistent with the rest of the app's no-login model,
+but keeping org-structure changes and cross-office reporting out of casual
+reach. The Admin Login button on the home screen and the gate itself are
+the same mechanism as before this section was renamed "Management Portal"
+— only the entry point moved, not the authentication. Entering the correct
+passcode sets a signed, httpOnly, 8-hour session cookie (shared by both
+`/admin` and `/reports`, so logging in once covers both); there's a
+"Log out" link in the Management Portal header. If `ADMIN_PASSCODE` isn't
+set, the gate always rejects every passcode (rather than failing open).
 
 This is fine for a small, trusted internal tool, but it means:
 
@@ -706,8 +749,9 @@ existing deployment won't pick up new values on its own.
 ## Project structure
 
 - `supabase/migrations` — SQL schema and storage buckets.
-- `src/app/select-advisor` — the home screen (dynamic advisor cards, search,
-  office filter).
+- `src/app/select-advisor` — the home screen: dynamic advisor cards, search,
+  office filter, and the Admin Login button that leads to the Management
+  Portal (`src/app/page.tsx` redirects `/` here).
 - `src/app/advisors/[advisorId]` — one advisor's workspace: layout/nav
   shell, dashboard, participants list, and participant create/edit/profile
   pages, all scoped to the `advisorId` route segment (the advisor's UUID,
@@ -717,12 +761,14 @@ existing deployment won't pick up new values on its own.
   lookups: `getAdvisorOrNotFound`, `listAdvisors`, `listOffices`,
   `getAdvisorCaseloadCounts`. Every part of the app that needs to know about
   advisors or offices goes through this file.
-- `src/app/admin` — the Administration panel (offices, advisors, transfer
-  participants, Funding Approval Queue), gated by
-  `src/components/admin-gate.tsx` / `src/lib/admin-auth.ts`. Server actions
-  in `src/lib/actions/admin.ts`, `src/lib/actions/transfer.ts` and
-  `src/lib/actions/funding.ts` (approve/reject); data layer in
-  `src/lib/data/funding-approvals.ts`.
+- `src/app/admin` — the Admin Dashboard (offices, advisors, transfer
+  participants, Funding Approval Queue, Programme Settings), gated by
+  `src/components/admin-gate.tsx` / `src/lib/admin-auth.ts`. Shares
+  `src/components/admin-shell.tsx` (now just two nav items: Admin
+  Dashboard, Reports) with `/reports` — together these two routes are the
+  Management Portal. Server actions in `src/lib/actions/admin.ts`,
+  `src/lib/actions/transfer.ts` and `src/lib/actions/funding.ts`
+  (approve/reject); data layer in `src/lib/data/funding-approvals.ts`.
 - `src/app/reports`, `src/lib/data/reports.ts` — the Manager Dashboard
   (company-wide reporting, Office Reporting, the Office/Advisor/Date Range
   filters in `src/components/reports/report-filters.tsx`); same passcode
