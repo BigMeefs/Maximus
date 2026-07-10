@@ -566,7 +566,7 @@ and immediately see what needs doing rather than reading passive numbers.
 Every card links straight into the relevant participant or queue:
 
 - **Headline counts** — Caseload size, Requiring a Gateway, Funding awaiting
-  approval, Due for contact, Approaching Trading Start, Notifications.
+  approval, Approaching Trading Start, Notifications.
 - **Participants requiring a Gateway** — Active participants whose live
   Gateway readiness % (the same calculation used on the Gateway tab) is
   below 100%, worst-first.
@@ -579,8 +579,6 @@ Every card links straight into the relevant participant or queue:
   real session — it's a convenience marker, not a security or audit
   mechanism, and falls back to "the last 3 days" the first time an advisor
   opens the page.
-- **Due for contact** — Active participants with no logged appointment in the
-  last 30 days (or none at all), most-overdue first.
 - **Approaching Trading Start** and **Transferred to IWT** — reuse the exact
   eligibility and transfer detection already built for the Self Employment
   Dashboard (`getSelfEmploymentDashboard`), so the two dashboards never
@@ -699,7 +697,7 @@ deleted.
   hard refresh (e.g. Funding approvals, Announcements). If nothing's active,
   the panel shows "You're all caught up. No notifications require your
   attention."
-- **Eleven automatic types, two different creation strategies:**
+- **Ten automatic types, two different creation strategies:**
   - **Event-driven** (created the instant the underlying action happens, by
     the same server action that performs it): **Income submitted** (Portal
     submissions only — see below), **Funding approval required / approved /
@@ -707,13 +705,13 @@ deleted.
   - **Lazy/computed** (an ongoing condition, not a one-off event — there's no
     background job or cron in this deployment, so these are (re)computed
     whenever an advisor opens their **Dashboard** or **Notifications** page):
-    **Trading Start eligible (GSE / NGSE / Claim Closed)**, **Participant
-    requires contact**, **Upcoming review** (an appointment or IWT review due
-    within 7 days, or an IWT review already overdue). See
-    `src/lib/data/notification-rules.ts` — it diffs the freshly computed set
-    of "true right now" conditions against whatever's already active and
-    reconciles both directions: creates anything newly true, auto-resolves
-    (never deletes) anything no longer true.
+    **Trading Start eligible (GSE / NGSE / Claim Closed)**, **Upcoming
+    review** (an appointment or IWT review due within 7 days, or an IWT
+    review already overdue). See `src/lib/data/notification-rules.ts` — it
+    diffs the freshly computed set of "true right now" conditions against
+    whatever's already active and reconciles both directions: creates
+    anything newly true, auto-resolves (never deletes) anything no longer
+    true.
 - **No duplicates for the same unresolved event.** Every notification has an
   optional `dedupe_key`; a partial unique index only enforces uniqueness
   among *active* rows, so a second attempt to raise the same unresolved event
@@ -725,13 +723,8 @@ deleted.
   waiting for the advisor to also click Mark as Reviewed: creating a Trading
   Start resolves that participant's eligibility notification(s); approving
   or declining a funding request resolves its "approval required"
-  notification; logging an appointment resolves "requires contact"; logging
-  a new IWT review resolves the stale "upcoming review" reminder for that
-  Trading Start.
-- **"Participant requires contact"** reads its threshold from Programme
-  Settings' new **Contact period** field (`programme_settings.contact_period_days`,
-  default 30 days) rather than a hard-coded number — configurable the same
-  way the NGSE/Outcome thresholds already are.
+  notification; logging a new IWT review resolves the stale "upcoming
+  review" reminder for that Trading Start.
 - **Income Tracker submissions stay in sync in both directions**, but
   deliberately only for **Portal** submissions, not every manual
   advisor-entered row — an advisor typing in their own entry doesn't need a
@@ -1022,14 +1015,13 @@ existing deployment won't pick up new values on its own.
   above): status lifecycle, dedupe-guarded creation, the panel itself. The
   nav sidebar's badge reads `getActiveNotificationCount` from the same data
   layer. `src/lib/data/notification-rules.ts` is the lazy/computed-condition
-  sync engine (Trading Start eligibility, contact required, upcoming
-  reviews), called from the Dashboard and Notifications pages. Event-driven
-  notification creation lives inside the server action that causes each
-  event: `src/lib/actions/portal.ts` (income submitted),
-  `src/lib/actions/funding.ts` (funding approval/decision),
-  `src/lib/actions/trading-start.ts` (transferred to IWT, outcome achieved,
-  eligibility auto-resolve), `src/lib/actions/appointments.ts` (contact
-  auto-resolve). Admin side: `src/app/admin/notifications`,
+  sync engine (Trading Start eligibility, upcoming reviews), called from the
+  Dashboard and Notifications pages. Event-driven notification creation
+  lives inside the server action that causes each event:
+  `src/lib/actions/portal.ts` (income submitted), `src/lib/actions/funding.ts`
+  (funding approval/decision), `src/lib/actions/trading-start.ts`
+  (transferred to IWT, outcome achieved, eligibility auto-resolve). Admin
+  side: `src/app/admin/notifications`,
   `src/components/admin/notification-history-filters.tsx`,
   `src/components/admin/notification-history-list.tsx`.
 - `src/lib/supabase` — Supabase client helpers.

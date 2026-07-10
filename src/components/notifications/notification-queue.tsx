@@ -18,7 +18,6 @@ const TYPE_ICON: Record<NotificationType, string> = {
   funding_declined: "❌",
   transferred_to_iwt: "🔄",
   outcome_achieved: "🏆",
-  contact_required: "📞",
   upcoming_review: "📅",
 };
 
@@ -32,7 +31,6 @@ const TYPE_LABEL: Record<NotificationType, string> = {
   funding_declined: "Funding declined",
   transferred_to_iwt: "Transferred to IWT",
   outcome_achieved: "Outcome achieved",
-  contact_required: "Participant requires contact",
   upcoming_review: "Upcoming review",
 };
 

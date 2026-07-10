@@ -144,7 +144,6 @@ export default async function DashboardPage({
   const actionCount =
     workQueue.gatewayIncomplete.length +
     pendingFunding.length +
-    workQueue.dueForContact.length +
     approachingTradingStart.length +
     unreadNotifications;
 
@@ -174,7 +173,7 @@ export default async function DashboardPage({
         </section>
       )}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard label="Caseload size" value={rows.length} href={participantsHref} />
         <StatCard
           label="Requiring a Gateway"
@@ -185,11 +184,6 @@ export default async function DashboardPage({
           label="Funding awaiting approval"
           value={pendingFunding.length}
           tone={pendingFunding.length > 0 ? "warning" : "default"}
-        />
-        <StatCard
-          label="Due for contact"
-          value={workQueue.dueForContact.length}
-          tone={workQueue.dueForContact.length > 0 ? "warning" : "default"}
         />
         <StatCard
           label="Approaching Trading Start"
@@ -253,16 +247,6 @@ export default async function DashboardPage({
               name={r.participantName}
             >
               <Badge tone="green">Net {currency.format(r.netProfit)}</Badge>
-            </Row>
-          ))}
-        </WorkQueueCard>
-
-        <WorkQueueCard title="Due for contact" emptyText="Everyone's been contacted in the last 30 days.">
-          {workQueue.dueForContact.slice(0, 6).map((r) => (
-            <Row key={r.participantId} href={`${participantsHref}/${r.participantId}?tab=appointments`} name={r.participantName}>
-              <Badge tone="amber">
-                {r.daysSinceContact === null ? "Never contacted" : `${r.daysSinceContact} days ago`}
-              </Badge>
             </Row>
           ))}
         </WorkQueueCard>

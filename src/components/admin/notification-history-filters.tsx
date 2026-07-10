@@ -17,7 +17,6 @@ const TYPE_LABEL: Record<NotificationType, string> = {
   funding_declined: "Funding declined",
   transferred_to_iwt: "Transferred to IWT",
   outcome_achieved: "Outcome achieved",
-  contact_required: "Requires contact",
   upcoming_review: "Upcoming review",
 };
 

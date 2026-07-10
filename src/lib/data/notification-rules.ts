@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { getProgrammeSettings } from "@/lib/data/programme-settings";
-import { getLastContactDate } from "@/lib/business-rules";
 import { evaluateTradingStartEligibility, isReviewOverdue } from "@/lib/trading-start-rules";
 import { ACTIVE_NOTIFICATION_STATUSES, type NotificationType } from "@/types/database";
 import type { Appointment, IncomeTrackerEntry, IwtReview, Participant, TradingStart } from "@/types/database";
@@ -25,7 +24,6 @@ export const LAZY_NOTIFICATION_TYPES: NotificationType[] = [
   "trading_start_eligible_gse",
   "trading_start_eligible_ngse",
   "trading_start_eligible_claim_closed",
-  "contact_required",
   "upcoming_review",
 ];
 
@@ -112,25 +110,6 @@ export async function syncAutoNotificationsForAdvisor(advisorId: string): Promis
           participantId: p.id,
           title: `${p.ptp_name} is eligible for a ${tsEligibleLabel(result.reason)} Trading Start`,
           body: `Participant ${p.ptp_name} is now eligible for a ${tsEligibleLabel(result.reason)} Trading Start. Review and process the Trading Start.`,
-        });
-      }
-    }
-
-    // ---- Contact required (Active participants only) ----
-    for (const p of activeParticipants) {
-      const appts = appointmentsByParticipant.get(p.id) ?? [];
-      const lastContact = getLastContactDate(appts);
-      const daysSince = lastContact ? daysBetween(lastContact, today) : null;
-      if (daysSince === null || daysSince > settings.contact_period_days) {
-        const dedupeKey = `contact_required:${p.id}`;
-        candidates.set(dedupeKey, {
-          type: "contact_required",
-          dedupeKey,
-          participantId: p.id,
-          title: `${p.ptp_name} requires contact`,
-          body: lastContact
-            ? `Participant ${p.ptp_name} has not been contacted since ${new Date(lastContact).toLocaleDateString("en-GB")} — over the configured ${settings.contact_period_days}-day contact period. Log an appointment or note that contact was made.`
-            : `Participant ${p.ptp_name} has no logged contact yet. Log an appointment or note that contact was made.`,
         });
       }
     }

@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getGatewayChecklist } from "@/lib/business-rules";
 import { netProfit } from "@/lib/trading-start-rules";
 import type {
-  Appointment,
   BusinessPlan,
   DigitalPresenceItem,
   EvidenceFile,
@@ -13,7 +12,6 @@ import type {
   TradingStartReason,
 } from "@/types/database";
 
-const DUE_FOR_CONTACT_DAYS = 30;
 const RECENT_TRADING_START_DAYS = 14;
 
 export type GatewayIncompleteRow = {
@@ -29,13 +27,6 @@ export type RecentIncomeRow = {
   netProfit: number;
 };
 
-export type DueForContactRow = {
-  participantId: string;
-  participantName: string;
-  lastContactDate: string | null;
-  daysSinceContact: number | null;
-};
-
 export type RecentTradingStartRow = {
   participantId: string;
   participantName: string;
@@ -46,7 +37,6 @@ export type RecentTradingStartRow = {
 export type AdvisorWorkQueue = {
   gatewayIncomplete: GatewayIncompleteRow[];
   recentIncomeSubmissions: RecentIncomeRow[];
-  dueForContact: DueForContactRow[];
   recentTradingStarts: RecentTradingStartRow[];
 };
 
@@ -73,7 +63,7 @@ export async function getAdvisorWorkQueue(
   const activeParticipantIds = rows.filter((p) => p.status === "Active").map((p) => p.id);
 
   if (participantIds.length === 0) {
-    return { gatewayIncomplete: [], recentIncomeSubmissions: [], dueForContact: [], recentTradingStarts: [] };
+    return { gatewayIncomplete: [], recentIncomeSubmissions: [], recentTradingStarts: [] };
   }
 
   const [
@@ -82,7 +72,6 @@ export async function getAdvisorWorkQueue(
     { data: digitalPresenceRows },
     { data: evidenceRows },
     { data: gatewayItemRows },
-    { data: appointmentRows },
     { data: incomeRows },
     { data: tradingStarts },
   ] = await Promise.all([
@@ -91,7 +80,6 @@ export async function getAdvisorWorkQueue(
     supabase.from("digital_presence_items").select("*").in("participant_id", activeParticipantIds),
     supabase.from("evidence_files").select("*").in("participant_id", activeParticipantIds),
     supabase.from("gateway_checklist_items").select("*").in("participant_id", activeParticipantIds),
-    supabase.from("appointments").select("*").in("participant_id", participantIds),
     supabase
       .from("income_tracker_entries")
       .select("participant_id, entry_date, income, expense, mileage_cost, created_at")
@@ -155,29 +143,6 @@ export async function getAdvisorWorkQueue(
       netProfit: netProfit(e),
     }));
 
-  // ---- Due for contact: Active participants with no contact in the last 30 days ----
-  const appointmentsByParticipant = new Map<string, Appointment[]>();
-  (appointmentRows ?? []).forEach((a) => {
-    const list = appointmentsByParticipant.get(a.participant_id) ?? [];
-    list.push(a);
-    appointmentsByParticipant.set(a.participant_id, list);
-  });
-
-  const dueForContact: DueForContactRow[] = rows
-    .filter((p) => p.status === "Active")
-    .map((p) => {
-      const appts = appointmentsByParticipant.get(p.id) ?? [];
-      const today = todayIso.slice(0, 10);
-      const past = appts
-        .filter((a) => a.appointment_date <= today)
-        .sort((a, b) => b.appointment_date.localeCompare(a.appointment_date));
-      const lastContactDate = past[0]?.appointment_date ?? null;
-      const daysSinceContact = lastContactDate ? daysBetween(lastContactDate, todayIso) : null;
-      return { participantId: p.id, participantName: p.ptp_name, lastContactDate, daysSinceContact };
-    })
-    .filter((r) => r.daysSinceContact === null || r.daysSinceContact > DUE_FOR_CONTACT_DAYS)
-    .sort((a, b) => (b.daysSinceContact ?? Infinity) - (a.daysSinceContact ?? Infinity));
-
   // ---- Recently achieved Trading Starts (this advisor originated) ----
   const recentTradingStarts: RecentTradingStartRow[] = (tradingStarts as TradingStart[] | null ?? [])
     .filter((ts) => daysBetween(ts.trading_start_date, todayIso) <= RECENT_TRADING_START_DAYS && daysBetween(ts.trading_start_date, todayIso) >= 0)
@@ -189,5 +154,5 @@ export async function getAdvisorWorkQueue(
     }))
     .sort((a, b) => b.tradingStartDate.localeCompare(a.tradingStartDate));
 
-  return { gatewayIncomplete, recentIncomeSubmissions, dueForContact, recentTradingStarts };
+  return { gatewayIncomplete, recentIncomeSubmissions, recentTradingStarts };
 }

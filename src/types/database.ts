@@ -220,7 +220,6 @@ export type ProgrammeSettings = {
   outcome_target: number;
   outcome_period_months: number;
   gse_outcome_period_months: number;
-  contact_period_days: number;
   updated_at: string;
   updated_by: string | null;
 };
@@ -243,7 +242,6 @@ export const NOTIFICATION_TYPES = [
   "funding_declined",
   "transferred_to_iwt",
   "outcome_achieved",
-  "contact_required",
   "upcoming_review",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];

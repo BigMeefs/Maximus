@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { resolveNotificationsForParticipant } from "@/lib/data/notifications";
 
 export type AppointmentFormState = {
   error?: string;
@@ -40,12 +39,6 @@ export async function createAppointment(
   if (error) {
     return { error: error.message };
   }
-
-  // Logging any appointment (past or future) counts as contact having been
-  // made — clear any "requires contact" notification for this participant.
-  // The next lazy sync will re-raise it once the configured contact period
-  // has elapsed again.
-  await resolveNotificationsForParticipant(participantId, ["contact_required"], "System (appointment logged)");
 
   revalidateParticipant();
   return {};
