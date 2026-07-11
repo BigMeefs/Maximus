@@ -1,6 +1,5 @@
 import type {
   BusinessPlan,
-  GatewayChecklistItem,
   OutcomeRecord,
   Participant,
   ParticipantStatusHistoryEntry,
@@ -44,8 +43,7 @@ export type JourneyTimelineInput = {
   participant: Participant;
   statusHistory: ParticipantStatusHistoryEntry[];
   businessPlan: BusinessPlan | null;
-  gatewayPercent: number;
-  gatewayChecklistItems: GatewayChecklistItem[];
+  gatewayReadinessPercent: number;
   currentTradingStart: TradingStart | null;
   outcome: OutcomeRecord | null;
 };
@@ -93,21 +91,29 @@ const MILESTONE_BUILDERS: ((input: JourneyTimelineInput) => RawMilestone)[] = [
       ],
     };
   },
-  // 3. Gateway
-  ({ gatewayPercent, gatewayChecklistItems }) => {
-    const completed = gatewayPercent >= 100;
-    const lastUpdated = gatewayChecklistItems.length
-      ? gatewayChecklistItems.reduce((latest, item) => (item.updated_at > latest ? item.updated_at : latest), gatewayChecklistItems[0].updated_at)
-      : null;
+  // 3. Gateway — a single milestone spanning advisor readiness prep through
+  // the Universal Credit Gateway appointment itself. There is no separate
+  // Gainful Decision milestone: UC's GSE/NGSE call is folded into this one
+  // as the "Outcome" detail once the Gateway is Completed.
+  ({ participant, gatewayReadinessPercent }) => {
+    const bookedStatus = participant.gateway_booked_status;
+    const appointmentDate = participant.gateway_appointment_date;
+    const outcome = participant.gateway_outcome;
+    const completed = bookedStatus === "Completed";
     return {
       id: "gateway",
       label: "Gateway",
-      date: completed ? lastUpdated : null,
-      summary: completed ? `Gateway complete.` : `${gatewayPercent}% of the Gateway checklist complete.`,
+      date: completed ? appointmentDate : null,
+      summary: completed
+        ? `Gateway Completed ${formatDate(appointmentDate)}${outcome ? ` — outcome: ${outcome}.` : "."}`
+        : bookedStatus === "Booked"
+          ? `Gateway Booked for ${formatDate(appointmentDate)} — ${gatewayReadinessPercent}% ready.`
+          : `${gatewayReadinessPercent}% of the Gateway Readiness checklist complete.`,
       detail: [
-        { label: "Readiness", value: `${gatewayPercent}%` },
-        { label: "Last checklist update", value: lastUpdated ? formatDate(lastUpdated) : "—" },
-        { label: "Full checklist", value: "See the Gateway tab for every item and Advisor Notes." },
+        { label: "Gateway Readiness", value: `${gatewayReadinessPercent}%` },
+        { label: "Booking status", value: bookedStatus },
+        { label: "Appointment date", value: appointmentDate ? formatDate(appointmentDate) : "—" },
+        { label: "Outcome", value: outcome ?? "Not yet decided — Universal Credit decides GSE or NGSE." },
       ],
     };
   },

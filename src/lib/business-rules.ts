@@ -1,7 +1,6 @@
 import { differenceInCalendarDays } from "date-fns";
 import {
   BUSINESS_STAGES,
-  GATEWAY_MANUAL_CHECKLIST_ITEMS,
   type Appointment,
   type ActionPlanItem,
   type BusinessPlan,
@@ -9,9 +8,8 @@ import {
   type DigitalPresenceItem,
   type EvidenceFile,
   type FundingRecord,
-  type GainfulAssessment,
   type GatewayChecklistItem,
-  type GatewayChecklistItemName,
+  type GatewayReadiness,
   type HmrcBusinessInfo,
   type IncomeTrackerEntry,
   type Participant,
@@ -36,7 +34,12 @@ export function isDigitalPresenceDone(item: Pick<DigitalPresenceItem, "status"> 
 }
 
 // ---------------------------------------------------------------------------
-// Gateway Readiness: 8 items auto-derived from existing data + 8 manual items.
+// Gateway Readiness — a purely advisor-facing checklist that prepares a
+// participant for their Universal Credit Gateway appointment. It carries no
+// weight of its own toward any official decision: UC alone decides GSE vs
+// NGSE (see participants.gateway_outcome). This replaces what used to be
+// two separate checklists (a "Gateway Assessment" and a "Gainful Decision")
+// with the one list the team actually works from day to day.
 // ---------------------------------------------------------------------------
 export type ChecklistEntry = {
   label: string;
@@ -44,58 +47,6 @@ export type ChecklistEntry = {
   source: "auto" | "manual";
 };
 
-export function getGatewayChecklist({
-  participant,
-  businessPlan,
-  hmrc,
-  digitalPresence,
-  evidenceFiles,
-  manualItems,
-}: {
-  participant: Participant;
-  businessPlan: BusinessPlan | null;
-  hmrc: HmrcBusinessInfo | null;
-  digitalPresence: DigitalPresenceItem[];
-  evidenceFiles: EvidenceFile[];
-  manualItems: GatewayChecklistItem[];
-}): { entries: ChecklistEntry[]; percent: number } {
-  const website = digitalPresence.find((d) => d.platform === "Website");
-  const manualByItem = new Map(manualItems.map((m) => [m.item, m.is_complete]));
-
-  const autoEntries: ChecklistEntry[] = [
-    { label: "Business Plan", complete: businessPlan?.status === "Complete", source: "auto" },
-    { label: "UTR", complete: !!hmrc?.utr_number, source: "auto" },
-    { label: "Insurance", complete: !!hmrc?.insurance_in_place, source: "auto" },
-    { label: "Business Bank Account", complete: !!hmrc?.business_bank_account, source: "auto" },
-    { label: "Website", complete: isDigitalPresenceDone(website), source: "auto" },
-    { label: "Evidence Uploaded", complete: evidenceFiles.length > 0, source: "auto" },
-    {
-      label: "Trading Started",
-      complete: hasReachedStage(participant.business_stage, "Trading"),
-      source: "auto",
-    },
-  ];
-
-  const manualEntries: ChecklistEntry[] = GATEWAY_MANUAL_CHECKLIST_ITEMS.map(
-    (item: GatewayChecklistItemName) => ({
-      label: item,
-      complete: manualByItem.get(item) ?? false,
-      source: "manual",
-    }),
-  );
-
-  const entries = [...autoEntries, ...manualEntries];
-  const percent = Math.round(
-    (entries.filter((e) => e.complete).length / entries.length) * 100,
-  );
-
-  return { entries, percent };
-}
-
-// ---------------------------------------------------------------------------
-// Gainful Readiness: 8 evidence factors feed the %; recommendation + sign-off
-// are tracked separately since they're the decision itself, not evidence.
-// ---------------------------------------------------------------------------
 export function getIncomeTrend(entries: IncomeTrackerEntry[]): "up" | "flat" | "down" | "unknown" {
   const sorted = [...entries].sort((a, b) => a.month.localeCompare(b.month));
   if (sorted.length < 2) return "unknown";
@@ -115,26 +66,24 @@ export function getIncomeTrend(entries: IncomeTrackerEntry[]): "up" | "flat" | "
   return "flat";
 }
 
-export function getGainfulChecklist({
-  gainful,
+export function getGatewayReadinessChecklist({
+  readiness,
   incomeTrackerEntries,
   evidenceFiles,
-  invoicesAvailable,
 }: {
-  gainful: GainfulAssessment | null;
+  readiness: GatewayReadiness | null;
   incomeTrackerEntries: IncomeTrackerEntry[];
   evidenceFiles: EvidenceFile[];
-  invoicesAvailable: boolean;
 }): { entries: ChecklistEntry[]; percent: number } {
   const entries: ChecklistEntry[] = [
-    { label: "Trading Consistently", complete: !!gainful?.trading_consistently, source: "manual" },
-    { label: "Income Trend", complete: getIncomeTrend(incomeTrackerEntries) === "up", source: "auto" },
-    { label: "Hours Worked Adequate", complete: !!gainful?.hours_worked_adequate, source: "manual" },
+    { label: "Trading Consistently", complete: !!readiness?.trading_consistently, source: "manual" },
+    { label: "Positive Income Trend", complete: getIncomeTrend(incomeTrackerEntries) === "up", source: "auto" },
+    { label: "Hours Worked Adequately", complete: !!readiness?.hours_worked_adequate, source: "manual" },
     { label: "Evidence Uploaded", complete: evidenceFiles.length > 0, source: "auto" },
-    { label: "Invoices Available", complete: invoicesAvailable, source: "auto" },
-    { label: "Customer Base Established", complete: !!gainful?.customer_base_established, source: "manual" },
-    { label: "Business Sustainable", complete: !!gainful?.business_sustainable, source: "manual" },
-    { label: "Expected To Make A Profit", complete: !!gainful?.expected_to_make_profit, source: "manual" },
+    { label: "Invoices Available", complete: !!readiness?.invoices_available, source: "manual" },
+    { label: "Customer Base Established", complete: !!readiness?.customer_base_established, source: "manual" },
+    { label: "Business Appears Sustainable", complete: !!readiness?.business_sustainable, source: "manual" },
+    { label: "Expected To Make A Profit", complete: !!readiness?.expected_to_make_profit, source: "manual" },
   ];
 
   const percent = Math.round(

@@ -108,7 +108,7 @@ app comes from these tables.
   note) for audit purposes, and a participant's office updates automatically
   if the destination advisor is in a different office. Nothing else about
   the participant changes — notes, documents, funding records, AI summaries,
-  Gateway/Gainful progress and every other record stay exactly as they were,
+  Gateway Readiness progress and every other record stay exactly as they were,
   since they all key off the participant's ID, not their advisor.
 - **Programme Settings** (`/admin/programme-settings`) — the configurable
   Trading Start / Outcome thresholds; see the dedicated section below.
@@ -129,10 +129,11 @@ so it was extended in place rather than duplicated.
   Advisor → Participants), and nothing else in the CRM references teams, so
   this was intentionally left out rather than inventing a new entity and
   admin UI for it.
-- **Office Overview** — total participants, Gateway/Gainful readiness,
-  funding approved/outstanding, a monthly income/expenses chart, and
-  breakdowns by office, by advisor, business sector, business stage, RAG
-  distribution, Gateway status, Gainful status and funding status.
+- **Office Overview** — total participants, Gateway Readiness and Gateway
+  booking completion, funding approved/outstanding, a monthly
+  income/expenses chart, and breakdowns by office, by advisor, business
+  sector, business stage, RAG distribution, Gateway status, Gateway booking
+  status and funding status.
 - **Office Reporting** — a dedicated per-office table: Trading Starts,
   Outcomes, GSE / NGSE / Claim Closed participants (from each Trading
   Start's recorded reason), Active IWT, Funding Requests/Approved/Rejected,
@@ -158,15 +159,16 @@ the CRM manages — nothing is duplicated into a separate reporting table.
 Every participant profile now includes, above the original CRM tabs:
 
 - **Next Best Action** — a rule-based engine inspects business stage, the
-  Gateway/Gainful checklists, funding, monthly performance, outstanding
-  actions and last contact, and surfaces the single most useful next step
-  (e.g. "Register for a UTR.", "Complete the Cashflow Forecast."). It
-  recalculates on every page load — nothing is cached or manually set.
+  Gateway Readiness checklist, Gateway booking/outcome status, funding,
+  monthly performance, outstanding actions and last contact, and surfaces
+  the single most useful next step (e.g. "Register for a UTR.", "Book the
+  Gateway appointment."). It recalculates on every page load — nothing is
+  cached or manually set.
 - **Self Employment Overview** — RAG status (advisor-set, with a computed
   suggestion based on inactivity/missing evidence), current stage, Gateway
-  and Gainful readiness %, days until Gateway, next appointment, outstanding
-  actions and last contact date (the last two computed from Appointment
-  History and the Action Plan, not stored separately).
+  Readiness %, days until Gateway, next appointment, outstanding actions and
+  last contact date (the last two computed from Appointment History and the
+  Action Plan, not stored separately).
 - **Business Health Score** — Planning, Finance, Marketing, Trading, Legal
   and Digital Presence are computed live from existing data; Confidence is
   the one advisor judgement call (a slider). (A Customer Acquisition
@@ -178,27 +180,20 @@ Every participant profile now includes, above the original CRM tabs:
   view distinct from the underlying Business Readiness Stage tracker (see
   the dedicated section below for the full picture, including what happened
   to the old 10-stage stepper).
-- **Gateway** — one combined page (previously two separate tabs: "Gateway"
-  and "Gainful Decision"), presented as two clearly separated cards so it
-  reads as a single workflow:
-  - **Gateway Assessment** — a readiness checklist (auto-derived items plus
-    manual checkboxes) with a live readiness %, the participant's Gateway
-    target date, a free-text Advisor Notes field, and **Gateway booking**:
-    **Gateway Booked** (Not Booked / Booked / Completed), an appointment
-    date once Booked, and — required once Completed — a **Gateway Outcome**
-    (GSE / NGSE) that feeds directly into the Trading Start eligibility
-    engine (see "Gateway booking & outcome" below).
-  - **Gainful Decision** — trading consistency, auto income trend,
-    evidence, invoices, customer base, business sustainability and expected
-    profitability feed a readiness %; a Supporting Evidence list (reads
-    from the same Evidence Vault records, not a separate upload); advisor
-    recommendation, manager approval, manager notes, a Decision Date, and
-    the Gainful Outcome (the overall 🟢/🟡/🔴 recommendation — a different
-    concept from the Gateway Outcome GSE/NGSE dropdown above, despite the
-    similar name; see below).
-
-  Nothing from either original tab was removed except where the operational
-  process update below explicitly says so.
+- **Gateway** — a single **Gateway Readiness** page (see "Gateway Readiness
+  reform" below for the full story of why this used to be two tabs and no
+  longer is): an advisor preparation checklist — Trading Consistently,
+  Positive Income Trend, Hours Worked Adequately, Evidence Uploaded,
+  Invoices Available, Customer Base Established, Business Appears
+  Sustainable, Expected To Make A Profit — with a live readiness %, a
+  Supporting Evidence list (reads from the same Evidence Vault records, not
+  a separate upload), a **Gateway Booking** section (**Status**: Not Booked
+  / Booked / Completed, plus an appointment date once Booked), and — required
+  once Completed — a **Gateway Outcome** (GSE / NGSE), the participant's
+  Gateway target date, and a free-text Advisor Notes field. The checklist and
+  the whole page are explicitly an advisor tool, not an official decision:
+  Universal Credit alone decides GSE or NGSE at the Gateway appointment (see
+  "Gateway booking & outcome" below).
 - **Funding** — funding source (a fixed dropdown: Business Card, BACS or
   Voucher — no free text), requested/approved/received amounts (with
   remaining computed automatically), purpose, dates, notes, a document
@@ -225,7 +220,7 @@ Every participant profile now includes, above the original CRM tabs:
   Plan, Cashflow, Invoices, Receipts, Quotes, Bank Statements, Insurance,
   Certificates, Marketing Material, Photos, Other).
 - **AI Assistant** — summarises notes into case notes, drafts participant
-  emails, suggests SMART actions, highlights missing Gateway/Gainful
+  emails, suggests SMART actions, highlights missing Gateway Readiness
   evidence, critiques business plans, and suggests marketing ideas, funding
   opportunities and next-appointment questions — tailored to the
   participant's live stage and readiness data. Requires `ANTHROPIC_API_KEY`
@@ -252,7 +247,7 @@ per month) was removed — the Income Tracker tab already provides the
 required monthly earnings data, so the two tabs were redundant. **The Income
 Tracker itself was not touched.** Everything that read from Monthly
 Performance was rewired onto the Income Tracker instead: the income trend
-used in the Gainful Decision checklist, the Business Health Score's Trading
+used in the Gateway Readiness checklist, the Business Health Score's Trading
 dimension, the Next Best Action engine, and the "Monthly progress" chart on
 Reports. The one thing with no equivalent in the Income Tracker — customer
 count / hours worked, and the Customer Acquisition health score dimension
@@ -291,26 +286,16 @@ date) was retired for the same reason — the checklist's separate "UTR" item
 already captures the same real-world fact — and "Insurance" now reads the
 new tick box instead of the old free-text field.
 
-**Gainful Decision checklist.** "Bank Statements Provided" is replaced by
-**"Expected To Make A Profit"** — the checklist is now: Trading
-Consistently, Income Trend, Hours Worked Adequate, Evidence Uploaded,
-Invoices Available, Customer Base Established, Business Sustainable,
-Expected To Make A Profit.
-
-**Gateway booking & outcome.** Below the Gateway Assessment checklist,
-advisors record **Gateway Booked** (Not Booked / Booked / Completed) with an
-appointment date once Booked, and — required once Completed — a **Gateway
-Outcome** (GSE / NGSE). This is a different field from the Gainful
-Decision's own "Gainful Outcome" (🟢/🟡/🔴 Ready / Needs Further Evidence /
-Not Yet Ready) despite the similar name — the Gateway Outcome specifically
-answers "which Trading Start route", and saving it has a real side effect:
-selecting **GSE** marks the participant Gainfully Self Employed exactly like
-the existing Trading Start tab's "Mark as GSE" action (`is_gse = true`,
-`gse_marked_at`, `gse_marked_by`); selecting **NGSE** clears that flag so
-the standard two-month income-average rule applies instead. Both paths feed
-the same `evaluateTradingStartEligibility` engine described under "Trading
-Start, In Work Tracking & Outcomes" below — nothing about that engine
-changed, this just gives it another entry point.
+**Gainful Decision checklist (superseded).** This migration replaced "Bank
+Statements Provided" with **"Expected To Make A Profit"** on the
+then-separate Gainful Decision checklist, and added **Gateway Booked**,
+Gateway Date and a **Gateway Outcome** (GSE / NGSE) field alongside it. The
+Gainful Decision card itself — an advisor recommendation, a manager
+approval/notes, a Decision Date, and an internal Ready / Needs Further
+Evidence / Not Yet Ready verdict — was retired shortly after by the
+**Gateway Readiness reform** below, which is the current, authoritative
+description of the Gateway tab; this paragraph is kept only as a historical
+record of the intermediate step.
 
 **Journey: Initial Appointment removed.** The Participant Journey Timeline
 (below) no longer has a separate "Initial Appointment" milestone — the
@@ -321,6 +306,71 @@ milestone (the whole timeline is computed live), so there's no data
 migration for it — the remaining milestones simply shift up one position,
 which the timeline's sequencing logic already handles generically (see
 "extensibility design" below).
+
+### Gateway Readiness reform
+
+The Gateway tab was reworked (`supabase/migrations/0021_gateway_readiness.sql`)
+so the Hub stops implying that advisors make a Gainful Self Employment
+decision — they don't. Universal Credit alone decides GSE or NGSE, at the
+participant's Gateway appointment; the advisor's job beforehand is only to
+get the participant ready for it.
+
+**One section, not two.** The old "Gateway Assessment" and "Gainful
+Decision" cards are gone, replaced by a single **Gateway Readiness** section:
+a checklist (Trading Consistently, Positive Income Trend, Hours Worked
+Adequately, Evidence Uploaded, Invoices Available, Customer Base
+Established, Business Appears Sustainable, Expected To Make A Profit) with
+a live readiness %, explicitly labelled as an advisor tool that "should not
+imply an official decision." Below it, **Gateway Booking** (Status: Not
+Booked / Booked / Completed, plus a date — it doesn't matter whether the
+advisor or the participant booked it, no distinction is made) and, once
+Completed, a required **Gateway Outcome** (GSE / NGSE) — labelled as "the
+Universal Credit decision," not an advisor recommendation.
+
+**What was retired, and how the data was kept.** The table behind this
+(`gainful_assessments`) was renamed to `gateway_readiness` rather than
+recreated, so every existing row's id and history survived the change.
+Its old advisor-decision columns — `advisor_recommendation`,
+`manager_approval`, `manager_notes`, `overall_recommendation`,
+`decision_date` — are gone, but nothing meaningful recorded in them was
+discarded: any row with real content in those fields had it folded into a
+new free-text `notes` column first (prefixed "Advisor notes:", "Manager
+notes:", or "Historical internal recommendation (pre-reform): ..." as
+appropriate), and only rows where something had actually been recorded got
+a note — untouched rows stay `null` rather than picking up boilerplate.
+"Invoices Available" moved from a live read of the old Gateway Assessment's
+manual checklist into a direct column on `gateway_readiness`, backfilled
+from whatever was last ticked there.
+
+The old Gateway Assessment's other manual items (Market Research, Competitor
+Analysis, Pricing, Cashflow Forecast, Marketing Plan, Branding, Social
+Media) are no longer shown or editable anywhere in the UI — there's no room
+for a second checklist in the new single-section design, and the reform's
+brief was explicit about replacing that whole framing rather than keeping
+both. Their underlying table (`gateway_checklist_items`) and the historical
+values in it are untouched, though: the Business Health Score's Planning and
+Marketing dimensions still read them directly, exactly as before, just now
+frozen rather than advisor-editable.
+
+**Workflow logic.** Saving a Gateway Outcome of **GSE** has the same effect
+as the Trading Start tab's existing "Mark as GSE" action (`is_gse = true`,
+`gse_marked_at`, `gse_marked_by`) and creates a dashboard notification —
+*"Participant eligible for GSE Trading Start."* — using the same dedupe key
+as the lazy eligibility sync, so the two never double up; the Trading Start
+itself is still only ever created manually by an advisor, never
+automatically. Saving **NGSE** clears the flag, so the participant continues
+under the existing two-month income-average rule, completely unchanged. Both
+paths feed the same `evaluateTradingStartEligibility` engine described under
+"Trading Start, In Work Tracking & Outcomes" below — this reform only adds
+another entry point into it.
+
+**Everywhere else this fed into.** The Journey Timeline's Gateway milestone
+(see below), the Reports "Gainful status" breakdown (now **"Gateway booking
+status"**, counting Not Booked / Booked / Completed instead of an advisor
+readiness verdict), the Next Best Action engine, and the Advisor Dashboard
+work queue were all updated to read from the new `gateway_readiness` table
+and the new `getGatewayReadinessChecklist()` helper — none of them still
+reference the retired Gainful Decision concept.
 
 ## Participant Journey Timeline
 
@@ -336,8 +386,15 @@ Seven milestones ship out of the box, each computed live from existing data
 1. **Referral Received** — earliest `participant_status_history` row with
    `to_status = "Referral"`, falling back to the participant's created date.
 2. **Business Plan** — the Business Plan record reaching `Complete`.
-3. **Gateway** — the same live Gateway readiness % used on the Gateway tab
-   reaching 100%.
+3. **Gateway** — one milestone spanning readiness prep through the actual
+   appointment: it reads the same live Gateway Readiness % used on the
+   Gateway tab plus the participant's Gateway Booking status and outcome,
+   and its summary text tracks the booking status as it progresses —
+   "X% of the Gateway Readiness checklist complete", then "Gateway Booked
+   for ...", then "Gateway Completed ... — outcome: GSE/NGSE" once done.
+   There is no separate Gainful Decision milestone; the Universal Credit
+   outcome is folded into this one as a detail once the Gateway is
+   Completed.
 4. **Trading Start** — a confirmed Trading Start record.
 5. **Transfer to IWT** — the Trading Start's IWT advisor differing from the
    original advisor. Participants who are never transferred show this
@@ -381,7 +438,7 @@ functionally unchanged.
 A case-management layer sits on top of the toolkit above, tracking a
 participant from Trading Start through to a confirmed outcome. This is a
 separate concept from the 10-stage business Journey and from the pre-Trading
-Start Gainful Decision tab — those track *readiness to trade*; this tracks
+Start Gateway Readiness tab — those track *readiness to trade*; this tracks
 what happens *after* trading starts.
 
 - **Status** — every participant now has a case-management status (Referral,
@@ -837,8 +894,8 @@ instead of entering each participant by hand.
   creates a new one.
 - **Safe Import Rules** — updates only ever touch the fields a row actually
   supplied a value for, and only ever touch `participants` columns. Funding,
-  Gateway/Gainful checklists, Business Health Score, evidence, business plan
-  status and every other CRM-managed record are structurally untouched by an
+  the Gateway Readiness checklist, Business Health Score, evidence, business
+  plan status and every other CRM-managed record are structurally untouched by an
   import — the import engine has no code path that writes to those tables.
 - **Automatic advisor assignment** — if a row's advisor name matches an
   advisor currently in the Administration panel (case-insensitive), it's
@@ -1058,7 +1115,7 @@ existing deployment won't pick up new values on its own.
   (company-wide reporting, Office Reporting, the Office/Advisor/Date Range
   filters in `src/components/reports/report-filters.tsx`); same passcode
   gate as `/admin`.
-- `src/lib/business-rules.ts` — Gateway/Gainful checklist %, business health
+- `src/lib/business-rules.ts` — Gateway Readiness checklist %, business health
   scores, RAG suggestion, income trend (from the Income Tracker) and
   appointment/action-derived facts (next appointment, last contact, days
   until Gateway) — all computed, nothing stored twice. Reused by both
@@ -1066,8 +1123,9 @@ existing deployment won't pick up new values on its own.
 - `src/lib/next-best-action.ts` — the deterministic Next Best Action engine.
 - `src/lib/actions` — server actions for participants, business plans,
   the Income Tracker, evidence, action plan items, appointments, the
-  business journey stage, RAG/health confidence, Gateway/Gainful checklists,
-  funding (including the approval workflow), HMRC info, digital presence,
+  business journey stage, RAG/health confidence, the Gateway Readiness
+  checklist and booking/outcome, funding (including the approval workflow),
+  HMRC info, digital presence,
   and the AI assistant.
 - `src/lib/data-sync` — the source-agnostic import engine: file parsing
   (`.xlsx`/`.csv`), field-mapping suggestions, date normalization, row

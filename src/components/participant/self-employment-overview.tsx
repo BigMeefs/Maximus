@@ -35,8 +35,7 @@ function InfoCard({ label, children }: { label: string; children: React.ReactNod
 
 export default function SelfEmploymentOverview({
   participant,
-  gatewayPercent,
-  gainfulPercent,
+  gatewayReadinessPercent,
   daysUntilGateway,
   nextAppointment,
   outstandingActionsCount,
@@ -44,8 +43,7 @@ export default function SelfEmploymentOverview({
   suggestedRag,
 }: {
   participant: Participant;
-  gatewayPercent: number;
-  gainfulPercent: number;
+  gatewayReadinessPercent: number;
   daysUntilGateway: number | null;
   nextAppointment: Appointment | null;
   outstandingActionsCount: number;
@@ -80,8 +78,7 @@ export default function SelfEmploymentOverview({
           {participant.business_sector || "—"}
         </InfoCard>
         <InfoCard label="Current Stage">{participant.business_stage}</InfoCard>
-        <ProgressCard label="Gateway Readiness" percent={gatewayPercent} />
-        <ProgressCard label="Gainful Readiness" percent={gainfulPercent} />
+        <ProgressCard label="Gateway Readiness" percent={gatewayReadinessPercent} />
         <InfoCard label="Days Until Gateway">
           {daysUntilGateway === null
             ? "No target set"

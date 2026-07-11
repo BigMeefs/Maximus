@@ -15,7 +15,7 @@ import StatusTimeline from "@/components/participant/status-timeline";
 import TradingStartTab from "@/components/participant/trading-start-tab";
 import HealthBadge from "@/components/participant/health-badge";
 import { computeParticipantHealth } from "@/lib/participant-health";
-import GatewayCombinedTab from "@/components/participant/gateway-combined-tab";
+import GatewayReadinessTab from "@/components/participant/gateway-tab";
 import FundingTab from "@/components/participant/funding-tab";
 import HmrcTab from "@/components/participant/hmrc-tab";
 import DigitalPresenceTab from "@/components/participant/digital-presence-tab";
@@ -27,8 +27,7 @@ import { deleteParticipant } from "@/app/advisors/[advisorId]/participants/actio
 import {
   getBusinessHealthScores,
   getDaysUntilGateway,
-  getGainfulChecklist,
-  getGatewayChecklist,
+  getGatewayReadinessChecklist,
   getLastContactDate,
   getNextAppointment,
   getOutstandingActions,
@@ -60,7 +59,7 @@ export default async function ParticipantProfilePage({
     hmrc,
     digitalPresence,
     gatewayChecklist,
-    gainful,
+    readiness,
     incomeTrackerEntries,
     statusHistory,
     currentTradingStart,
@@ -77,33 +76,19 @@ export default async function ParticipantProfilePage({
       ? computeParticipantHealth(currentTradingStart, incomeTrackerEntries, iwtReviews, programmeSettings)
       : null;
 
-  const gateway = getGatewayChecklist({
-    participant,
-    businessPlan,
-    hmrc,
-    digitalPresence,
+  const gatewayReadiness = getGatewayReadinessChecklist({
+    readiness,
+    incomeTrackerEntries,
     evidenceFiles,
-    manualItems: gatewayChecklist,
   });
-
-  const invoicesAvailable =
-    gateway.entries.find((e) => e.label === "Invoices Available")?.complete ?? false;
 
   const journeyMilestones = computeJourneyTimeline({
     participant,
     statusHistory,
     businessPlan,
-    gatewayPercent: gateway.percent,
-    gatewayChecklistItems: gatewayChecklist,
+    gatewayReadinessPercent: gatewayReadiness.percent,
     currentTradingStart,
     outcome,
-  });
-
-  const gainfulChecklist = getGainfulChecklist({
-    gainful,
-    incomeTrackerEntries,
-    evidenceFiles,
-    invoicesAvailable,
   });
 
   const healthScores = getBusinessHealthScores({
@@ -126,14 +111,12 @@ export default async function ParticipantProfilePage({
     participant,
     businessPlan,
     hmrc,
-    digitalPresence,
     evidenceFiles,
-    manualGatewayItems: gatewayChecklist,
     fundingRecords,
     incomeTrackerEntries,
     actionItems: actionPlanItems,
     appointments,
-    gainful,
+    readiness,
   });
 
   return (
@@ -226,8 +209,7 @@ export default async function ParticipantProfilePage({
 
       <SelfEmploymentOverview
         participant={participant}
-        gatewayPercent={gateway.percent}
-        gainfulPercent={gainfulChecklist.percent}
+        gatewayReadinessPercent={gatewayReadiness.percent}
         daysUntilGateway={daysUntilGateway}
         nextAppointment={nextAppointment}
         outstandingActionsCount={outstandingActions.length}
@@ -286,19 +268,16 @@ export default async function ParticipantProfilePage({
               id: "gateway",
               label: "Gateway",
               content: (
-                <GatewayCombinedTab
+                <GatewayReadinessTab
                   participantId={id}
                   advisorId={advisorId}
-                  gatewayEntries={gateway.entries}
-                  gatewayPercent={gateway.percent}
+                  entries={gatewayReadiness.entries}
+                  percent={gatewayReadiness.percent}
                   gatewayTargetDate={participant.gateway_target_date}
                   gatewayNotes={participant.gateway_notes}
                   gatewayBookedStatus={participant.gateway_booked_status}
                   gatewayAppointmentDate={participant.gateway_appointment_date}
                   gatewayOutcome={participant.gateway_outcome}
-                  gainfulEntries={gainfulChecklist.entries}
-                  gainfulPercent={gainfulChecklist.percent}
-                  gainful={gainful}
                   evidenceFiles={evidenceFiles}
                 />
               ),
@@ -366,12 +345,8 @@ export default async function ParticipantProfilePage({
                   participantId={id}
                   participant={participant}
                   businessPlan={businessPlan}
-                  gatewayPercent={gateway.percent}
-                  gainfulPercent={gainfulChecklist.percent}
-                  incompleteGatewayItems={gateway.entries
-                    .filter((e) => !e.complete)
-                    .map((e) => e.label)}
-                  incompleteGainfulItems={gainfulChecklist.entries
+                  gatewayReadinessPercent={gatewayReadiness.percent}
+                  incompleteReadinessItems={gatewayReadiness.entries
                     .filter((e) => !e.complete)
                     .map((e) => e.label)}
                 />

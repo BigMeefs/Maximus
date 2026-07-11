@@ -282,8 +282,8 @@ function buildCreatePayload(
 }
 
 // Safe Import Rules: only ever includes fields the row actually supplied a
-// value for, and only ever touches participants columns — funding, gateway,
-// gainful, evidence and business-plan data are untouched by construction
+// value for, and only ever touches participants columns — funding, Gateway
+// Readiness, evidence and business-plan data are untouched by construction
 // since this function never references those tables.
 function buildUpdatePayload(
   values: MappedParticipantRow["values"],

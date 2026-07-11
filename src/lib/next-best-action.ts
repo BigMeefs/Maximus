@@ -2,18 +2,15 @@ import type {
   ActionPlanItem,
   Appointment,
   BusinessPlan,
-  DigitalPresenceItem,
   EvidenceFile,
   FundingRecord,
-  GainfulAssessment,
-  GatewayChecklistItem,
+  GatewayReadiness,
   HmrcBusinessInfo,
   IncomeTrackerEntry,
   Participant,
 } from "@/types/database";
 import {
-  getGatewayChecklist,
-  getGainfulChecklist,
+  getGatewayReadinessChecklist,
   getOutstandingActions,
   getOverdueActions,
   hasReachedStage,
@@ -23,14 +20,12 @@ export type NextBestActionContext = {
   participant: Participant;
   businessPlan: BusinessPlan | null;
   hmrc: HmrcBusinessInfo | null;
-  digitalPresence: DigitalPresenceItem[];
   evidenceFiles: EvidenceFile[];
-  manualGatewayItems: GatewayChecklistItem[];
   fundingRecords: FundingRecord[];
   incomeTrackerEntries: IncomeTrackerEntry[];
   actionItems: ActionPlanItem[];
   appointments: Appointment[];
-  gainful: GainfulAssessment | null;
+  readiness: GatewayReadiness | null;
 };
 
 export type NextBestAction = {
@@ -42,8 +37,9 @@ export type NextBestAction = {
  * Deterministic recommendation engine: inspects every signal the toolkit
  * tracks and returns the single highest-priority next step, in roughly the
  * order a participant naturally needs to clear them (plan -> register ->
- * trade -> evidence -> gateway -> gainful), falling back to relationship
- * upkeep (overdue actions, contact) when the business track is on course.
+ * trade -> evidence -> Gateway Readiness -> Gateway booking/outcome),
+ * falling back to relationship upkeep (overdue actions, contact) when the
+ * business track is on course.
  */
 export function getNextBestAction(ctx: NextBestActionContext): NextBestAction {
   const overdue = getOverdueActions(ctx.actionItems);
@@ -75,35 +71,6 @@ export function getNextBestAction(ctx: NextBestActionContext): NextBestAction {
     };
   }
 
-  const gateway = getGatewayChecklist({
-    participant: ctx.participant,
-    businessPlan: ctx.businessPlan,
-    hmrc: ctx.hmrc,
-    digitalPresence: ctx.digitalPresence,
-    evidenceFiles: ctx.evidenceFiles,
-    manualItems: ctx.manualGatewayItems,
-  });
-
-  const missingCashflow = gateway.entries.find(
-    (e) => e.label === "Cashflow Forecast" && !e.complete,
-  );
-  if (missingCashflow) {
-    return {
-      action: "Complete the Cashflow Forecast.",
-      reason: "The Cashflow Forecast is still outstanding on the Gateway checklist.",
-    };
-  }
-
-  const missingMarketing = gateway.entries.find(
-    (e) => e.label === "Marketing Plan" && !e.complete,
-  );
-  if (missingMarketing) {
-    return {
-      action: "Create a Marketing Plan.",
-      reason: "The Marketing Plan is still outstanding on the Gateway checklist.",
-    };
-  }
-
   if (
     hasReachedStage(ctx.participant.business_stage, "Trading") &&
     ctx.evidenceFiles.length === 0
@@ -124,65 +91,40 @@ export function getNextBestAction(ctx: NextBestActionContext): NextBestAction {
     };
   }
 
+  const readiness = getGatewayReadinessChecklist({
+    readiness: ctx.readiness,
+    incomeTrackerEntries: ctx.incomeTrackerEntries,
+    evidenceFiles: ctx.evidenceFiles,
+  });
+
   if (
-    gateway.percent >= 90 &&
-    !hasReachedStage(ctx.participant.business_stage, "Gateway Preparation")
+    ctx.participant.gateway_booked_status === "Not Booked" &&
+    readiness.percent >= 90
   ) {
     return {
-      action: "Schedule Gateway Assessment.",
-      reason: `Gateway readiness is at ${gateway.percent}%.`,
+      action: "Book the Gateway appointment.",
+      reason: `Gateway Readiness is at ${readiness.percent}%.`,
     };
   }
 
-  const incompleteGatewayItems = gateway.entries.filter((e) => !e.complete);
+  const incompleteReadinessItems = readiness.entries.filter((e) => !e.complete);
   if (
-    ctx.participant.business_stage === "Gateway Preparation" &&
-    incompleteGatewayItems.length > 0
+    ctx.participant.gateway_booked_status !== "Completed" &&
+    incompleteReadinessItems.length > 0
   ) {
     return {
-      action: `Complete outstanding Gateway items: ${incompleteGatewayItems
+      action: `Complete outstanding Gateway Readiness items: ${incompleteReadinessItems
         .slice(0, 3)
         .map((e) => e.label)
         .join(", ")}.`,
-      reason: `Gateway readiness is at ${gateway.percent}%.`,
+      reason: `Gateway Readiness is at ${readiness.percent}%.`,
     };
   }
 
-  if (
-    hasReachedStage(ctx.participant.business_stage, "Gateway Complete") &&
-    gateway.percent >= 100
-  ) {
-    const gainful = getGainfulChecklist({
-      gainful: ctx.gainful,
-      incomeTrackerEntries: ctx.incomeTrackerEntries,
-      evidenceFiles: ctx.evidenceFiles,
-      invoicesAvailable:
-        gateway.entries.find((e) => e.label === "Invoices Available")?.complete ?? false,
-    });
-
-    if (gainful.percent >= 90) {
-      return {
-        action: "Participant appears ready for a Gainful decision.",
-        reason: `Gainful readiness evidence is at ${gainful.percent}%.`,
-      };
-    }
-
-    const incompleteGainfulItems = gainful.entries.filter((e) => !e.complete);
-    if (incompleteGainfulItems.length > 0) {
-      return {
-        action: `Gather outstanding Gainful evidence: ${incompleteGainfulItems
-          .slice(0, 3)
-          .map((e) => e.label)
-          .join(", ")}.`,
-        reason: `Gainful readiness evidence is at ${gainful.percent}%.`,
-      };
-    }
-  }
-
-  if (gateway.percent >= 100 && !hasReachedStage(ctx.participant.business_stage, "Gateway Preparation")) {
+  if (ctx.participant.gateway_booked_status === "Completed" && !ctx.participant.gateway_outcome) {
     return {
-      action: "Participant appears Gateway Ready.",
-      reason: "All Gateway checklist items are complete.",
+      action: "Record the Gateway Outcome.",
+      reason: "The Gateway appointment has taken place but the outcome (GSE or NGSE) hasn't been recorded yet.",
     };
   }
 

@@ -86,11 +86,6 @@ export const GATEWAY_MANUAL_CHECKLIST_ITEMS = [
 ] as const;
 export type GatewayChecklistItemName = (typeof GATEWAY_MANUAL_CHECKLIST_ITEMS)[number];
 
-export type GainfulRecommendation =
-  | "Ready"
-  | "Needs Further Evidence"
-  | "Not Yet Ready";
-
 export const GATEWAY_BOOKED_STATUSES = ["Not Booked", "Booked", "Completed"] as const;
 export type GatewayBookedStatus = (typeof GATEWAY_BOOKED_STATUSES)[number];
 
@@ -402,7 +397,11 @@ export type GatewayChecklistItem = {
   updated_at: string;
 };
 
-export type GainfulAssessment = {
+// Gateway Readiness — a purely advisor-facing preparation checklist ahead
+// of a participant's Universal Credit Gateway appointment. Deliberately
+// has no recommendation/approval/decision fields: UC decides GSE vs NGSE
+// (see GatewayOutcome and participants.gateway_outcome), not the advisor.
+export type GatewayReadiness = {
   id: string;
   participant_id: string;
   trading_consistently: boolean;
@@ -410,11 +409,8 @@ export type GainfulAssessment = {
   expected_to_make_profit: boolean;
   customer_base_established: boolean;
   business_sustainable: boolean;
-  advisor_recommendation: string | null;
-  manager_approval: boolean;
-  manager_notes: string | null;
-  overall_recommendation: GainfulRecommendation;
-  decision_date: string | null;
+  invoices_available: boolean;
+  notes: string | null;
   updated_at: string;
 };
 
@@ -578,10 +574,10 @@ export type Database = {
         Update: Partial<GatewayChecklistItem>;
         Relationships: [];
       };
-      gainful_assessments: {
-        Row: GainfulAssessment;
-        Insert: Partial<GainfulAssessment> & { participant_id: string };
-        Update: Partial<GainfulAssessment>;
+      gateway_readiness: {
+        Row: GatewayReadiness;
+        Insert: Partial<GatewayReadiness> & { participant_id: string };
+        Update: Partial<GatewayReadiness>;
         Relationships: [];
       };
       income_tracker_entries: {

@@ -21,14 +21,9 @@ const QUICK_ACTIONS = [
       "Suggest 3-5 SMART (Specific, Measurable, Achievable, Relevant, Time-bound) actions for this participant right now, given their context.",
   },
   {
-    label: "Highlight missing Gateway evidence",
+    label: "Highlight missing Gateway Readiness evidence",
     instruction:
-      "Review the participant's Gateway checklist gaps in the context below and explain what's missing and why it matters for Gateway readiness.",
-  },
-  {
-    label: "Highlight missing Gainful evidence",
-    instruction:
-      "Review the participant's Gainful readiness gaps in the context below and explain what's missing and why it matters for a Gainful Self Employment decision.",
+      "Review the participant's Gateway Readiness checklist gaps in the context below and explain what's missing and why it matters ahead of their Universal Credit Gateway appointment.",
   },
   {
     label: "Analyse business plan for weaknesses",
@@ -57,18 +52,14 @@ const initialState: AiAssistantState = {};
 export default function AiAssistantTab({
   participant,
   businessPlan,
-  gatewayPercent,
-  gainfulPercent,
-  incompleteGatewayItems,
-  incompleteGainfulItems,
+  gatewayReadinessPercent,
+  incompleteReadinessItems,
 }: {
   participantId: string;
   participant: Participant;
   businessPlan: BusinessPlan | null;
-  gatewayPercent: number;
-  gainfulPercent: number;
-  incompleteGatewayItems: string[];
-  incompleteGainfulItems: string[];
+  gatewayReadinessPercent: number;
+  incompleteReadinessItems: string[];
 }) {
   const [instruction, setInstruction] = useState<string>(QUICK_ACTIONS[0].instruction);
 
@@ -78,8 +69,7 @@ export default function AiAssistantTab({
     `Current stage: ${participant.business_stage}`,
     `RAG status: ${participant.rag_status}`,
     `Business plan status: ${businessPlan?.status ?? "Not Started"}`,
-    `Gateway readiness: ${gatewayPercent}%${incompleteGatewayItems.length ? ` — outstanding: ${incompleteGatewayItems.join(", ")}` : ""}`,
-    `Gainful readiness: ${gainfulPercent}%${incompleteGainfulItems.length ? ` — outstanding: ${incompleteGainfulItems.join(", ")}` : ""}`,
+    `Gateway Readiness: ${gatewayReadinessPercent}%${incompleteReadinessItems.length ? ` — outstanding: ${incompleteReadinessItems.join(", ")}` : ""}`,
   ].join("\n");
 
   const boundAction = runAiAssistant.bind(null, contextSummary);

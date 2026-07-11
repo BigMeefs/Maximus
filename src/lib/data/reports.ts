@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { listAdvisors, listOffices } from "@/lib/data/advisor";
-import { getGatewayChecklist } from "@/lib/business-rules";
+import { getGatewayReadinessChecklist } from "@/lib/business-rules";
 import {
   evaluateTradingStartEligibility,
   getOutcomeDeadline,
@@ -9,16 +9,13 @@ import {
 } from "@/lib/trading-start-rules";
 import { computeParticipantHealth } from "@/lib/participant-health";
 import { getProgrammeSettings } from "@/lib/data/programme-settings";
-import { FUNDING_APPLICATION_STATUSES, TRADING_START_REASONS } from "@/types/database";
+import { FUNDING_APPLICATION_STATUSES, GATEWAY_BOOKED_STATUSES, TRADING_START_REASONS } from "@/types/database";
 import type {
-  BusinessPlan,
   BusinessStage,
-  DigitalPresenceItem,
   EvidenceFile,
   FundingApplicationStatus,
-  GainfulRecommendation,
-  GatewayChecklistItem,
-  HmrcBusinessInfo,
+  GatewayBookedStatus,
+  GatewayReadiness,
   IncomeTrackerEntry,
   IwtReview,
   Participant,
@@ -28,7 +25,7 @@ import type {
 
 type Bucket = { label: string; count: number };
 
-type PerformanceBucket = Bucket & { gatewayReady: number; gainfulReady: number };
+type PerformanceBucket = Bucket & { gatewayReady: number; gatewayCompleted: number };
 
 export type ReportDateRange = { from?: string; to?: string };
 
@@ -63,7 +60,7 @@ export type ReportStats = {
   byRag: Bucket[];
   byStage: Bucket[];
   byGatewayStatus: Bucket[];
-  byGainfulStatus: Bucket[];
+  byGatewayBookingStatus: Bucket[];
   byFundingStatus: (Bucket & { totalRequested: number; totalApproved: number; totalReceived: number })[];
   fundingOutstanding: number;
   monthlyProgress: MonthlyProgressPoint[];
@@ -92,25 +89,17 @@ export async function getCompanyReportStats(filters?: ReportFilters): Promise<Re
   const [
     advisors,
     { data: participants },
-    { data: businessPlans },
-    { data: hmrcRows },
-    { data: digitalPresenceRows },
     { data: evidenceRows },
-    { data: gatewayItemRows },
-    { data: gainfulRows },
+    { data: readinessRows },
     { data: fundingRows },
     { data: incomeTrackerRows },
   ] = await Promise.all([
     listAdvisors(),
     supabase.from("participants").select("*"),
-    supabase.from("business_plans").select("*"),
-    supabase.from("hmrc_business_info").select("*"),
-    supabase.from("digital_presence_items").select("*"),
     supabase.from("evidence_files").select("*"),
-    supabase.from("gateway_checklist_items").select("*"),
-    supabase.from("gainful_assessments").select("*"),
+    supabase.from("gateway_readiness").select("*"),
     supabase.from("funding_records").select("*"),
-    supabase.from("income_tracker_entries").select("participant_id, month, income, expense"),
+    supabase.from("income_tracker_entries").select("participant_id, month, income, expense, mileage_cost"),
   ]);
 
   const advisorById = new Map(advisors.map((a) => [a.id, a]));
@@ -126,43 +115,33 @@ export async function getCompanyReportStats(filters?: ReportFilters): Promise<Re
   );
   const participantIdSet = new Set(rows.map((p) => p.id));
 
-  const businessPlanByParticipant = new Map<string, BusinessPlan>(
-    (businessPlans ?? []).map((bp) => [bp.participant_id, bp]),
-  );
-  const hmrcByParticipant = new Map<string, HmrcBusinessInfo>(
-    (hmrcRows ?? []).map((h) => [h.participant_id, h]),
-  );
-  const digitalPresenceByParticipant = groupBy(
-    (digitalPresenceRows ?? []) as DigitalPresenceItem[],
-    (d) => d.participant_id,
-  );
   const evidenceByParticipant = groupBy((evidenceRows ?? []) as EvidenceFile[], (e) => e.participant_id);
-  const gatewayItemsByParticipant = groupBy(
-    (gatewayItemRows ?? []) as GatewayChecklistItem[],
-    (g) => g.participant_id,
+  const incomeEntriesByParticipant = groupBy(
+    (incomeTrackerRows ?? []) as IncomeTrackerEntry[],
+    (e) => e.participant_id,
   );
-  const gainfulRecommendationByParticipant = new Map<string, GainfulRecommendation>(
-    (gainfulRows ?? []).map((g) => [g.participant_id, g.overall_recommendation]),
+  const readinessByParticipant = new Map<string, GatewayReadiness>(
+    (readinessRows ?? []).map((r) => [r.participant_id, r]),
   );
 
-  const officeStats = new Map<string, { count: number; gatewayReady: number; gainfulReady: number }>();
-  const advisorStats = new Map<string, { count: number; gatewayReady: number; gainfulReady: number }>();
+  const officeStats = new Map<string, { count: number; gatewayReady: number; gatewayCompleted: number }>();
+  const advisorStats = new Map<string, { count: number; gatewayReady: number; gatewayCompleted: number }>();
   const sectorCounts = new Map<string, number>();
   const ragCounts = new Map<RagStatus, number>();
   const stageCounts = new Map<BusinessStage, number>();
   const gatewayCounts = new Map<string, number>();
-  const gainfulCounts = new Map<GainfulRecommendation, number>();
+  const gatewayBookingCounts = new Map<GatewayBookedStatus, number>();
 
   function bump(
-    map: Map<string, { count: number; gatewayReady: number; gainfulReady: number }>,
+    map: Map<string, { count: number; gatewayReady: number; gatewayCompleted: number }>,
     key: string,
     gatewayReady: boolean,
-    gainfulReady: boolean,
+    gatewayCompleted: boolean,
   ) {
-    const existing = map.get(key) ?? { count: 0, gatewayReady: 0, gainfulReady: 0 };
+    const existing = map.get(key) ?? { count: 0, gatewayReady: 0, gatewayCompleted: 0 };
     existing.count += 1;
     if (gatewayReady) existing.gatewayReady += 1;
-    if (gainfulReady) existing.gainfulReady += 1;
+    if (gatewayCompleted) existing.gatewayCompleted += 1;
     map.set(key, existing);
   }
 
@@ -176,28 +155,24 @@ export async function getCompanyReportStats(filters?: ReportFilters): Promise<Re
     ragCounts.set(p.rag_status, (ragCounts.get(p.rag_status) ?? 0) + 1);
     stageCounts.set(p.business_stage, (stageCounts.get(p.business_stage) ?? 0) + 1);
 
-    const gateway = getGatewayChecklist({
-      participant: p,
-      businessPlan: businessPlanByParticipant.get(p.id) ?? null,
-      hmrc: hmrcByParticipant.get(p.id) ?? null,
-      digitalPresence: digitalPresenceByParticipant.get(p.id) ?? [],
+    const readiness = getGatewayReadinessChecklist({
+      readiness: readinessByParticipant.get(p.id) ?? null,
+      incomeTrackerEntries: incomeEntriesByParticipant.get(p.id) ?? [],
       evidenceFiles: evidenceByParticipant.get(p.id) ?? [],
-      manualItems: gatewayItemsByParticipant.get(p.id) ?? [],
     });
-    const gatewayLabel = gatewayStatusLabel(gateway.percent);
+    const gatewayLabel = gatewayStatusLabel(readiness.percent);
     gatewayCounts.set(gatewayLabel, (gatewayCounts.get(gatewayLabel) ?? 0) + 1);
 
-    const gainfulRecommendation = gainfulRecommendationByParticipant.get(p.id) ?? "Not Yet Ready";
-    gainfulCounts.set(gainfulRecommendation, (gainfulCounts.get(gainfulRecommendation) ?? 0) + 1);
+    gatewayBookingCounts.set(p.gateway_booked_status, (gatewayBookingCounts.get(p.gateway_booked_status) ?? 0) + 1);
 
     const isGatewayReady = gatewayLabel === "Ready";
-    const isGainfulReady = gainfulRecommendation === "Ready";
-    bump(officeStats, officeLabel, isGatewayReady, isGainfulReady);
-    bump(advisorStats, p.advisor_id, isGatewayReady, isGainfulReady);
+    const isGatewayCompleted = p.gateway_booked_status === "Completed";
+    bump(officeStats, officeLabel, isGatewayReady, isGatewayCompleted);
+    bump(advisorStats, p.advisor_id, isGatewayReady, isGatewayCompleted);
   }
 
   const byOffice = [...officeStats.entries()]
-    .map(([label, stats]) => ({ label, count: stats.count, gatewayReady: stats.gatewayReady, gainfulReady: stats.gainfulReady }))
+    .map(([label, stats]) => ({ label, count: stats.count, gatewayReady: stats.gatewayReady, gatewayCompleted: stats.gatewayCompleted }))
     .sort((a, b) => b.count - a.count);
 
   const byAdvisor = [...advisorStats.entries()]
@@ -208,7 +183,7 @@ export async function getCompanyReportStats(filters?: ReportFilters): Promise<Re
         officeLabel: advisor?.office_name ?? "Unknown office",
         count: stats.count,
         gatewayReady: stats.gatewayReady,
-        gainfulReady: stats.gainfulReady,
+        gatewayCompleted: stats.gatewayCompleted,
       };
     })
     .sort((a, b) => b.count - a.count);
@@ -223,9 +198,10 @@ export async function getCompanyReportStats(filters?: ReportFilters): Promise<Re
     label,
     count: gatewayCounts.get(label) ?? 0,
   }));
-  const byGainfulStatus = (["Ready", "Needs Further Evidence", "Not Yet Ready"] as GainfulRecommendation[]).map(
-    (label) => ({ label, count: gainfulCounts.get(label) ?? 0 }),
-  );
+  const byGatewayBookingStatus = GATEWAY_BOOKED_STATUSES.map((label) => ({
+    label,
+    count: gatewayBookingCounts.get(label) ?? 0,
+  }));
 
   const fundingStatusTotals = new Map<
     FundingApplicationStatus,
@@ -291,7 +267,7 @@ export async function getCompanyReportStats(filters?: ReportFilters): Promise<Re
     fundingOutstanding,
     monthlyProgress,
     byGatewayStatus,
-    byGainfulStatus,
+    byGatewayBookingStatus,
     byFundingStatus,
   };
 }

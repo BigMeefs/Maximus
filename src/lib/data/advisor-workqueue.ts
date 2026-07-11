@@ -1,12 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import { getGatewayChecklist } from "@/lib/business-rules";
+import { getGatewayReadinessChecklist } from "@/lib/business-rules";
 import { netProfit } from "@/lib/trading-start-rules";
 import type {
-  BusinessPlan,
-  DigitalPresenceItem,
   EvidenceFile,
-  GatewayChecklistItem,
-  HmrcBusinessInfo,
+  GatewayReadiness,
   IncomeTrackerEntry,
   TradingStart,
   TradingStartReason,
@@ -67,61 +64,46 @@ export async function getAdvisorWorkQueue(
   }
 
   const [
-    { data: businessPlans },
-    { data: hmrcRows },
-    { data: digitalPresenceRows },
+    { data: readinessRows },
     { data: evidenceRows },
-    { data: gatewayItemRows },
     { data: incomeRows },
     { data: tradingStarts },
   ] = await Promise.all([
-    supabase.from("business_plans").select("*").in("participant_id", activeParticipantIds),
-    supabase.from("hmrc_business_info").select("*").in("participant_id", activeParticipantIds),
-    supabase.from("digital_presence_items").select("*").in("participant_id", activeParticipantIds),
+    supabase.from("gateway_readiness").select("*").in("participant_id", activeParticipantIds),
     supabase.from("evidence_files").select("*").in("participant_id", activeParticipantIds),
-    supabase.from("gateway_checklist_items").select("*").in("participant_id", activeParticipantIds),
     supabase
       .from("income_tracker_entries")
-      .select("participant_id, entry_date, income, expense, mileage_cost, created_at")
+      .select("participant_id, entry_date, month, income, expense, mileage_cost, created_at")
       .in("participant_id", participantIds)
       .order("entry_date", { ascending: false }),
     supabase.from("trading_starts").select("*").eq("original_advisor_id", advisorId),
   ]);
 
-  // ---- Gateway incomplete: Active participants whose Gateway checklist isn't 100% ----
-  const businessPlanByParticipant = new Map<string, BusinessPlan>(
-    (businessPlans ?? []).map((bp) => [bp.participant_id, bp]),
+  // ---- Gateway incomplete: Active participants whose Gateway Readiness checklist isn't 100% ----
+  const readinessByParticipant = new Map<string, GatewayReadiness>(
+    (readinessRows ?? []).map((r) => [r.participant_id, r]),
   );
-  const hmrcByParticipant = new Map<string, HmrcBusinessInfo>((hmrcRows ?? []).map((h) => [h.participant_id, h]));
-  const digitalPresenceByParticipant = new Map<string, DigitalPresenceItem[]>();
-  (digitalPresenceRows ?? []).forEach((d) => {
-    const list = digitalPresenceByParticipant.get(d.participant_id) ?? [];
-    list.push(d);
-    digitalPresenceByParticipant.set(d.participant_id, list);
-  });
   const evidenceByParticipant = new Map<string, EvidenceFile[]>();
   (evidenceRows ?? []).forEach((e) => {
     const list = evidenceByParticipant.get(e.participant_id) ?? [];
     list.push(e);
     evidenceByParticipant.set(e.participant_id, list);
   });
-  const gatewayItemsByParticipant = new Map<string, GatewayChecklistItem[]>();
-  (gatewayItemRows ?? []).forEach((g) => {
-    const list = gatewayItemsByParticipant.get(g.participant_id) ?? [];
-    list.push(g);
-    gatewayItemsByParticipant.set(g.participant_id, list);
+  const entries = (incomeRows as IncomeTrackerEntry[] | null ?? []);
+  const incomeEntriesByParticipant = new Map<string, IncomeTrackerEntry[]>();
+  entries.forEach((e) => {
+    const list = incomeEntriesByParticipant.get(e.participant_id) ?? [];
+    list.push(e);
+    incomeEntriesByParticipant.set(e.participant_id, list);
   });
 
   const gatewayIncomplete: GatewayIncompleteRow[] = rows
     .filter((p) => p.status === "Active")
     .map((p) => {
-      const { percent } = getGatewayChecklist({
-        participant: p,
-        businessPlan: businessPlanByParticipant.get(p.id) ?? null,
-        hmrc: hmrcByParticipant.get(p.id) ?? null,
-        digitalPresence: digitalPresenceByParticipant.get(p.id) ?? [],
+      const { percent } = getGatewayReadinessChecklist({
+        readiness: readinessByParticipant.get(p.id) ?? null,
+        incomeTrackerEntries: incomeEntriesByParticipant.get(p.id) ?? [],
         evidenceFiles: evidenceByParticipant.get(p.id) ?? [],
-        manualItems: gatewayItemsByParticipant.get(p.id) ?? [],
       });
       return { participantId: p.id, participantName: p.ptp_name, percent };
     })
@@ -129,10 +111,6 @@ export async function getAdvisorWorkQueue(
     .sort((a, b) => b.percent - a.percent);
 
   // ---- Recent income submissions: entries created since the advisor's last visit ----
-  const entries = (incomeRows ?? []) as (Pick<
-    IncomeTrackerEntry,
-    "participant_id" | "entry_date" | "income" | "expense" | "mileage_cost"
-  > & { created_at: string })[];
   const since = lastVisitAt ?? new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
   const recentIncomeSubmissions: RecentIncomeRow[] = entries
     .filter((e) => e.created_at > since)

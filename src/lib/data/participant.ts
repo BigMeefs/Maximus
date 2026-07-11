@@ -16,7 +16,7 @@ export async function getParticipantDetail(participantId: string) {
     hmrcRes,
     digitalPresenceRes,
     gatewayChecklistRes,
-    gainfulRes,
+    readinessRes,
     incomeTrackerEntriesRes,
     statusHistoryRes,
     tradingStartsRes,
@@ -67,7 +67,7 @@ export async function getParticipantDetail(participantId: string) {
       .select("*")
       .eq("participant_id", participantId),
     supabase
-      .from("gainful_assessments")
+      .from("gateway_readiness")
       .select("*")
       .eq("participant_id", participantId)
       .maybeSingle(),
@@ -127,7 +127,7 @@ export async function getParticipantDetail(participantId: string) {
     hmrc: hmrcRes.data,
     digitalPresence: digitalPresenceRes.data ?? [],
     gatewayChecklist: gatewayChecklistRes.data ?? [],
-    gainful: gainfulRes.data,
+    readiness: readinessRes.data,
     incomeTrackerEntries: incomeTrackerEntriesRes.data ?? [],
     statusHistory: statusHistoryRes.data ?? [],
     tradingStarts,

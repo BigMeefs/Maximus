@@ -45,7 +45,7 @@ export default async function ReportsPage({
   ]);
 
   const gatewayReadyTotal = stats.byGatewayStatus.find((b) => b.label === "Ready")?.count ?? 0;
-  const gainfulReadyTotal = stats.byGainfulStatus.find((b) => b.label === "Ready")?.count ?? 0;
+  const gatewayCompletedTotal = stats.byGatewayBookingStatus.find((b) => b.label === "Completed")?.count ?? 0;
   const fundingApproved = stats.byFundingStatus.reduce((sum, f) => sum + f.totalApproved, 0);
   const fundingReceived = stats.byFundingStatus.reduce((sum, f) => sum + f.totalReceived, 0);
   const pendingFundingApprovals =
@@ -80,7 +80,7 @@ export default async function ReportsPage({
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
         <StatCard label="Total participants" value={stats.totalParticipants} />
         <StatCard label="Gateway ready" value={gatewayReadyTotal} />
-        <StatCard label="Gainful ready" value={gainfulReadyTotal} />
+        <StatCard label="Gateway completed" value={gatewayCompletedTotal} />
         <StatCard label="Funding approved" value={currency.format(fundingApproved)} />
         <StatCard
           label="Funding outstanding"
@@ -188,8 +188,8 @@ export default async function ReportsPage({
           <BarList items={stats.byGatewayStatus} total={stats.totalParticipants} />
         </Section>
 
-        <Section title="Gainful status">
-          <BarList items={stats.byGainfulStatus} total={stats.totalParticipants} />
+        <Section title="Gateway booking status">
+          <BarList items={stats.byGatewayBookingStatus} total={stats.totalParticipants} />
         </Section>
 
         <Section title="Funding status">
@@ -385,7 +385,7 @@ function BarList({ items, total }: { items: { label: string; count: number }[]; 
   );
 }
 
-type PerformanceRow = { label: string; count: number; gatewayReady: number; gainfulReady: number };
+type PerformanceRow = { label: string; count: number; gatewayReady: number; gatewayCompleted: number };
 
 function PerformanceTable<T extends PerformanceRow>({
   rows,
@@ -408,7 +408,7 @@ function PerformanceTable<T extends PerformanceRow>({
             <th className="px-4 py-3">{nameHeader}</th>
             <th className="px-4 py-3">Participants</th>
             <th className="px-4 py-3">Gateway ready</th>
-            <th className="px-4 py-3">Gainful ready</th>
+            <th className="px-4 py-3">Gateway completed</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
@@ -420,7 +420,7 @@ function PerformanceTable<T extends PerformanceRow>({
                 {row.gatewayReady} ({row.count > 0 ? Math.round((row.gatewayReady / row.count) * 100) : 0}%)
               </td>
               <td className="px-4 py-3 text-slate-600">
-                {row.gainfulReady} ({row.count > 0 ? Math.round((row.gainfulReady / row.count) * 100) : 0}%)
+                {row.gatewayCompleted} ({row.count > 0 ? Math.round((row.gatewayCompleted / row.count) * 100) : 0}%)
               </td>
             </tr>
           ))}

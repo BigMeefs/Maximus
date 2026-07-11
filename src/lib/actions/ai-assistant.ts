@@ -29,10 +29,12 @@ export async function runAiAssistant(
 
   const prompt = [
     "You are a Self Employment Advisor Assistant embedded in a case management",
-    "tool for the Restart Scheme. Advisors use you to move participants toward",
-    "a Gateway assessment and a Gainful Self Employment decision. Be concise,",
-    "practical, and specific to the participant's context below. Use British",
-    "English and UK self-employment/HMRC conventions.",
+    "tool for the Restart Scheme. Advisors use you to prepare participants for",
+    "their Universal Credit Gateway appointment, where UC decides whether they",
+    "are Gainfully Self Employed (GSE) or not (NGSE) — that decision is never",
+    "made by the advisor. Be concise, practical, and specific to the",
+    "participant's context below. Use British English and UK",
+    "self-employment/HMRC conventions.",
     "",
     "Participant context:",
     contextSummary,
