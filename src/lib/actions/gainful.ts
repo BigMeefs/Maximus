@@ -7,9 +7,9 @@ import type { GainfulRecommendation } from "@/types/database";
 const CHECKBOX_FIELDS = [
   "trading_consistently",
   "hours_worked_adequate",
-  "bank_statements_provided",
   "customer_base_established",
   "business_sustainable",
+  "expected_to_make_profit",
   "manager_approval",
 ] as const;
 

@@ -52,7 +52,14 @@ export type FundingApplicationStatus = (typeof FUNDING_APPLICATION_STATUSES)[num
 export const FUNDING_SOURCES = ["Business Card", "BACS", "Voucher"] as const;
 export type FundingSource = (typeof FUNDING_SOURCES)[number];
 
-export type BusinessStructure = "Sole Trader" | "Limited Company";
+export const BUSINESS_STRUCTURES = [
+  "Sole Trader",
+  "Limited Company",
+  "Partnership",
+  "CIC",
+  "Other",
+] as const;
+export type BusinessStructure = (typeof BUSINESS_STRUCTURES)[number];
 
 export const DIGITAL_PLATFORMS = [
   "Website",
@@ -83,6 +90,15 @@ export type GainfulRecommendation =
   | "Ready"
   | "Needs Further Evidence"
   | "Not Yet Ready";
+
+export const GATEWAY_BOOKED_STATUSES = ["Not Booked", "Booked", "Completed"] as const;
+export type GatewayBookedStatus = (typeof GATEWAY_BOOKED_STATUSES)[number];
+
+export const GATEWAY_OUTCOMES = ["GSE", "NGSE"] as const;
+export type GatewayOutcome = (typeof GATEWAY_OUTCOMES)[number];
+
+export const DIGITAL_PRESENCE_STATUSES = ["Complete", "In Progress", "Not Started", "Not Needed"] as const;
+export type DigitalPresenceStatus = (typeof DIGITAL_PRESENCE_STATUSES)[number];
 
 export type ImportStatus = "Success" | "Partial" | "Failed";
 
@@ -154,6 +170,9 @@ export type Participant = {
   rag_note: string | null;
   gateway_target_date: string | null;
   gateway_notes: string | null;
+  gateway_booked_status: GatewayBookedStatus;
+  gateway_appointment_date: string | null;
+  gateway_outcome: GatewayOutcome | null;
   health_confidence: number | null;
   external_participant_id: string | null;
   email: string | null;
@@ -357,14 +376,11 @@ export type HmrcBusinessInfo = {
   participant_id: string;
   business_structure: BusinessStructure | null;
   utr_number: string | null;
-  hmrc_registration_date: string | null;
   vat_registered: boolean;
   paye_registered: boolean;
   business_bank_account: boolean;
-  insurance_status: string | null;
-  accountant_name: string | null;
-  accountant_contact: string | null;
-  tax_deadline_notes: string | null;
+  insurance_in_place: boolean;
+  notes: string | null;
   updated_at: string;
 };
 
@@ -372,7 +388,7 @@ export type DigitalPresenceItem = {
   id: string;
   participant_id: string;
   platform: DigitalPlatform;
-  is_active: boolean;
+  status: DigitalPresenceStatus;
   url: string | null;
   notes: string | null;
   updated_at: string;
@@ -391,7 +407,7 @@ export type GainfulAssessment = {
   participant_id: string;
   trading_consistently: boolean;
   hours_worked_adequate: boolean;
-  bank_statements_provided: boolean;
+  expected_to_make_profit: boolean;
   customer_base_established: boolean;
   business_sustainable: boolean;
   advisor_recommendation: string | null;

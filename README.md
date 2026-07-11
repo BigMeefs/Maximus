@@ -181,20 +181,24 @@ Every participant profile now includes, above the original CRM tabs:
 - **Gateway** — one combined page (previously two separate tabs: "Gateway"
   and "Gainful Decision"), presented as two clearly separated cards so it
   reads as a single workflow:
-  - **Gateway Assessment** — the 16-item readiness checklist (eight
-    auto-derived from data entered elsewhere, the rest manual checkboxes)
-    with a live readiness %, the participant's Gateway target date, and a
-    free-text Advisor Notes field (new — previously nothing captured this).
+  - **Gateway Assessment** — a readiness checklist (auto-derived items plus
+    manual checkboxes) with a live readiness %, the participant's Gateway
+    target date, a free-text Advisor Notes field, and **Gateway booking**:
+    **Gateway Booked** (Not Booked / Booked / Completed), an appointment
+    date once Booked, and — required once Completed — a **Gateway Outcome**
+    (GSE / NGSE) that feeds directly into the Trading Start eligibility
+    engine (see "Gateway booking & outcome" below).
   - **Gainful Decision** — trading consistency, auto income trend,
-    evidence, invoices, bank statements and customer base feed a readiness
-    %; a Supporting Evidence list (reads from the same Evidence Vault
-    records, not a separate upload); advisor recommendation, manager
-    approval, manager notes, a Decision Date (new — previously only
-    implied by a last-updated timestamp), and the Gainful Outcome (the
-    overall 🟢/🟡/🔴 recommendation).
+    evidence, invoices, customer base, business sustainability and expected
+    profitability feed a readiness %; a Supporting Evidence list (reads
+    from the same Evidence Vault records, not a separate upload); advisor
+    recommendation, manager approval, manager notes, a Decision Date, and
+    the Gainful Outcome (the overall 🟢/🟡/🔴 recommendation — a different
+    concept from the Gateway Outcome GSE/NGSE dropdown above, despite the
+    similar name; see below).
 
-  Nothing from either original tab was removed — every existing field,
-  checkbox and value carried over unchanged into its respective card.
+  Nothing from either original tab was removed except where the operational
+  process update below explicitly says so.
 - **Funding** — funding source (a fixed dropdown: Business Card, BACS or
   Voucher — no free text), requested/approved/received amounts (with
   remaining computed automatically), purpose, dates, notes, a document
@@ -207,12 +211,15 @@ Every participant profile now includes, above the original CRM tabs:
   entry), and forcing those into one of the three new options would
   misrepresent real data, so they're left exactly as they are and stay
   selectable on their own record without being editable to free text.
-- **HMRC & Business** — structure, UTR, registration date, VAT/PAYE, bank
-  account, insurance, accountant details, tax deadline notes.
+- **HMRC & Business** — Business Structure, UTR Number, three tick boxes
+  (Business Bank Account, Insurance, VAT Registered, PAYE Registered) and
+  one free-text Notes field — deliberately simplified down to what the team
+  actually records (see "HMRC & Business simplification" below).
 - **Digital Presence** — the 9 standard channels (Website, Facebook,
   Instagram, LinkedIn, TikTok, Google Business Profile, YouTube, Online
-  Booking, Google Reviews), each active/not-created with a URL, notes, and a
-  completion %.
+  Booking, Google Reviews), each with a per-platform status (Complete / In
+  Progress / Not Started / Not Needed — see "Digital Presence status"
+  below), a URL, notes, and a completion %.
 - **Evidence Vault** (extends the former Evidence Library tab) — the same
   upload/view/delete flow, now organised into folders by category (Business
   Plan, Cashflow, Invoices, Receipts, Quotes, Bank Statements, Insurance,
@@ -253,6 +260,68 @@ built on top of it — was removed cleanly rather than left silently frozen
 with stale data. The underlying `monthly_earnings` database table is left
 in place (unused, historical rows intact) rather than dropped.
 
+### Operational process alignment
+
+Four tabs were updated to match how the Self Employment Team actually works
+day to day (`supabase/migrations/0020_process_alignment.sql`). Every change
+backfills from the data it replaces rather than discarding it.
+
+**Digital Presence status.** Each of the 9 platforms now has a status —
+**Complete**, **In Progress**, **Not Started**, **Not Needed** — instead of a
+single active/inactive toggle. **Not Needed counts as complete** in every
+progress calculation (the tab's own %, the Business Health Score's Marketing
+and Digital Presence dimensions, and the Gateway checklist's Website item),
+so a business that genuinely doesn't need, say, TikTok isn't penalised for
+it; it's shown with a grey "Not Needed" badge rather than the green
+"Complete" one, so at a glance an advisor can still tell "intentionally
+skipped" apart from "actually done". The old `is_active` boolean is gone —
+existing rows were backfilled (`true` → Complete, `false` → Not Started)
+before the column was dropped.
+
+**HMRC & Business simplification.** Down to what the team actually records:
+Business Structure (now also offering Partnership and CIC, not just Sole
+Trader / Limited Company), UTR Number, four tick boxes (Business Bank
+Account, Insurance, VAT Registered, PAYE Registered), and one free-text
+Notes field. Accountant Name, Accountant Contact, HMRC Registration Date and
+Tax Deadline Notes are no longer tracked as separate fields; where any of
+them had content, that content was folded into the new Notes field during
+the migration rather than deleted outright. The Gateway checklist's old
+"HMRC Registration" auto-item (which read the now-removed registration
+date) was retired for the same reason — the checklist's separate "UTR" item
+already captures the same real-world fact — and "Insurance" now reads the
+new tick box instead of the old free-text field.
+
+**Gainful Decision checklist.** "Bank Statements Provided" is replaced by
+**"Expected To Make A Profit"** — the checklist is now: Trading
+Consistently, Income Trend, Hours Worked Adequate, Evidence Uploaded,
+Invoices Available, Customer Base Established, Business Sustainable,
+Expected To Make A Profit.
+
+**Gateway booking & outcome.** Below the Gateway Assessment checklist,
+advisors record **Gateway Booked** (Not Booked / Booked / Completed) with an
+appointment date once Booked, and — required once Completed — a **Gateway
+Outcome** (GSE / NGSE). This is a different field from the Gainful
+Decision's own "Gainful Outcome" (🟢/🟡/🔴 Ready / Needs Further Evidence /
+Not Yet Ready) despite the similar name — the Gateway Outcome specifically
+answers "which Trading Start route", and saving it has a real side effect:
+selecting **GSE** marks the participant Gainfully Self Employed exactly like
+the existing Trading Start tab's "Mark as GSE" action (`is_gse = true`,
+`gse_marked_at`, `gse_marked_by`); selecting **NGSE** clears that flag so
+the standard two-month income-average rule applies instead. Both paths feed
+the same `evaluateTradingStartEligibility` engine described under "Trading
+Start, In Work Tracking & Outcomes" below — nothing about that engine
+changed, this just gives it another entry point.
+
+**Journey: Initial Appointment removed.** The Participant Journey Timeline
+(below) no longer has a separate "Initial Appointment" milestone — the
+Appointments module remains fully intact elsewhere in the system (the
+Appointment History tab, "Due" tracking, etc.); it just isn't one of the
+Journey's headline milestones any more. Nothing was stored for this
+milestone (the whole timeline is computed live), so there's no data
+migration for it — the remaining milestones simply shift up one position,
+which the timeline's sequencing logic already handles generically (see
+"extensibility design" below).
+
 ## Participant Journey Timeline
 
 The Journey tab (`src/components/participant/journey-tab.tsx`) is now a true
@@ -261,24 +330,28 @@ profile — rather than a single stage stepper. A badge next to the
 participant's Status/Health badges in the profile header always shows the
 current milestone and links straight to the tab.
 
-Eight milestones ship out of the box, each computed live from existing data
+Seven milestones ship out of the box, each computed live from existing data
 (nothing new is stored):
 
 1. **Referral Received** — earliest `participant_status_history` row with
    `to_status = "Referral"`, falling back to the participant's created date.
-2. **Initial Appointment** — earliest logged appointment.
-3. **Business Plan** — the Business Plan record reaching `Complete`.
-4. **Gateway** — the same live Gateway readiness % used on the Gateway tab
+2. **Business Plan** — the Business Plan record reaching `Complete`.
+3. **Gateway** — the same live Gateway readiness % used on the Gateway tab
    reaching 100%.
-5. **Trading Start** — a confirmed Trading Start record.
-6. **Transfer to IWT** — the Trading Start's IWT advisor differing from the
+4. **Trading Start** — a confirmed Trading Start record.
+5. **Transfer to IWT** — the Trading Start's IWT advisor differing from the
    original advisor. Participants who are never transferred show this
    milestone as **Not required** rather than stuck "upcoming" forever.
-7. **In Work Tracking** — begins the moment Trading Start is confirmed, per
+6. **In Work Tracking** — begins the moment Trading Start is confirmed, per
    this CRM's existing IWT model.
-8. **Outcome Achieved** — an Outcome record exists. If one exists but wasn't
+7. **Outcome Achieved** — an Outcome record exists. If one exists but wasn't
    achieved, the milestone shows a distinct "not achieved" state instead of
    silently looking incomplete.
+
+(An eighth milestone, **Initial Appointment**, existed until the operational
+process alignment update above removed it — the Appointments module itself
+is untouched, it's just no longer one of the Journey's headline
+milestones.)
 
 Each milestone is one of **completed** (✓), **current** (the first
 not-yet-done milestone, hollow indigo ring), or **upcoming** (hollow slate

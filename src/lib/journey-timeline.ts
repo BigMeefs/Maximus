@@ -1,5 +1,4 @@
 import type {
-  Appointment,
   BusinessPlan,
   GatewayChecklistItem,
   OutcomeRecord,
@@ -44,7 +43,6 @@ export type JourneyMilestone = {
 export type JourneyTimelineInput = {
   participant: Participant;
   statusHistory: ParticipantStatusHistoryEntry[];
-  appointments: Appointment[];
   businessPlan: BusinessPlan | null;
   gatewayPercent: number;
   gatewayChecklistItems: GatewayChecklistItem[];
@@ -78,24 +76,7 @@ const MILESTONE_BUILDERS: ((input: JourneyTimelineInput) => RawMilestone)[] = [
       ],
     };
   },
-  // 2. Initial Appointment
-  ({ appointments }) => {
-    const first = [...appointments].sort((a, b) => a.appointment_date.localeCompare(b.appointment_date))[0] ?? null;
-    return {
-      id: "initial-appointment",
-      label: "Initial Appointment",
-      date: first?.appointment_date ?? null,
-      summary: first ? `First appointment held ${formatDate(first.appointment_date)}.` : "No appointment logged yet.",
-      detail: first
-        ? [
-            { label: "Date", value: formatDate(first.appointment_date) },
-            { label: "Outcome", value: first.outcome ?? "—" },
-            { label: "Notes", value: first.notes ?? "—" },
-          ]
-        : [{ label: "Status", value: "Log the first appointment on the Appointment History tab." }],
-    };
-  },
-  // 3. Business Plan
+  // 2. Business Plan
   ({ businessPlan }) => {
     const completed = businessPlan?.status === "Complete";
     return {
@@ -112,7 +93,7 @@ const MILESTONE_BUILDERS: ((input: JourneyTimelineInput) => RawMilestone)[] = [
       ],
     };
   },
-  // 4. Gateway
+  // 3. Gateway
   ({ gatewayPercent, gatewayChecklistItems }) => {
     const completed = gatewayPercent >= 100;
     const lastUpdated = gatewayChecklistItems.length
@@ -130,7 +111,7 @@ const MILESTONE_BUILDERS: ((input: JourneyTimelineInput) => RawMilestone)[] = [
       ],
     };
   },
-  // 5. Trading Start
+  // 4. Trading Start
   ({ currentTradingStart }) => ({
     id: "trading-start",
     label: "Trading Start",
@@ -146,7 +127,7 @@ const MILESTONE_BUILDERS: ((input: JourneyTimelineInput) => RawMilestone)[] = [
         ]
       : [{ label: "Status", value: "Awaiting eligibility — see the Trading Start & IWT tab." }],
   }),
-  // 6. Transfer to IWT
+  // 5. Transfer to IWT
   ({ currentTradingStart }) => {
     const transferred = !!currentTradingStart && currentTradingStart.iwt_advisor_id !== currentTradingStart.original_advisor_id;
     const notRequired = !!currentTradingStart && !transferred;
@@ -165,7 +146,7 @@ const MILESTONE_BUILDERS: ((input: JourneyTimelineInput) => RawMilestone)[] = [
         : [{ label: "Status", value: notRequired ? "No transfer needed for this participant." : "—" }],
     };
   },
-  // 7. In Work Tracking
+  // 6. In Work Tracking
   ({ currentTradingStart, participant }) => ({
     id: "in-work-tracking",
     label: "In Work Tracking",
@@ -177,7 +158,7 @@ const MILESTONE_BUILDERS: ((input: JourneyTimelineInput) => RawMilestone)[] = [
       ? [{ label: "Tracking since", value: formatDate(currentTradingStart.trading_start_date) }, { label: "Reviews", value: "See the Trading Start & IWT tab for the full review log." }]
       : [{ label: "Status", value: "Begins automatically once a Trading Start is confirmed." }],
   }),
-  // 8. Outcome Achieved
+  // 7. Outcome Achieved
   ({ outcome }) => ({
     id: "outcome-achieved",
     label: "Outcome Achieved",

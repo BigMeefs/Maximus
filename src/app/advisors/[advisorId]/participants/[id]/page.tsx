@@ -92,7 +92,6 @@ export default async function ParticipantProfilePage({
   const journeyMilestones = computeJourneyTimeline({
     participant,
     statusHistory,
-    appointments,
     businessPlan,
     gatewayPercent: gateway.percent,
     gatewayChecklistItems: gatewayChecklist,
@@ -289,10 +288,14 @@ export default async function ParticipantProfilePage({
               content: (
                 <GatewayCombinedTab
                   participantId={id}
+                  advisorId={advisorId}
                   gatewayEntries={gateway.entries}
                   gatewayPercent={gateway.percent}
                   gatewayTargetDate={participant.gateway_target_date}
                   gatewayNotes={participant.gateway_notes}
+                  gatewayBookedStatus={participant.gateway_booked_status}
+                  gatewayAppointmentDate={participant.gateway_appointment_date}
+                  gatewayOutcome={participant.gateway_outcome}
                   gainfulEntries={gainfulChecklist.entries}
                   gainfulPercent={gainfulChecklist.percent}
                   gainful={gainful}

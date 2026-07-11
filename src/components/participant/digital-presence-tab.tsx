@@ -1,8 +1,17 @@
 "use client";
 
 import { useTransition } from "react";
-import { DIGITAL_PLATFORMS, type DigitalPresenceItem } from "@/types/database";
+import clsx from "clsx";
+import { DIGITAL_PLATFORMS, DIGITAL_PRESENCE_STATUSES, type DigitalPresenceItem, type DigitalPresenceStatus } from "@/types/database";
+import { isDigitalPresenceDone } from "@/lib/business-rules";
 import { updateDigitalPresenceItem } from "@/lib/actions/digital-presence";
+
+const STATUS_BADGE: Record<DigitalPresenceStatus, string> = {
+  Complete: "bg-emerald-100 text-emerald-700",
+  "In Progress": "bg-amber-100 text-amber-700",
+  "Not Started": "bg-slate-100 text-slate-600",
+  "Not Needed": "bg-slate-200 text-slate-500",
+};
 
 export default function DigitalPresenceTab({
   participantId,
@@ -12,10 +21,8 @@ export default function DigitalPresenceTab({
   items: DigitalPresenceItem[];
 }) {
   const byPlatform = new Map(items.map((i) => [i.platform, i]));
-  const activeCount = DIGITAL_PLATFORMS.filter(
-    (p) => byPlatform.get(p)?.is_active,
-  ).length;
-  const percent = Math.round((activeCount / DIGITAL_PLATFORMS.length) * 100);
+  const doneCount = DIGITAL_PLATFORMS.filter((p) => isDigitalPresenceDone(byPlatform.get(p))).length;
+  const percent = Math.round((doneCount / DIGITAL_PLATFORMS.length) * 100);
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -24,6 +31,10 @@ export default function DigitalPresenceTab({
           <h3 className="font-semibold text-slate-900">Digital Presence Completion</h3>
           <span className="font-semibold text-slate-900">{percent}%</span>
         </div>
+        <p className="mt-1 text-xs text-slate-500">
+          Platforms marked &ldquo;Not Needed&rdquo; count as complete — advisors aren&apos;t penalised for
+          businesses that genuinely don&apos;t need a given platform.
+        </p>
         <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-slate-100">
           <div
             className="h-full rounded-full bg-indigo-600 transition-all"
@@ -61,6 +72,7 @@ function PlatformRow({
     participantId,
     platform as DigitalPresenceItem["platform"],
   );
+  const status = item?.status ?? "Not Started";
 
   return (
     <form
@@ -68,19 +80,28 @@ function PlatformRow({
       className="flex flex-col gap-3 rounded-lg border border-slate-200 p-4 sm:flex-row sm:items-center"
     >
       <div className="flex w-48 shrink-0 items-center gap-2">
-        <span className="text-lg">{item?.is_active ? "✔" : "❌"}</span>
+        <span
+          className={clsx(
+            "rounded-full px-2 py-0.5 text-xs font-medium",
+            STATUS_BADGE[status],
+          )}
+        >
+          {status}
+        </span>
         <span className="text-sm font-medium text-slate-800">{platform}</span>
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-slate-600">
-        <input
-          type="checkbox"
-          name="is_active"
-          defaultChecked={item?.is_active ?? false}
-          className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-        />
-        Active
-      </label>
+      <select
+        name="status"
+        defaultValue={status}
+        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+      >
+        {DIGITAL_PRESENCE_STATUSES.map((s) => (
+          <option key={s} value={s}>
+            {s}
+          </option>
+        ))}
+      </select>
 
       <input
         type="url"

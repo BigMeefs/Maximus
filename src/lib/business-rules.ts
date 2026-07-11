@@ -27,6 +27,14 @@ export function hasReachedStage(current: BusinessStage, target: BusinessStage) {
   return stageIndex(current) >= stageIndex(target);
 }
 
+// A platform counts as "done" for both progress % and Business Health Score
+// purposes if it's genuinely Complete, or if the advisor has explicitly
+// recorded it as Not Needed for this business — Not Needed is a considered
+// answer, not a gap, so it shouldn't drag a participant's readiness down.
+export function isDigitalPresenceDone(item: Pick<DigitalPresenceItem, "status"> | undefined): boolean {
+  return item?.status === "Complete" || item?.status === "Not Needed";
+}
+
 // ---------------------------------------------------------------------------
 // Gateway Readiness: 8 items auto-derived from existing data + 8 manual items.
 // ---------------------------------------------------------------------------
@@ -56,11 +64,10 @@ export function getGatewayChecklist({
 
   const autoEntries: ChecklistEntry[] = [
     { label: "Business Plan", complete: businessPlan?.status === "Complete", source: "auto" },
-    { label: "HMRC Registration", complete: !!hmrc?.hmrc_registration_date, source: "auto" },
     { label: "UTR", complete: !!hmrc?.utr_number, source: "auto" },
-    { label: "Insurance", complete: !!hmrc?.insurance_status, source: "auto" },
+    { label: "Insurance", complete: !!hmrc?.insurance_in_place, source: "auto" },
     { label: "Business Bank Account", complete: !!hmrc?.business_bank_account, source: "auto" },
-    { label: "Website", complete: !!website?.is_active, source: "auto" },
+    { label: "Website", complete: isDigitalPresenceDone(website), source: "auto" },
     { label: "Evidence Uploaded", complete: evidenceFiles.length > 0, source: "auto" },
     {
       label: "Trading Started",
@@ -125,9 +132,9 @@ export function getGainfulChecklist({
     { label: "Hours Worked Adequate", complete: !!gainful?.hours_worked_adequate, source: "manual" },
     { label: "Evidence Uploaded", complete: evidenceFiles.length > 0, source: "auto" },
     { label: "Invoices Available", complete: invoicesAvailable, source: "auto" },
-    { label: "Bank Statements Provided", complete: !!gainful?.bank_statements_provided, source: "manual" },
     { label: "Customer Base Established", complete: !!gainful?.customer_base_established, source: "manual" },
     { label: "Business Sustainable", complete: !!gainful?.business_sustainable, source: "manual" },
+    { label: "Expected To Make A Profit", complete: !!gainful?.expected_to_make_profit, source: "manual" },
   ];
 
   const percent = Math.round(
@@ -195,7 +202,7 @@ export function getBusinessHealthScores({
     incomeTrend === "up" ? 100 : incomeTrend === "flat" ? 60 : incomeTrend === "down" ? 20 : 0,
   ]);
 
-  const activePlatforms = digitalPresence.filter((d) => d.is_active).length;
+  const activePlatforms = digitalPresence.filter((d) => isDigitalPresenceDone(d)).length;
   const digitalPresenceScore = Math.round(
     (activePlatforms / DIGITAL_PLATFORM_COUNT) * 100,
   );
@@ -211,7 +218,7 @@ export function getBusinessHealthScores({
     : Math.round((stageIndex(participant.business_stage) / (BUSINESS_STAGES.length - 1)) * 100);
 
   const legal = average([
-    hmrc?.insurance_status ? 100 : 0,
+    hmrc?.insurance_in_place ? 100 : 0,
     hmrc?.utr_number ? 100 : 0,
     hmrc?.business_structure ? 100 : 0,
     hmrc?.business_bank_account ? 100 : 0,

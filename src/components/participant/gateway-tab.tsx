@@ -3,25 +3,38 @@
 import { useState, useTransition } from "react";
 import clsx from "clsx";
 import type { ChecklistEntry } from "@/lib/business-rules";
-import type { GatewayChecklistItemName } from "@/types/database";
-import { toggleGatewayChecklistItem, updateGatewayNotes } from "@/lib/actions/gateway";
+import { GATEWAY_OUTCOMES, type GatewayBookedStatus, type GatewayChecklistItemName, type GatewayOutcome } from "@/types/database";
+import { toggleGatewayChecklistItem, updateGatewayBooking, updateGatewayNotes } from "@/lib/actions/gateway";
+
+const BOOKED_STATUSES: GatewayBookedStatus[] = ["Not Booked", "Booked", "Completed"];
 
 export default function GatewayAssessmentCard({
   participantId,
+  advisorId,
   entries,
   percent,
   gatewayTargetDate,
   gatewayNotes,
+  gatewayBookedStatus,
+  gatewayAppointmentDate,
+  gatewayOutcome,
 }: {
   participantId: string;
+  advisorId: string;
   entries: ChecklistEntry[];
   percent: number;
   gatewayTargetDate: string | null;
   gatewayNotes: string | null;
+  gatewayBookedStatus: GatewayBookedStatus;
+  gatewayAppointmentDate: string | null;
+  gatewayOutcome: GatewayOutcome | null;
 }) {
   const [pending, startTransition] = useTransition();
   const [notesPending, startNotesTransition] = useTransition();
   const [notes, setNotes] = useState(gatewayNotes ?? "");
+  const [bookingPending, startBookingTransition] = useTransition();
+  const [bookedStatus, setBookedStatus] = useState<GatewayBookedStatus>(gatewayBookedStatus);
+  const boundBookingAction = updateGatewayBooking.bind(null, participantId, advisorId);
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -93,6 +106,74 @@ export default function GatewayAssessmentCard({
             </p>
           </div>
         </div>
+
+        <form
+          action={(formData) => startBookingTransition(() => boundBookingAction(formData))}
+          className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4"
+        >
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-800">Gateway Booked</label>
+            <select
+              name="gateway_booked_status"
+              value={bookedStatus}
+              onChange={(e) => setBookedStatus(e.target.value as GatewayBookedStatus)}
+              className="w-full max-w-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            >
+              {BOOKED_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {(bookedStatus === "Booked" || bookedStatus === "Completed") && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-800">
+                Gateway Appointment Date
+              </label>
+              <input
+                type="date"
+                name="gateway_appointment_date"
+                defaultValue={gatewayAppointmentDate ?? ""}
+                className="w-full max-w-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              />
+            </div>
+          )}
+
+          {bookedStatus === "Completed" && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-800">Gateway Outcome</label>
+              <select
+                name="gateway_outcome"
+                required
+                defaultValue={gatewayOutcome ?? ""}
+                className="w-full max-w-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              >
+                <option value="" disabled>
+                  Select outcome...
+                </option>
+                {GATEWAY_OUTCOMES.map((outcome) => (
+                  <option key={outcome} value={outcome}>
+                    {outcome}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">
+                Feeds directly into Trading Start eligibility — GSE marks the participant as
+                Gainfully Self Employed; NGSE relies on the two-month income average rule.
+              </p>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={bookingPending}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+          >
+            {bookingPending ? "Saving..." : "Save Gateway booking"}
+          </button>
+        </form>
 
         <form
           action={(formData) => startNotesTransition(() => updateGatewayNotes(participantId, formData))}

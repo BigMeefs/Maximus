@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import type { HmrcBusinessInfo } from "@/types/database";
+import { BUSINESS_STRUCTURES, type HmrcBusinessInfo } from "@/types/database";
 import { updateHmrcInfo, type HmrcFormState } from "@/lib/actions/hmrc";
 
 const initialState: HmrcFormState = {};
@@ -26,8 +26,11 @@ export default function HmrcTab({
             className={inputClass}
           >
             <option value="">Not set</option>
-            <option value="Sole Trader">Sole Trader</option>
-            <option value="Limited Company">Limited Company</option>
+            {BUSINESS_STRUCTURES.map((structure) => (
+              <option key={structure} value={structure}>
+                {structure}
+              </option>
+            ))}
           </select>
         </Field>
 
@@ -39,41 +42,25 @@ export default function HmrcTab({
           />
         </Field>
 
-        <Field label="HMRC Registration Date">
-          <input
-            name="hmrc_registration_date"
-            type="date"
-            defaultValue={hmrc?.hmrc_registration_date ?? ""}
-            className={inputClass}
-          />
-        </Field>
-
-        <Field label="Insurance Status">
-          <input
-            name="insurance_status"
-            placeholder="e.g. Public liability arranged"
-            defaultValue={hmrc?.insurance_status ?? ""}
-            className={inputClass}
-          />
-        </Field>
-
-        <Field label="Accountant Name">
-          <input
-            name="accountant_name"
-            defaultValue={hmrc?.accountant_name ?? ""}
-            className={inputClass}
-          />
-        </Field>
-
-        <Field label="Accountant Contact">
-          <input
-            name="accountant_contact"
-            defaultValue={hmrc?.accountant_contact ?? ""}
-            className={inputClass}
-          />
-        </Field>
-
-        <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:gap-8">
+        <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:flex-wrap sm:gap-8">
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              name="business_bank_account"
+              defaultChecked={hmrc?.business_bank_account ?? false}
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            Business Bank Account
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              name="insurance_in_place"
+              defaultChecked={hmrc?.insurance_in_place ?? false}
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            Insurance
+          </label>
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <input
               type="checkbox"
@@ -92,22 +79,13 @@ export default function HmrcTab({
             />
             PAYE Registered
           </label>
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              name="business_bank_account"
-              defaultChecked={hmrc?.business_bank_account ?? false}
-              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-            />
-            Business Bank Account
-          </label>
         </div>
 
-        <Field label="Tax Deadline Notes" className="sm:col-span-2">
+        <Field label="Notes (optional)" className="sm:col-span-2">
           <textarea
-            name="tax_deadline_notes"
+            name="notes"
             rows={3}
-            defaultValue={hmrc?.tax_deadline_notes ?? ""}
+            defaultValue={hmrc?.notes ?? ""}
             className={inputClass}
           />
         </Field>

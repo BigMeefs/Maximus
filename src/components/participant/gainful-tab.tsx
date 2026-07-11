@@ -15,9 +15,9 @@ const RECOMMENDATIONS: { value: GainfulRecommendation; label: string; tone: stri
 const CHECKLIST_FIELD_MAP: Record<string, keyof GainfulAssessment> = {
   "Trading Consistently": "trading_consistently",
   "Hours Worked Adequate": "hours_worked_adequate",
-  "Bank Statements Provided": "bank_statements_provided",
   "Customer Base Established": "customer_base_established",
   "Business Sustainable": "business_sustainable",
+  "Expected To Make A Profit": "expected_to_make_profit",
 };
 
 export default function GainfulDecisionCard({
