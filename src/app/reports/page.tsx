@@ -1,8 +1,10 @@
+import Link from "next/link";
 import StatCard from "@/components/stat-card";
 import Badge from "@/components/badge";
 import MonthlyProgressChart from "@/components/reports/monthly-progress-chart";
 import TradingStartTrendsChart from "@/components/reports/trading-start-trends-chart";
 import ReportFilters from "@/components/reports/report-filters";
+import AdvisorPerformanceTable from "@/components/reports/advisor-performance-table";
 import {
   getCompanyReportStats,
   getOfficeReportStats,
@@ -297,42 +299,31 @@ export default async function ReportsPage({
 
         <Section
           title="Team leaderboard — Trading Starts &amp; Outcomes by advisor"
-          subtitle="Sorted by Trading Starts, attributed to the original advisor even after the participant transfers to an IWT advisor."
+          subtitle="Attributed to the original advisor even after the participant transfers to an IWT advisor. Sort any column, search by advisor or office, and export the current view to CSV."
         >
-          {tsStats.byAdvisor.length === 0 ? (
-            <p className="text-sm text-slate-500">No advisors found.</p>
-          ) : (
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="px-4 py-3">#</th>
-                    <th className="px-4 py-3">Advisor</th>
-                    <th className="px-4 py-3">Active caseload</th>
-                    <th className="px-4 py-3">Trading Starts</th>
-                    <th className="px-4 py-3">Outcomes achieved</th>
-                    <th className="px-4 py-3">Outcomes not achieved</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {tsStats.byAdvisor.map((row, index) => (
-                    <tr key={row.advisorId}>
-                      <td className="px-4 py-3 text-slate-400">{index + 1}</td>
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-slate-900">{row.label}</p>
-                        <p className="text-xs text-slate-500">{row.officeLabel}</p>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">{row.activeCaseload}</td>
-                      <td className="px-4 py-3 text-slate-600">{row.tradingStarts}</td>
-                      <td className="px-4 py-3 text-slate-600">{row.outcomesAchieved}</td>
-                      <td className="px-4 py-3 text-slate-600">{row.outcomesNotAchieved}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <AdvisorPerformanceTable
+            rows={tsStats.byAdvisor.map((row) => ({
+              advisorId: row.advisorId,
+              advisorName: row.label,
+              officeLabel: row.officeLabel,
+              tradingStarts: row.tradingStarts,
+              outcomesAchieved: row.outcomesAchieved,
+              conversionRate: row.conversionRate,
+              currentCaseload: row.activeCaseload,
+              iwtCaseload: row.iwtCaseload,
+            }))}
+            exportFilename="team-leaderboard.csv"
+          />
         </Section>
+
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-sm text-slate-600">
+            Want to compare performance month by month, or as a chart?{" "}
+            <Link href="/reports/performance-tracker" className="font-medium text-indigo-600 hover:underline">
+              Open the Performance Tracker →
+            </Link>
+          </p>
+        </div>
 
         <Section title="Monthly trends" subtitle="Trading Starts and Outcomes recorded per month, company-wide.">
           <TradingStartTrendsChart points={tsStats.monthlyTrends} />

@@ -524,9 +524,12 @@ what happens *after* trading starts.
   days to Trading Start, average days Trading Start → Outcome, participants
   approaching the Outcome deadline, overdue reviews, participants at risk,
   participants eligible but not yet processed, a monthly Trading
-  Starts/Outcomes trend chart, and a team leaderboard (active caseload,
-  Trading Starts, Outcomes achieved/not achieved per advisor, ranked and
-  attributed to the **original** advisor).
+  Starts/Outcomes trend chart, and a **team leaderboard** — active caseload,
+  current IWT caseload, Trading Starts, Outcomes achieved, and a Conversion
+  Rate (Outcomes ÷ Trading Starts), attributed to the **original** advisor —
+  sortable by any column, searchable by advisor or office, and exportable to
+  CSV (`src/components/reports/advisor-performance-table.tsx`, reused
+  as-is on the Performance Tracker below).
 
 This extends the existing schema (`trading_starts`, `iwt_reviews`,
 `outcome_records`, `participant_status_history`, plus `participants.is_gse`
@@ -536,6 +539,56 @@ there's no new authentication or role system: any advisor can still open any
 workspace (see Security model below), and "managers only see org-wide
 reporting" is satisfied by the existing Reports passcode gate exactly as it
 already was.
+
+## Performance Tracker
+
+`/reports/performance-tracker` (same passcode gate, linked from the bottom
+of the Reports team leaderboard) is a dedicated month-by-month view of the
+same KPI attribution model described above — separate from the leaderboard
+because "compare everyone right now" and "see how one advisor/office trended
+over a year" are different questions, and cramming both onto one page meant
+neither was easy to read. No new schema — it's a second view
+(`src/lib/data/performance-tracker.ts`) over the same `trading_starts` /
+`outcome_records` / `participants` tables the rest of this section reads.
+
+- **Filters** — Month, Year, Office, Advisor, at the top of the page,
+  pushing the URL query string and re-rendering immediately (the same
+  pattern as the Reports filters). Office/Advisor scope every number on the
+  page, including *who* the original advisor must be for a Trading Start or
+  Outcome to count. Month/Year scope the KPI cards and the by-advisor table;
+  the monthly charts intentionally ignore a single Month filter (a one-bar
+  "trend" isn't a useful chart) but do narrow to a selected Year.
+- **KPI cards** — Trading Starts Achieved, Outcomes Achieved, Conversion
+  Rate (Outcomes ÷ Trading Starts), Current Caseload, Participants in IWT,
+  and Average Time from Trading Start to Outcome, all for the selected
+  period/scope.
+- **Charts** — "Trading Starts & Outcomes by month" (reuses the existing
+  monthly trend chart from Reports), "Advisor performance by month" and
+  "Office performance by month" (Trading Starts per month, one series per
+  advisor/office — capped to the top 8 by volume so the chart stays
+  readable; narrow with the Office/Advisor filter to see fewer, larger
+  series).
+- **By advisor table** — the same interactive, sortable/searchable/CSV
+  component as the Reports team leaderboard, plus Average Time to Outcome
+  for this view specifically.
+- **Current Caseload and Participants in IWT are the one exception** to
+  the "always attributed to the original advisor" rule on this page — those
+  are point-in-time snapshots of who is *currently* supporting a
+  participant (`participants.advisor_id`), on purpose: they answer "who is
+  busy right now," not "who gets credit," and are never scoped by Month/Year
+  since a caseload isn't a historical event.
+
+## Advisor Dashboard performance summary
+
+The general Advisor Dashboard (`/advisors/<id>/dashboard`) has a "Your
+Performance" card, right below the headline stat row: Trading Starts this
+month, Trading Starts this year, Outcomes this month, Outcomes this year,
+lifetime Trading Starts, lifetime Outcomes, and a current (lifetime)
+Conversion Rate (`getAdvisorPerformanceSummary()` in
+`src/lib/data/performance-tracker.ts`). Like everywhere else, these are
+attributed to the advisor as the Trading Start owner — an advisor whose
+participants have all transferred to IWT support elsewhere still sees their
+own Trading Start and Outcome numbers here, unaffected by the handoff.
 
 ## Organisation Branding Settings
 
@@ -697,6 +750,10 @@ Every card links straight into the relevant participant or queue:
 
 - **Headline counts** — Caseload size, Requiring a Gateway, Funding awaiting
   approval, Approaching Trading Start, Notifications.
+- **Your Performance** — the one stats card on an otherwise action-focused
+  page: Trading Starts and Outcomes this month/this year/lifetime, and a
+  current Conversion Rate — see "Advisor Dashboard performance summary"
+  above.
 - **Participants requiring a Gateway** — Active participants whose live
   Gateway readiness % (the same calculation used on the Gateway tab) is
   below 100%, worst-first.
@@ -1115,6 +1172,14 @@ existing deployment won't pick up new values on its own.
   (company-wide reporting, Office Reporting, the Office/Advisor/Date Range
   filters in `src/components/reports/report-filters.tsx`); same passcode
   gate as `/admin`.
+- `src/app/reports/performance-tracker`, `src/lib/data/performance-tracker.ts`
+  — the Performance Tracker (Month/Year/Office/Advisor filters in
+  `src/components/reports/performance-filters.tsx`, monthly charts in
+  `src/components/reports/monthly-breakdown-chart.tsx`) and
+  `getAdvisorPerformanceSummary()`, the same file's per-advisor summary used
+  by the general Advisor Dashboard. `src/components/reports/advisor-performance-table.tsx`
+  is the sortable/searchable/CSV-exportable table shared between this page
+  and the Reports team leaderboard.
 - `src/lib/business-rules.ts` — Gateway Readiness checklist %, business health
   scores, RAG suggestion, income trend (from the Income Tracker) and
   appointment/action-derived facts (next appointment, last contact, days

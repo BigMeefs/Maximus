@@ -6,6 +6,7 @@ import { getDaysRemaining } from "@/lib/participant";
 import { getAdvisorOrNotFound } from "@/lib/data/advisor";
 import { getAdvisorWorkQueue } from "@/lib/data/advisor-workqueue";
 import { getSelfEmploymentDashboard } from "@/lib/data/self-employment";
+import { getAdvisorPerformanceSummary } from "@/lib/data/performance-tracker";
 import { getActiveAnnouncements } from "@/lib/data/announcements";
 import { getActiveNotificationCount, getActiveNotificationsForAdvisor } from "@/lib/data/notifications";
 import { syncAutoNotificationsForAdvisor } from "@/lib/data/notification-rules";
@@ -52,6 +53,7 @@ export default async function DashboardPage({
     announcements,
     unreadNotifications,
     activeNotifications,
+    performanceSummary,
   ] = await Promise.all([
     participantIds.length
       ? supabase
@@ -81,6 +83,7 @@ export default async function DashboardPage({
     getActiveAnnouncements(),
     getActiveNotificationCount(advisorId),
     getActiveNotificationsForAdvisor(advisorId),
+    getAdvisorPerformanceSummary(advisorId),
   ]);
 
   const businessPlanByParticipant = new Map(
@@ -195,6 +198,23 @@ export default async function DashboardPage({
           href={`/advisors/${advisorId}/notifications`}
           tone={unreadNotifications > 0 ? "warning" : "default"}
         />
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-900">Your Performance</h2>
+        <p className="mt-1 text-xs text-slate-500">
+          Trading Starts and Outcomes stay credited to you as the original advisor, even after a
+          participant transfers to an IWT advisor for support.
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <StatCard label="Trading Starts this month" value={performanceSummary.tradingStartsThisMonth} />
+          <StatCard label="Trading Starts this year" value={performanceSummary.tradingStartsThisYear} />
+          <StatCard label="Outcomes this month" value={performanceSummary.outcomesThisMonth} />
+          <StatCard label="Outcomes this year" value={performanceSummary.outcomesThisYear} />
+          <StatCard label="Lifetime Trading Starts" value={performanceSummary.lifetimeTradingStarts} />
+          <StatCard label="Lifetime Outcomes" value={performanceSummary.lifetimeOutcomes} />
+          <StatCard label="Current conversion rate" value={`${performanceSummary.conversionRate}%`} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

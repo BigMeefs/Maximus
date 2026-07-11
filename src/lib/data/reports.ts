@@ -285,6 +285,8 @@ export type TradingStartAdvisorRow = {
   outcomesAchieved: number;
   outcomesNotAchieved: number;
   activeCaseload: number;
+  iwtCaseload: number;
+  conversionRate: number;
 };
 
 export type MonthlyTrendPoint = {
@@ -495,8 +497,12 @@ export async function getTradingStartReportStats(
   }
 
   const caseloadByAdvisor = new Map<string, number>();
+  const iwtCaseloadByAdvisor = new Map<string, number>();
   for (const p of scopedParticipants) {
     caseloadByAdvisor.set(p.advisor_id, (caseloadByAdvisor.get(p.advisor_id) ?? 0) + 1);
+    if (p.status === "In Work Tracking") {
+      iwtCaseloadByAdvisor.set(p.advisor_id, (iwtCaseloadByAdvisor.get(p.advisor_id) ?? 0) + 1);
+    }
   }
   // Advisors with no Trading Starts or Outcomes yet still belong on the
   // leaderboard so their caseload is visible.
@@ -514,6 +520,8 @@ export async function getTradingStartReportStats(
         label: advisor?.full_name ?? "Unknown advisor",
         officeLabel: advisor?.office_name ?? "Unknown office",
         activeCaseload: caseloadByAdvisor.get(advisorId) ?? 0,
+        iwtCaseload: iwtCaseloadByAdvisor.get(advisorId) ?? 0,
+        conversionRate: stats.tradingStarts > 0 ? Math.round((stats.outcomesAchieved / stats.tradingStarts) * 100) : 0,
         ...stats,
       };
     })
