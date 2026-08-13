@@ -1,0 +1,67 @@
+"use client";
+
+import { useActionState } from "react";
+import { loginAdvisor, type AdvisorPinFormState } from "@/lib/actions/advisor-auth";
+import BrandMark from "@/components/brand-mark";
+
+const initialState: AdvisorPinFormState = {};
+
+export default function AdvisorPinForm({
+  advisorId,
+  advisorName,
+  redirectTo,
+  appName,
+  logoUrl,
+}: {
+  advisorId: string;
+  advisorName: string;
+  redirectTo: string;
+  appName: string;
+  logoUrl: string | null;
+}) {
+  const boundAction = loginAdvisor.bind(null, advisorId, redirectTo);
+  const [state, formAction, pending] = useActionState(boundAction, initialState);
+
+  return (
+    <form
+      action={formAction}
+      className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/50"
+    >
+      <div className="mb-6 text-center">
+        <div className="mx-auto mb-4 flex justify-center">
+          <BrandMark logoUrl={logoUrl} size="lg" />
+        </div>
+        <h1 className="text-xl font-semibold text-slate-900">{advisorName}</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          {appName} — enter your 4-digit passcode to continue.
+        </p>
+      </div>
+      <input
+        type="password"
+        name="pin"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        maxLength={4}
+        required
+        autoFocus
+        autoComplete="off"
+        placeholder="• • • •"
+        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-center text-lg tracking-[0.5em] text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+      />
+      {state.error && <p className="mt-2 text-sm text-red-600">{state.error}</p>}
+      <button
+        type="submit"
+        disabled={pending}
+        className="mt-4 w-full rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+      >
+        {pending ? "Checking..." : "Continue"}
+      </button>
+      <a
+        href="/select-advisor"
+        className="mt-4 block text-center text-sm text-slate-500 hover:text-indigo-600"
+      >
+        ← Back to Home
+      </a>
+    </form>
+  );
+}

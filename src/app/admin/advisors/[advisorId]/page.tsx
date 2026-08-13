@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { listOffices } from "@/lib/data/advisor";
 import Badge from "@/components/badge";
 import AdvisorEditForm from "@/components/admin/advisor-edit-form";
+import AdvisorPinManager from "@/components/admin/advisor-pin-manager";
 
 export default async function AdminAdvisorDetailPage({
   params,
@@ -13,7 +14,7 @@ export default async function AdminAdvisorDetailPage({
   const { advisorId } = await params;
   const supabase = await createClient();
 
-  const [{ data: advisor }, offices, { data: caseload }] = await Promise.all([
+  const [{ data: advisor }, offices, { data: caseload }, { data: pinCredential }] = await Promise.all([
     supabase.from("advisors").select("*").eq("id", advisorId).maybeSingle(),
     listOffices(),
     supabase
@@ -21,11 +22,18 @@ export default async function AdminAdvisorDetailPage({
       .select("id, ptp_name, business_name, business_stage")
       .eq("advisor_id", advisorId)
       .order("ptp_name", { ascending: true }),
+    supabase
+      .from("advisor_pin_credentials")
+      .select("failed_attempts, locked_until")
+      .eq("advisor_id", advisorId)
+      .maybeSingle(),
   ]);
 
   if (!advisor) {
     notFound();
   }
+
+  const isLocked = !!pinCredential?.locked_until && new Date(pinCredential.locked_until) > new Date();
 
   return (
     <div className="space-y-6">
@@ -41,10 +49,12 @@ export default async function AdminAdvisorDetailPage({
 
       <AdvisorEditForm advisor={advisor} offices={offices} />
 
-      <p className="text-xs text-slate-500">
-        There are no individual advisor logins in this CRM (advisors just pick their name), so
-        there&apos;s no password to reset here.
-      </p>
+      <AdvisorPinManager
+        advisorId={advisorId}
+        hasPin={!!pinCredential}
+        isLocked={isLocked}
+        lockedUntil={pinCredential?.locked_until ?? null}
+      />
 
       <div className="space-y-3">
         <h2 className="text-sm font-semibold text-slate-900">

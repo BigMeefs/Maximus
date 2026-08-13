@@ -134,6 +134,19 @@ export type Advisor = {
   updated_at: string;
 };
 
+// Advisor PIN authentication credentials — one optional row per advisor
+// (no row = no PIN configured yet). pin_hash/pin_salt are a scrypt digest,
+// never the raw PIN. See src/lib/advisor-auth.ts.
+export type AdvisorPinCredential = {
+  advisor_id: string;
+  pin_hash: string;
+  pin_salt: string;
+  failed_attempts: number;
+  locked_until: string | null;
+  updated_at: string;
+  updated_by: string | null;
+};
+
 export type ParticipantTransfer = {
   id: string;
   participant_id: string;
@@ -682,6 +695,12 @@ export type Database = {
         Row: Notification;
         Insert: Partial<Notification> & { type: NotificationType; title: string; body: string };
         Update: Partial<Notification>;
+        Relationships: [];
+      };
+      advisor_pin_credentials: {
+        Row: AdvisorPinCredential;
+        Insert: Partial<AdvisorPinCredential> & { advisor_id: string; pin_hash: string; pin_salt: string };
+        Update: Partial<AdvisorPinCredential>;
         Relationships: [];
       };
     };

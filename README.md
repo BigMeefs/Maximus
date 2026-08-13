@@ -95,8 +95,11 @@ app comes from these tables.
   job title), edit their details, move them between offices, and
   archive/reactivate them. Each advisor's detail page
   (`/admin/advisors/<id>`) shows their current caseload (every participant
-  assigned to them) alongside the edit form. There are no individual advisor
-  logins in this CRM, so there's no password to reset.
+  assigned to them) alongside the edit form, plus an **Advisor Passcode
+  (PIN)** card: set, change, or clear the lockout on that advisor's 4-digit
+  sign-in PIN (see "Security model" below). There's still no individual
+  advisor *login* in the traditional sense — no username, no password to
+  reset — just this one shared-secret-per-advisor PIN.
 - **Transfer participants** (`/admin/transfer`) — move one or many
   participants to a different advisor in a few clicks: search the full,
   company-wide participant list by Participant Name, Iconi ID, Email,
@@ -1026,12 +1029,32 @@ system called out in the Security model below.
 
 ## Security model
 
-There is no per-advisor authentication. `/advisors/<id>/...` is just a URL —
-anyone who opens the app can navigate into any advisor's workspace by
-clicking their card; this is intentional (see Organisation structure above),
-not an oversight. Row-level security is disabled on every table, so **the
-Supabase anon key (shipped in the browser bundle) has full read/write access
-to all participant data, independent of workspace-based navigation.**
+Advisors sign in with a 4-digit PIN. Picking a name on the home screen no
+longer opens that advisor's workspace directly — `/advisors/<id>/...` now
+checks for a signed session cookie scoped to that specific advisor id
+(`ADVISOR_SESSION_SECRET`, set once as an environment variable) and, if
+missing or expired, shows a PIN prompt instead of the workspace
+(`src/app/advisors/[advisorId]/layout.tsx`, `src/lib/advisor-auth.ts`). The
+PIN is verified against a scrypt hash — stored in its own
+`advisor_pin_credentials` table, never in plain text and never alongside the
+`advisors` row it belongs to — with a simple lockout (5 wrong attempts locks
+that advisor out for 15 minutes; an admin can clear it early from that
+advisor's page in Administration). A correct PIN only ever unlocks *that*
+advisor's own workspace: the session token has the advisor id baked into it,
+so switching to a different advisor's card always demands their own PIN, and
+there is no way to reuse one advisor's session for another's. Only an admin
+(via the existing Administration passcode gate below) can set, change, or
+clear an advisor's PIN — see "Administration panel" above.
+
+This is layered on top of, not a replacement for, the app's existing
+no-login model: there are still no individual advisor *accounts* — the PIN
+gate only proves "this browser knows this advisor's 4 digits," the same
+trust level as the admin passcode below, just scoped per advisor. Row-level
+security is still disabled on every table, so **the Supabase anon key
+(shipped in the browser bundle) has full read/write access to all
+participant data — including `advisor_pin_credentials` — independent of the
+PIN gate**, which only guards the app's own UI, not direct Supabase REST API
+access.
 
 The Administration panel and Reports (`/admin`, `/reports` — together the
 Management Portal) sit behind a single **shared passcode**
@@ -1052,9 +1075,15 @@ This is fine for a small, trusted internal tool, but it means:
   barrier in front of it (e.g. a hosting platform's password protection, a
   VPN, or an IP allowlist).
 - Anyone with the anon key can call the Supabase REST API directly and bypass
-  the app's UI (and the admin passcode gate) entirely.
+  the app's UI (and the admin passcode gate, and the advisor PIN gate)
+  entirely.
 - The admin passcode is a casual-access deterrent, not a hardened auth
   system — anyone who knows it has full admin access from any device.
+- Likewise, a 4-digit PIN (10,000 possibilities) is a deterrent against
+  casual/opportunistic access, not protection against a determined attacker
+  with unlimited attempts and no lockout — the 5-attempt/15-minute lockout
+  substantially raises the bar for online guessing, but this is still not
+  the security bar a real multi-factor login system would provide.
 
 ## Getting started
 
@@ -1098,6 +1127,14 @@ Set `ADMIN_PASSCODE` to any shared passcode to enable the Administration
 and Reports sections (`/admin`, `/reports`). Without it, those sections
 always reject every passcode.
 
+Set `ADVISOR_SESSION_SECRET` to any long random string to enable advisor PIN
+sign-in — it signs each advisor's session cookie (see "Security model"
+below). Without it, the PIN gate always rejects every attempt (fails closed,
+same as a missing `ADMIN_PASSCODE`), so every advisor's workspace stays
+inaccessible until it's set. This is separate from `ADMIN_PASSCODE` on
+purpose — one shared admin passcode and thousands of individual advisor PINs
+are different credential domains, so they're signed with different secrets.
+
 Optionally add `ANTHROPIC_API_KEY` to enable the AI Assistant tab (get one at
 [console.anthropic.com](https://console.anthropic.com)). Without it, that tab
 still works but shows a message explaining it isn't configured — every other
@@ -1112,12 +1149,15 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000), pick an advisor, and go.
 If this is a fresh database with no advisors yet, go straight to `/admin` to
-add your first office and advisor.
+add your first office and advisor. A brand-new advisor has no PIN configured
+yet either — set one for them from their page in `/admin/advisors` before
+they can sign in (see "Security model" below).
 
 ### Deploying (e.g. Vercel)
 
-`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ADMIN_PASSCODE`
-(and optionally `ANTHROPIC_API_KEY`) also need to be set as **Environment
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ADMIN_PASSCODE`,
+`ADVISOR_SESSION_SECRET` (and optionally `ANTHROPIC_API_KEY`) also need to be
+set as **Environment
 Variables on the hosting project itself** (Vercel: Project Settings →
 Environment Variables) — `.env.local` is git-ignored and never reaches a
 deployment. If the Supabase vars are missing, every page that talks to
