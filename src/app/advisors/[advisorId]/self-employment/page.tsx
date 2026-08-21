@@ -172,8 +172,8 @@ export default async function SelfEmploymentDashboardPage({
         <div>
           <h2 className="text-sm font-semibold text-slate-900">Eligible for NGSE Trading Start</h2>
           <p className="text-xs text-slate-500">
-            Detected automatically when the average net profit across any two consecutive Income Tracker
-            months reaches £{settings.ngse_average_threshold.toLocaleString("en-GB")} (configurable in
+            Detected automatically once any 2 Income Tracker months (not necessarily consecutive) each
+            reach £{settings.ngse_average_threshold.toLocaleString("en-GB")} net profit (configurable in
             Programme Settings) — a Trading Start is never created automatically, an advisor must confirm.
           </p>
         </div>

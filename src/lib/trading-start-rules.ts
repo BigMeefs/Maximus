@@ -26,9 +26,10 @@ function areConsecutiveMonths(aMonth: string, bMonth: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// NGSE two-month-average — every consecutive Income Tracker month pair,
-// with its combined average net profit. Shared by "current average" display
-// and eligibility detection.
+// Consecutive-month pairing — used only for the participant profile's
+// informational "Current two month average" display below. NGSE Trading
+// Start eligibility does NOT use this (see evaluateNgseEligibility below,
+// which judges each month independently and does not require adjacency).
 // ---------------------------------------------------------------------------
 export type MonthPairAverage = {
   month1: string;
@@ -80,18 +81,25 @@ export type NgseEligibility = {
   month2: string | null;
   month1NetProfit: number | null;
   month2NetProfit: number | null;
-  averageNetProfit: number | null;
+  qualifyingMonthCount: number;
   dateEligible: string | null;
 };
 
-// NGSE Trading Start eligibility — the average net profit across ANY pair of
-// consecutive Income Tracker months meets the configured threshold (not two
-// months each individually above it). The first qualifying pair,
-// chronologically, sets the eligibility date.
+// NGSE Trading Start eligibility — every Income Tracker month is judged
+// independently against the threshold (its own net profit, not averaged
+// with any other month). Two or more qualifying months makes the
+// participant eligible; they do NOT need to be consecutive or adjacent —
+// deliberately not a rolling window or "latest 2 months" check. month1/
+// month2 are the two earliest qualifying months found, chronologically;
+// dateEligible is the entry date of the second of those — the point at
+// which the participant first had 2 qualifying months on record.
 export function evaluateNgseEligibility(entries: IncomeTrackerEntry[], threshold: number): NgseEligibility {
-  const qualifying = consecutivePairs(entries).find((pair) => pair.averageNetProfit >= threshold);
+  const qualifyingMonths = entries
+    .filter((e) => netProfit(e) >= threshold)
+    .sort((a, b) => a.month.localeCompare(b.month));
+  const qualifyingMonthCount = qualifyingMonths.length;
 
-  if (!qualifying) {
+  if (qualifyingMonthCount < 2) {
     return {
       eligible: false,
       threshold,
@@ -99,20 +107,21 @@ export function evaluateNgseEligibility(entries: IncomeTrackerEntry[], threshold
       month2: null,
       month1NetProfit: null,
       month2NetProfit: null,
-      averageNetProfit: null,
+      qualifyingMonthCount,
       dateEligible: null,
     };
   }
 
+  const [first, second] = qualifyingMonths;
   return {
     eligible: true,
     threshold,
-    month1: qualifying.month1,
-    month2: qualifying.month2,
-    month1NetProfit: qualifying.month1NetProfit,
-    month2NetProfit: qualifying.month2NetProfit,
-    averageNetProfit: qualifying.averageNetProfit,
-    dateEligible: qualifying.month2EntryDate,
+    month1: first.month.slice(0, 7),
+    month2: second.month.slice(0, 7),
+    month1NetProfit: netProfit(first),
+    month2NetProfit: netProfit(second),
+    qualifyingMonthCount,
+    dateEligible: second.entry_date,
   };
 }
 
@@ -193,8 +202,8 @@ const NGSE_RULE: TradingStartRule = {
       reason: "NGSE",
       eligible: ngse.eligible,
       detail: ngse.eligible
-        ? `Two-month average net profit of ${currencyLabel(ngse.averageNetProfit!)} across ${ngse.month1} and ${ngse.month2} meets the ${currencyLabel(ngse.threshold)} threshold.`
-        : `No consecutive two-month average has reached the ${currencyLabel(ngse.threshold)} threshold yet.`,
+        ? `${ngse.qualifyingMonthCount} qualifying months (net profit at or above ${currencyLabel(ngse.threshold)} each) recorded, including ${ngse.month1} and ${ngse.month2}.`
+        : `Fewer than 2 months have reached the ${currencyLabel(ngse.threshold)} net profit threshold yet.`,
       ngse,
     };
   },

@@ -86,10 +86,10 @@ export async function setParticipantStatus(
 
 // ---------------------------------------------------------------------------
 // Create Trading Start — always a manual, advisor-confirmed action, even
-// when the participant was auto-flagged as eligible (GSE / NGSE two-month
-// average / Claim Closed). Never creates a duplicate: if this participant
-// already has an active Trading Start (no Outcome recorded yet), it's
-// updated in place instead of inserting a second row.
+// when the participant was auto-flagged as eligible (GSE / NGSE two
+// qualifying months / Claim Closed). Never creates a duplicate: if this
+// participant already has an active Trading Start (no Outcome recorded
+// yet), it's updated in place instead of inserting a second row.
 // ---------------------------------------------------------------------------
 export async function createTradingStart(
   participantId: string,
