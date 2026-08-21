@@ -27,9 +27,8 @@ function isThisMonth(dateStr: string, now: Date): boolean {
 
 // ---------------------------------------------------------------------------
 // Trading Start Intelligence — Active participants auto-detected as eligible
-// for an NGSE Trading Start (2 qualifying months — net profit at/above the
-// configured threshold each — anywhere in their history; the months do not
-// need to be consecutive).
+// for an NGSE Trading Start (any two Income Tracker months, not necessarily
+// consecutive, whose average net profit reaches the configured threshold).
 // ---------------------------------------------------------------------------
 export type TsIntelligenceRow = {
   participantId: string;
@@ -346,7 +345,7 @@ export async function getSelfEmploymentDashboard(
       participantId: row.participantId,
       participantName: row.participantName,
       label: "Eligible for Trading Start",
-      detail: `2 qualifying months with net profit at or above £${settings.ngse_average_threshold.toLocaleString("en-GB")} (including ${row.month1} and ${row.month2}).`,
+      detail: `${row.month1} and ${row.month2} average £${(((row.month1NetProfit + row.month2NetProfit) / 2)).toLocaleString("en-GB", { maximumFractionDigits: 0 })} net profit, at or above the £${settings.ngse_average_threshold.toLocaleString("en-GB")} threshold.`,
     });
   }
   for (const row of gseClaimEligible) {

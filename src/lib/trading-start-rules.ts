@@ -81,25 +81,21 @@ export type NgseEligibility = {
   month2: string | null;
   month1NetProfit: number | null;
   month2NetProfit: number | null;
-  qualifyingMonthCount: number;
+  averageNetProfit: number | null;
   dateEligible: string | null;
 };
 
-// NGSE Trading Start eligibility — every Income Tracker month is judged
-// independently against the threshold (its own net profit, not averaged
-// with any other month). Two or more qualifying months makes the
-// participant eligible; they do NOT need to be consecutive or adjacent —
-// deliberately not a rolling window or "latest 2 months" check. month1/
-// month2 are the two earliest qualifying months found, chronologically;
-// dateEligible is the entry date of the second of those — the point at
-// which the participant first had 2 qualifying months on record.
+// NGSE Trading Start eligibility — considers every possible pair of Income
+// Tracker months (they do NOT need to be consecutive or adjacent) and asks
+// whether ANY pair's average net profit meets the configured threshold.
+// Averaging is monotonic, so the pair with the highest possible average is
+// always the participant's two highest individual net-profit months — no
+// need to actually enumerate every combination, just check that one best
+// pair. month1/month2 report that pair in chronological order; dateEligible
+// is the entry date of whichever of the two is later — the point at which
+// both months existed on record together.
 export function evaluateNgseEligibility(entries: IncomeTrackerEntry[], threshold: number): NgseEligibility {
-  const qualifyingMonths = entries
-    .filter((e) => netProfit(e) >= threshold)
-    .sort((a, b) => a.month.localeCompare(b.month));
-  const qualifyingMonthCount = qualifyingMonths.length;
-
-  if (qualifyingMonthCount < 2) {
+  if (entries.length < 2) {
     return {
       eligible: false,
       threshold,
@@ -107,21 +103,41 @@ export function evaluateNgseEligibility(entries: IncomeTrackerEntry[], threshold
       month2: null,
       month1NetProfit: null,
       month2NetProfit: null,
-      qualifyingMonthCount,
+      averageNetProfit: null,
       dateEligible: null,
     };
   }
 
-  const [first, second] = qualifyingMonths;
+  const rankedByNetProfit = [...entries].sort((a, b) => {
+    const diff = netProfit(b) - netProfit(a);
+    return diff !== 0 ? diff : a.month.localeCompare(b.month);
+  });
+  const [best, secondBest] = rankedByNetProfit;
+  const averageNetProfit = (netProfit(best) + netProfit(secondBest)) / 2;
+
+  if (averageNetProfit < threshold) {
+    return {
+      eligible: false,
+      threshold,
+      month1: null,
+      month2: null,
+      month1NetProfit: null,
+      month2NetProfit: null,
+      averageNetProfit,
+      dateEligible: null,
+    };
+  }
+
+  const [earlier, later] = [best, secondBest].sort((a, b) => a.month.localeCompare(b.month));
   return {
     eligible: true,
     threshold,
-    month1: first.month.slice(0, 7),
-    month2: second.month.slice(0, 7),
-    month1NetProfit: netProfit(first),
-    month2NetProfit: netProfit(second),
-    qualifyingMonthCount,
-    dateEligible: second.entry_date,
+    month1: earlier.month.slice(0, 7),
+    month2: later.month.slice(0, 7),
+    month1NetProfit: netProfit(earlier),
+    month2NetProfit: netProfit(later),
+    averageNetProfit,
+    dateEligible: later.entry_date,
   };
 }
 
@@ -202,8 +218,8 @@ const NGSE_RULE: TradingStartRule = {
       reason: "NGSE",
       eligible: ngse.eligible,
       detail: ngse.eligible
-        ? `${ngse.qualifyingMonthCount} qualifying months (net profit at or above ${currencyLabel(ngse.threshold)} each) recorded, including ${ngse.month1} and ${ngse.month2}.`
-        : `Fewer than 2 months have reached the ${currencyLabel(ngse.threshold)} net profit threshold yet.`,
+        ? `${ngse.month1} and ${ngse.month2} average ${currencyLabel(ngse.averageNetProfit ?? 0)} net profit, at or above the ${currencyLabel(ngse.threshold)} threshold.`
+        : `No two months (consecutive or not) reach an average net profit of ${currencyLabel(ngse.threshold)} yet.`,
       ngse,
     };
   },

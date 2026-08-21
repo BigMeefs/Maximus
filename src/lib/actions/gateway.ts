@@ -43,7 +43,7 @@ export async function updateGatewayNotes(participantId: string, formData: FormDa
 // the same effect as the Trading Start tab's "Mark as GSE" action (the
 // Trading Start itself is still only ever created manually by the
 // advisor); selecting NGSE clears that flag so the standard
-// two-qualifying-months rule applies instead.
+// two-month average rule applies instead.
 // ---------------------------------------------------------------------------
 export async function updateGatewayBooking(
   participantId: string,

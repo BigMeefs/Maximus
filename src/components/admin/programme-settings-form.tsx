@@ -18,7 +18,7 @@ export default function ProgrammeSettingsForm({ settings }: { settings: Programm
   return (
     <form action={formAction} className="max-w-2xl space-y-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="NGSE qualifying month threshold (£)" required>
+        <Field label="NGSE two-month average threshold (£)" required>
           <input
             name="ngse_average_threshold"
             type="number"
