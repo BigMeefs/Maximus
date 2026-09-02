@@ -20,7 +20,7 @@ export default function ReferralFlow({ options }: { options: ReferralOption[] })
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <p className="mb-4 text-sm font-medium text-slate-900">
-          Who would you like to refer this participant to?
+          Which SE advisor would you like to refer this participant to?
         </p>
         <div className="space-y-2">
           {options.map((option) => (
@@ -56,23 +56,25 @@ function ReferralForm({ option, onChangeAdvisor }: { option: ReferralOption; onC
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="mb-4 flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+        <p className="text-slate-600">
+          SE advisor: <span className="font-medium text-slate-900">{option.name}</span>
+        </p>
+        <button
+          type="button"
+          onClick={onChangeAdvisor}
+          className="shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-700"
+        >
+          Change
+        </button>
+      </div>
       <p className="mb-4 text-sm text-slate-600">
         Use this form to suggest a participant who may be interested in exploring self employment.
       </p>
       <form action={formAction} className="space-y-4">
-        <Field label="Advisor Name" required>
-          <div className="flex items-center justify-between gap-3">
-            <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-              {option.name}
-            </p>
-            <button
-              type="button"
-              onClick={onChangeAdvisor}
-              className="shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-700"
-            >
-              Change
-            </button>
-          </div>
+        <Field label="Advisor" required>
+          <input name="referring_advisor_name" required placeholder="Your name" className={inputClass} />
+          <p className="mt-1 text-xs text-slate-500">Your name, as the person making this referral.</p>
         </Field>
         <Field label="Participant ENG" required>
           <input name="participant_eng" required className={inputClass} />

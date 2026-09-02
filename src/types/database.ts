@@ -147,17 +147,21 @@ export type AdvisorReferralToken = {
 export const REFERRAL_STATUSES = ["new", "accepted", "rejected"] as const;
 export type ReferralStatus = (typeof REFERRAL_STATUSES)[number];
 
-// advisor_id/advisor_name are null for a "No preference" submission — the
-// referral sits in every advisor's shared pool until one of them accepts
-// it. participant_name is null on every new submission (the external form
-// collects only Advisor Name / Participant ENG / Business Idea); it's a
-// legacy column, kept only because one real referral already has a value
-// in it. See the External Self Employment Referral System
-// (src/app/referral/page.tsx, src/lib/actions/referrals.ts).
+// advisor_id/advisor_name are the SE Advisor — who the referral is
+// intended for, picked on the external page's first step; null for "No
+// preference". referring_advisor_name is a separate concept: who actually
+// submitted the referral, entered as a form field on the second step —
+// never auto-filled from the SE Advisor pick. participant_name is null on
+// every new submission (the external form collects only Advisor /
+// Participant ENG / Business Idea); it's a legacy column, kept only
+// because one real referral already has a value in it. See the External
+// Self Employment Referral System (src/app/referral/page.tsx,
+// src/lib/actions/referrals.ts).
 export type Referral = {
   id: string;
   advisor_id: string | null;
   advisor_name: string | null;
+  referring_advisor_name: string | null;
   participant_name: string | null;
   participant_eng: string;
   business_idea: string;

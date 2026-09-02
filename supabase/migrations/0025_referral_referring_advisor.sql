@@ -1,0 +1,14 @@
+-- Referrals: separate "SE Advisor" from "Advisor".
+--
+-- advisor_id/advisor_name already capture the SE Advisor — who the
+-- referral is intended for, picked on the external page's first step (or
+-- null for "No preference"). The form's second step was wrongly echoing
+-- that same pick back as a read-only "Advisor Name" field instead of
+-- capturing who actually submitted the referral. referring_advisor_name
+-- is new and holds that separately.
+--
+-- Nullable: the one real referral already in this table predates this
+-- column and has no value to backfill; new submissions always provide one
+-- (enforced in submitReferral, same pattern as every other required field
+-- on this table).
+alter table referrals add column referring_advisor_name text;

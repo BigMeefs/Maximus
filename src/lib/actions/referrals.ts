@@ -11,13 +11,15 @@ import { findParticipantByExternalId } from "@/lib/data/referrals";
 // submitReferral is the public, no-login entry point (src/app/referral/page.tsx),
 // mirroring the Participant Income Tracker Portal's pattern: a standalone
 // page, no nav, and a Server Action that never returns more than a
-// generic success/error. The chosen advisor (or "No preference", as null)
-// is bound into the action server-side — one differently-bound copy of
-// this action per picker option (see ReferralFlow) — never a
-// client-editable form field, so a colleague can't submit with an advisor
-// other than the one they picked, and the advisor's internal id is never
-// serialized to the browser (a bound Server Action reference is opaque to
-// the client, unlike a hidden form field).
+// generic success/error. The chosen SE Advisor (or "No preference", as
+// null) is bound into the action server-side — one differently-bound copy
+// of this action per picker option (see ReferralFlow) — never a
+// client-editable form field, so a colleague can't submit with an SE
+// Advisor other than the one they picked, and the SE Advisor's internal id
+// is never serialized to the browser (a bound Server Action reference is
+// opaque to the client, unlike a hidden form field). The referring
+// advisor (who actually made the referral) is a separate, ordinary form
+// field — never derived from the SE Advisor pick.
 //
 // Same security caveat as the rest of this app (see README "Security
 // model" and src/lib/actions/portal.ts): RLS is disabled project-wide, so
@@ -36,10 +38,11 @@ export async function submitReferral(
   _prevState: ReferralSubmitState,
   formData: FormData,
 ): Promise<ReferralSubmitState> {
+  const referringAdvisorName = formData.get("referring_advisor_name")?.toString().trim() ?? "";
   const participantEng = formData.get("participant_eng")?.toString().trim() ?? "";
   const businessIdea = formData.get("business_idea")?.toString().trim() ?? "";
 
-  if (!participantEng || !businessIdea) {
+  if (!referringAdvisorName || !participantEng || !businessIdea) {
     return { error: "Please fill in all fields." };
   }
 
@@ -49,6 +52,7 @@ export async function submitReferral(
     .insert({
       advisor_id: advisorId,
       advisor_name: advisorName,
+      referring_advisor_name: referringAdvisorName,
       participant_eng: participantEng,
       business_idea: businessIdea,
     })
@@ -66,7 +70,7 @@ export async function submitReferral(
     await createNotification({
       type: "referral_submitted",
       title: `New referral: ENG ${participantEng}`,
-      body: `A participant (ENG: ${participantEng}) was referred to ${advisorName} for Self Employment. Business idea: ${businessIdea}`,
+      body: `A participant (ENG: ${participantEng}) was referred to ${advisorName} for Self Employment by ${referringAdvisorName}. Business idea: ${businessIdea}`,
       advisorId,
       relatedId: referral.id,
       dedupeKey: `referral_submitted:${referral.id}`,
