@@ -19,6 +19,7 @@ const TYPE_ICON: Record<NotificationType, string> = {
   transferred_to_iwt: "🔄",
   outcome_achieved: "🏆",
   upcoming_review: "📅",
+  referral_submitted: "✉️",
 };
 
 const TYPE_LABEL: Record<NotificationType, string> = {
@@ -32,6 +33,7 @@ const TYPE_LABEL: Record<NotificationType, string> = {
   transferred_to_iwt: "Transferred to IWT",
   outcome_achieved: "Outcome achieved",
   upcoming_review: "Upcoming review",
+  referral_submitted: "Referral submitted",
 };
 
 export default function NotificationQueue({

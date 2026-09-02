@@ -134,6 +134,33 @@ export type Advisor = {
   updated_at: string;
 };
 
+// One opaque referral link token per advisor — see the External Self
+// Employment Referral System (src/app/referral/[token], src/lib/actions/referrals.ts).
+export type AdvisorReferralToken = {
+  advisor_id: string;
+  token: string;
+  created_at: string;
+};
+
+export const REFERRAL_STATUSES = ["new", "accepted", "rejected"] as const;
+export type ReferralStatus = (typeof REFERRAL_STATUSES)[number];
+
+export type Referral = {
+  id: string;
+  advisor_id: string;
+  advisor_name: string;
+  participant_name: string;
+  participant_eng: string;
+  business_idea: string;
+  status: ReferralStatus;
+  submitted_at: string;
+  accepted_at: string | null;
+  accepted_participant_id: string | null;
+  rejected_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 // Advisor PIN authentication credentials — one optional row per advisor
 // (no row = no PIN configured yet). pin_hash/pin_salt are a scrypt digest,
 // never the raw PIN. See src/lib/advisor-auth.ts.
@@ -270,6 +297,7 @@ export const NOTIFICATION_TYPES = [
   "transferred_to_iwt",
   "outcome_achieved",
   "upcoming_review",
+  "referral_submitted",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -701,6 +729,24 @@ export type Database = {
         Row: AdvisorPinCredential;
         Insert: Partial<AdvisorPinCredential> & { advisor_id: string; pin_hash: string; pin_salt: string };
         Update: Partial<AdvisorPinCredential>;
+        Relationships: [];
+      };
+      advisor_referral_tokens: {
+        Row: AdvisorReferralToken;
+        Insert: Partial<AdvisorReferralToken> & { advisor_id: string };
+        Update: Partial<AdvisorReferralToken>;
+        Relationships: [];
+      };
+      referrals: {
+        Row: Referral;
+        Insert: Partial<Referral> & {
+          advisor_id: string;
+          advisor_name: string;
+          participant_name: string;
+          participant_eng: string;
+          business_idea: string;
+        };
+        Update: Partial<Referral>;
         Relationships: [];
       };
     };
