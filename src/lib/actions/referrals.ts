@@ -8,12 +8,16 @@ import { findParticipantByExternalId } from "@/lib/data/referrals";
 // ---------------------------------------------------------------------------
 // External Self-Employment Referral System.
 //
-// submitReferral is the public, no-login entry point (src/app/referral/[token]),
+// submitReferral is the public, no-login entry point (src/app/referral/page.tsx),
 // mirroring the Participant Income Tracker Portal's pattern: a standalone
 // page, no nav, and a Server Action that never returns more than a
-// generic success/error. The advisor is bound into the action server-side
-// (see the page component) — never a client-editable form field — so a
-// colleague can't redirect their referral to a different advisor.
+// generic success/error. The chosen advisor (or "No preference", as null)
+// is bound into the action server-side — one differently-bound copy of
+// this action per picker option (see ReferralFlow) — never a
+// client-editable form field, so a colleague can't submit with an advisor
+// other than the one they picked, and the advisor's internal id is never
+// serialized to the browser (a bound Server Action reference is opaque to
+// the client, unlike a hidden form field).
 //
 // Same security caveat as the rest of this app (see README "Security
 // model" and src/lib/actions/portal.ts): RLS is disabled project-wide, so
@@ -27,16 +31,15 @@ export type ReferralSubmitState = {
 };
 
 export async function submitReferral(
-  advisorId: string,
-  advisorName: string,
+  advisorId: string | null,
+  advisorName: string | null,
   _prevState: ReferralSubmitState,
   formData: FormData,
 ): Promise<ReferralSubmitState> {
-  const participantName = formData.get("participant_name")?.toString().trim() ?? "";
   const participantEng = formData.get("participant_eng")?.toString().trim() ?? "";
   const businessIdea = formData.get("business_idea")?.toString().trim() ?? "";
 
-  if (!participantName || !participantEng || !businessIdea) {
+  if (!participantEng || !businessIdea) {
     return { error: "Please fill in all fields." };
   }
 
@@ -46,7 +49,6 @@ export async function submitReferral(
     .insert({
       advisor_id: advisorId,
       advisor_name: advisorName,
-      participant_name: participantName,
       participant_eng: participantEng,
       business_idea: businessIdea,
     })
@@ -57,14 +59,19 @@ export async function submitReferral(
     return { error: "Something went wrong — please try again." };
   }
 
-  await createNotification({
-    type: "referral_submitted",
-    title: `New referral: ${participantName}`,
-    body: `${participantName} (ENG: ${participantEng}) was referred to ${advisorName} for Self Employment. Business idea: ${businessIdea}`,
-    advisorId,
-    relatedId: referral.id,
-    dedupeKey: `referral_submitted:${referral.id}`,
-  });
+  // No single recipient for a "No preference" referral (it sits in every
+  // advisor's shared pool instead), so only notify when a specific
+  // advisor was chosen.
+  if (advisorId && advisorName) {
+    await createNotification({
+      type: "referral_submitted",
+      title: `New referral: ENG ${participantEng}`,
+      body: `A participant (ENG: ${participantEng}) was referred to ${advisorName} for Self Employment. Business idea: ${businessIdea}`,
+      advisorId,
+      relatedId: referral.id,
+      dedupeKey: `referral_submitted:${referral.id}`,
+    });
+  }
 
   return { success: { referralId: referral.id } };
 }
@@ -124,7 +131,11 @@ export async function acceptReferral(referralId: string, advisorId: string): Pro
       .from("participants")
       .insert({
         advisor_id: advisorId,
-        ptp_name: referral.participant_name,
+        // The external form no longer collects a participant name — fall
+        // back to the ENG reference so ptp_name (NOT NULL) is always
+        // populated; the advisor can rename via the existing Edit
+        // Participant page once they know who this is.
+        ptp_name: referral.participant_name ?? referral.participant_eng,
         external_participant_id: referral.participant_eng,
         business_name: referral.business_idea.slice(0, 200),
         scheme_start_date: new Date().toISOString().slice(0, 10),

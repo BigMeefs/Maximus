@@ -1,55 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
+import { listAdvisors } from "@/lib/data/advisor";
 import type { Referral, ReferralStatus } from "@/types/database";
 
-// Resolves a public referral link token to the advisor it belongs to.
-// Returns null for an unknown/invalid token — the external page shows a
-// generic "not valid" message either way, never which part failed.
-export async function getAdvisorByReferralToken(
-  token: string,
-): Promise<{ advisorId: string; advisorName: string } | null> {
-  const supabase = await createClient();
-
-  const { data: tokenRow } = await supabase
-    .from("advisor_referral_tokens")
-    .select("advisor_id")
-    .eq("token", token)
-    .maybeSingle();
-
-  if (!tokenRow) return null;
-
-  const { data: advisor } = await supabase
-    .from("advisors")
-    .select("full_name")
-    .eq("id", tokenRow.advisor_id)
-    .maybeSingle();
-
-  if (!advisor) return null;
-
-  return { advisorId: tokenRow.advisor_id, advisorName: advisor.full_name };
-}
-
-// The referral link for a given advisor — creates a token on the fly if
-// this advisor somehow doesn't have one yet (shouldn't happen once the
-// migration's backfill + insert trigger have run, but keeps the Referrals
-// tab from ever showing a broken link).
-export async function getOrCreateReferralToken(advisorId: string): Promise<string> {
-  const supabase = await createClient();
-
-  const { data: existing } = await supabase
-    .from("advisor_referral_tokens")
-    .select("token")
-    .eq("advisor_id", advisorId)
-    .maybeSingle();
-
-  if (existing) return existing.token;
-
-  const { data: created } = await supabase
-    .from("advisor_referral_tokens")
-    .insert({ advisor_id: advisorId })
-    .select("token")
-    .single();
-
-  return created?.token ?? "";
+// Advisors offered on the external referral picker. Reuses the same
+// activeOnly convention as the internal advisor picker (select-advisor
+// page) so an advisor going Inactive automatically drops off both.
+// "In Work" is excluded: it's the pseudo-advisor used for In Work
+// Tracking case handoffs (iwt_advisor_id), not a person who should
+// receive new Self Employment referrals.
+export async function listReferralAdvisors(): Promise<{ id: string; name: string }[]> {
+  const advisors = await listAdvisors({ activeOnly: true });
+  return advisors.filter((a) => a.full_name !== "In Work").map((a) => ({ id: a.id, name: a.full_name }));
 }
 
 export async function listReferralsForAdvisor(
@@ -57,10 +18,12 @@ export async function listReferralsForAdvisor(
   status?: ReferralStatus,
 ): Promise<Referral[]> {
   const supabase = await createClient();
+  // Own referrals plus the shared "No preference" pool (advisor_id null) —
+  // every advisor sees both in their Referrals tab.
   let query = supabase
     .from("referrals")
     .select("*")
-    .eq("advisor_id", advisorId)
+    .or(`advisor_id.eq.${advisorId},advisor_id.is.null`)
     .order("submitted_at", { ascending: false });
 
   if (status) {
@@ -73,7 +36,10 @@ export async function listReferralsForAdvisor(
 
 export async function getReferralCountsForAdvisor(advisorId: string): Promise<Record<ReferralStatus, number>> {
   const supabase = await createClient();
-  const { data } = await supabase.from("referrals").select("status").eq("advisor_id", advisorId);
+  const { data } = await supabase
+    .from("referrals")
+    .select("status")
+    .or(`advisor_id.eq.${advisorId},advisor_id.is.null`);
 
   const counts: Record<ReferralStatus, number> = { new: 0, accepted: 0, rejected: 0 };
   for (const row of data ?? []) {

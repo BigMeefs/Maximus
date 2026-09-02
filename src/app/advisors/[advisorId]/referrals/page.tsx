@@ -41,11 +41,12 @@ export default async function ReferralsPage({
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Referrals</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Potential Self Employment referrals sent to {advisor.full_name}.
+          Potential Self Employment referrals sent to {advisor.full_name}, plus any unassigned
+          referrals.
         </p>
       </div>
 
-      <ReferralQrCard advisorId={advisorId} />
+      <ReferralQrCard />
 
       <div className="flex flex-wrap gap-2">
         {STATUS_TABS.map((tab) => (
@@ -82,40 +83,41 @@ export default async function ReferralsPage({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {referrals.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 text-slate-600">{r.advisor_name}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      {r.status === "accepted" && r.accepted_participant_id ? (
-                        <Link
-                          href={`/advisors/${advisorId}/participants/${r.accepted_participant_id}`}
-                          className="hover:text-indigo-600"
-                        >
-                          {r.participant_name}
-                        </Link>
-                      ) : (
-                        r.participant_name
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{r.participant_eng}</td>
-                    <td className="max-w-xs px-4 py-3 text-slate-600">{r.business_idea}</td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {new Date(r.submitted_at).toLocaleDateString("en-GB")}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge tone={statusTone(r.status)}>{r.status}</Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      {r.status === "new" && (
-                        <ReferralActions
-                          referralId={r.id}
-                          advisorId={advisorId}
-                          participantName={r.participant_name}
-                        />
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {referrals.map((r) => {
+                  const displayName = r.participant_name ?? r.participant_eng;
+                  return (
+                    <tr key={r.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 text-slate-600">
+                        {r.advisor_name ?? <Badge tone="slate">Unassigned</Badge>}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-slate-900">
+                        {r.status === "accepted" && r.accepted_participant_id ? (
+                          <Link
+                            href={`/advisors/${advisorId}/participants/${r.accepted_participant_id}`}
+                            className="hover:text-indigo-600"
+                          >
+                            {displayName}
+                          </Link>
+                        ) : (
+                          displayName
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">{r.participant_eng}</td>
+                      <td className="max-w-xs px-4 py-3 text-slate-600">{r.business_idea}</td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {new Date(r.submitted_at).toLocaleDateString("en-GB")}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge tone={statusTone(r.status)}>{r.status}</Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        {r.status === "new" && (
+                          <ReferralActions referralId={r.id} advisorId={advisorId} participantName={displayName} />
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

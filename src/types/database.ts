@@ -134,8 +134,10 @@ export type Advisor = {
   updated_at: string;
 };
 
-// One opaque referral link token per advisor — see the External Self
-// Employment Referral System (src/app/referral/[token], src/lib/actions/referrals.ts).
+// One opaque referral link token per advisor — no longer used by the
+// current referral flow (see Referral below), which uses a single shared
+// picker page instead of per-advisor links. Table left in place rather
+// than dropped; kept here since the rows still exist.
 export type AdvisorReferralToken = {
   advisor_id: string;
   token: string;
@@ -145,11 +147,18 @@ export type AdvisorReferralToken = {
 export const REFERRAL_STATUSES = ["new", "accepted", "rejected"] as const;
 export type ReferralStatus = (typeof REFERRAL_STATUSES)[number];
 
+// advisor_id/advisor_name are null for a "No preference" submission — the
+// referral sits in every advisor's shared pool until one of them accepts
+// it. participant_name is null on every new submission (the external form
+// collects only Advisor Name / Participant ENG / Business Idea); it's a
+// legacy column, kept only because one real referral already has a value
+// in it. See the External Self Employment Referral System
+// (src/app/referral/page.tsx, src/lib/actions/referrals.ts).
 export type Referral = {
   id: string;
-  advisor_id: string;
-  advisor_name: string;
-  participant_name: string;
+  advisor_id: string | null;
+  advisor_name: string | null;
+  participant_name: string | null;
   participant_eng: string;
   business_idea: string;
   status: ReferralStatus;
@@ -740,9 +749,6 @@ export type Database = {
       referrals: {
         Row: Referral;
         Insert: Partial<Referral> & {
-          advisor_id: string;
-          advisor_name: string;
-          participant_name: string;
           participant_eng: string;
           business_idea: string;
         };
