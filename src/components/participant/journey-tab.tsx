@@ -6,6 +6,7 @@ import { BUSINESS_STAGES, type BusinessStage } from "@/types/database";
 import { updateBusinessStage } from "@/lib/actions/participant-attributes";
 import type { JourneyMilestone } from "@/lib/journey-timeline";
 import JourneyTimeline from "@/components/participant/journey-timeline";
+import Card from "@/components/ui/card";
 
 export default function JourneyTab({
   participantId,
@@ -20,9 +21,9 @@ export default function JourneyTab({
 }) {
   return (
     <div className="max-w-3xl space-y-8">
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <Card>
         <JourneyTimeline milestones={milestones} />
-      </div>
+      </Card>
 
       <details className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <summary className="cursor-pointer text-sm font-semibold text-slate-900">

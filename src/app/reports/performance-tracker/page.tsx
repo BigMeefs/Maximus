@@ -5,6 +5,7 @@ import TradingStartTrendsChart from "@/components/reports/trading-start-trends-c
 import MonthlyBreakdownChart from "@/components/reports/monthly-breakdown-chart";
 import { getPerformanceTrackerData, type PerformanceTrackerFilters } from "@/lib/data/performance-tracker";
 import { listAdvisors, listOffices } from "@/lib/data/advisor";
+import PageHeader from "@/components/ui/page-header";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -43,14 +44,10 @@ export default async function PerformanceTrackerPage({
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Performance Tracker</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Trading Starts and Outcomes stay credited to the advisor who originally created the Trading
-          Start, even after a participant transfers to an IWT advisor. Filter by Month, Year, Office or
-          Advisor — totals and charts update immediately.
-        </p>
-      </div>
+      <PageHeader
+        title="Performance Tracker"
+        description="Trading Starts and Outcomes stay credited to the advisor who originally created the Trading Start, even after a participant transfers to an IWT advisor. Filter by Month, Year, Office or Advisor — totals and charts update immediately."
+      />
 
       <PerformanceFilters offices={offices} advisors={advisors} years={years} />
 

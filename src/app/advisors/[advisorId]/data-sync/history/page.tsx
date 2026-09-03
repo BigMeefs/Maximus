@@ -2,6 +2,8 @@ import Link from "next/link";
 import Badge from "@/components/badge";
 import { getImportHistory } from "@/lib/actions/data-sync";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
+import Card from "@/components/ui/card";
+import PageHeader from "@/components/ui/page-header";
 import type { ImportStatus } from "@/types/database";
 
 function statusTone(status: ImportStatus) {
@@ -18,12 +20,9 @@ export default async function ImportHistoryPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Import history</h1>
-        <p className="mt-1 text-sm text-slate-500">Every import run against this CRM, most recent first.</p>
-      </div>
+      <PageHeader title="Import history" description="Every import run against this CRM, most recent first." />
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <Card padding="none" className="overflow-hidden">
         {batches.length === 0 ? (
           <p className="p-8 text-center text-sm text-slate-500">No imports yet.</p>
         ) : (
@@ -66,7 +65,7 @@ export default async function ImportHistoryPage({
             </TBody>
           </Table>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

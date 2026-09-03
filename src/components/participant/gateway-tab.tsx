@@ -6,6 +6,7 @@ import type { ChecklistEntry } from "@/lib/business-rules";
 import { GATEWAY_OUTCOMES, type EvidenceFile, type GatewayBookedStatus, type GatewayOutcome } from "@/types/database";
 import { toggleReadinessItem, updateGatewayBooking, updateGatewayNotes, type ReadinessChecklistField } from "@/lib/actions/gateway";
 import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
 
 const BOOKED_STATUSES: GatewayBookedStatus[] = ["Not Booked", "Booked", "Completed"];
 
@@ -52,7 +53,7 @@ export default function GatewayReadinessTab({
   const boundBookingAction = updateGatewayBooking.bind(null, participantId, advisorId);
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <Card>
       <h3 className="text-sm font-semibold text-slate-900">Gateway Readiness</h3>
       <p className="mt-1 text-xs text-slate-500">
         An advisor preparation checklist ahead of the participant&apos;s Universal Credit Gateway
@@ -223,6 +224,6 @@ export default function GatewayReadinessTab({
           </Button>
         </form>
       </div>
-    </section>
+    </Card>
   );
 }

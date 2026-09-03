@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
 
 type OfficeOption = { id: string; name: string };
 type AdvisorOption = { id: string; full_name: string; office_id: string };
@@ -39,7 +40,7 @@ export default function ReportFilters({
   const hasFilters = Boolean(officeId || advisorId || from || to);
 
   return (
-    <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <Card padding="sm" className="flex flex-wrap items-end gap-3">
       <label className="text-xs font-medium text-slate-600">
         Office
         <select
@@ -93,6 +94,6 @@ export default function ReportFilters({
           Clear filters
         </Button>
       )}
-    </div>
+    </Card>
   );
 }

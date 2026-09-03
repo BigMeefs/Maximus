@@ -10,6 +10,7 @@ import {
 } from "@/lib/actions/organisation-settings";
 import Field from "@/components/ui/field";
 import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
 
 const initialState: OrganisationSettingsFormState = {};
 
@@ -91,7 +92,7 @@ function LogoUploader({ logoUrl, logoName }: { logoUrl: string | null; logoName:
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <Card padding="lg">
       <h2 className="text-sm font-semibold text-slate-900">Organisation Logo</h2>
       <p className="mt-1 text-xs text-slate-500">
         Shown throughout the app in place of the default &ldquo;SE&rdquo; mark. Falls back to the
@@ -148,6 +149,6 @@ function LogoUploader({ logoUrl, logoName }: { logoUrl: string | null; logoName:
         </button>
         {uploadError && <span className="text-sm text-red-600">{uploadError}</span>}
       </form>
-    </div>
+    </Card>
   );
 }

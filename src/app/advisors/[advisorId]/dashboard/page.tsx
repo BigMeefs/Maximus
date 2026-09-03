@@ -13,6 +13,8 @@ import Badge from "@/components/badge";
 import TouchLastVisit from "@/components/touch-last-visit";
 import Button from "@/components/ui/button";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
+import Card from "@/components/ui/card";
+import PageHeader from "@/components/ui/page-header";
 
 const EXPIRING_THRESHOLD_DAYS = 30;
 const currency = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
@@ -120,21 +122,19 @@ export default async function DashboardPage({
     <div className="space-y-8">
       <TouchLastVisit advisorId={advisorId} />
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">
-            Welcome back, {advisor.full_name}
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {actionCount > 0
-              ? `${actionCount} item${actionCount === 1 ? "" : "s"} need your attention today.`
-              : "Nothing needs your attention right now — nice and quiet."}
-          </p>
-        </div>
-        <Button variant="secondary" href={additionalInfoHref} className="shrink-0">
-          Additional Information →
-        </Button>
-      </div>
+      <PageHeader
+        title={`Welcome back, ${advisor.full_name}`}
+        description={
+          actionCount > 0
+            ? `${actionCount} item${actionCount === 1 ? "" : "s"} need your attention today.`
+            : "Nothing needs your attention right now — nice and quiet."
+        }
+        actions={
+          <Button variant="secondary" href={additionalInfoHref}>
+            Additional Information →
+          </Button>
+        }
+      />
 
       {announcements.length > 0 && (
         <section className="space-y-2">
@@ -220,11 +220,13 @@ export default async function DashboardPage({
           </p>
         </div>
         {selfEmployment.tsIntelligence.length === 0 ? (
-          <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
-            No participants currently meet the NGSE Trading Start threshold.
-          </p>
+          <Card padding="sm">
+            <p className="text-sm text-slate-500">
+              No participants currently meet the NGSE Trading Start threshold.
+            </p>
+          </Card>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <Card padding="none" className="overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
                 <THead>
@@ -255,7 +257,7 @@ export default async function DashboardPage({
                 </TBody>
               </Table>
             </div>
-          </div>
+          </Card>
         )}
       </section>
 
@@ -263,8 +265,8 @@ export default async function DashboardPage({
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-slate-900">Stats</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">RAG breakdown</p>
+          <Card>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">RAG breakdown</p>
             <div className="mt-3 flex items-center gap-4">
               <span className="flex items-center gap-1.5 text-sm text-slate-700">
                 <Badge tone="green">{ragCounts.Green}</Badge> Green
@@ -276,12 +278,14 @@ export default async function DashboardPage({
                 <Badge tone="red">{ragCounts.Red}</Badge> Red
               </span>
             </div>
-          </div>
+          </Card>
 
           <StatCard label="Business plans uploaded" value={businessPlansUploaded} />
 
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Trading Starts — rolling 3 months</p>
+          <Card>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Trading Starts — rolling 3 months
+            </p>
             <div className="mt-3 space-y-1 text-sm text-slate-700">
               {selfEmployment.tradingStartsRolling3Months.map((m) => (
                 <div key={m.month} className="flex items-center justify-between">
@@ -290,7 +294,7 @@ export default async function DashboardPage({
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         </div>
       </section>
     </div>
@@ -310,10 +314,10 @@ function WorkQueueCard({
 }) {
   const hasChildren = Children.toArray(children).length > 0;
   return (
-    <section className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm ${className ?? ""}`}>
+    <Card className={className}>
       <h2 className="mb-4 text-sm font-semibold text-slate-900">{title}</h2>
       {hasChildren ? <ul className="divide-y divide-slate-100">{children}</ul> : <p className="text-sm text-slate-500">{emptyText}</p>}
-    </section>
+    </Card>
   );
 }
 

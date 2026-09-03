@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Button from "@/components/ui/button";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
+import Card from "@/components/ui/card";
 
 export type AdvisorPerformanceRow = {
   advisorId: string;
@@ -99,7 +100,7 @@ export default function AdvisorPerformanceTable({
       {visibleRows.length === 0 ? (
         <p className="text-sm text-slate-500">No advisors match your search.</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Card padding="none" className="overflow-x-auto">
           <Table>
             <THead>
               <tr>
@@ -133,7 +134,7 @@ export default function AdvisorPerformanceTable({
               ))}
             </TBody>
           </Table>
-        </div>
+        </Card>
       )}
     </div>
   );

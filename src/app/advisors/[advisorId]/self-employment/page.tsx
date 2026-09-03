@@ -13,6 +13,8 @@ import StatCard from "@/components/stat-card";
 import HealthBadge from "@/components/participant/health-badge";
 import Badge, { statusTone } from "@/components/badge";
 import PortalQrCard from "@/components/self-employment/portal-qr-card";
+import Card from "@/components/ui/card";
+import PageHeader from "@/components/ui/page-header";
 
 const currency = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
 
@@ -112,14 +114,16 @@ export default async function AdditionalInformationPage({
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Additional Information</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Everything else for {advisor.full_name}&apos;s caseload — Trading Starts, In Work Tracking,
-          Outcomes, funding, business plans and earnings analysis. The main Dashboard covers what needs
-          attention today.
-        </p>
-      </div>
+      <PageHeader
+        title="Additional Information"
+        description={
+          <>
+            Everything else for {advisor.full_name}&apos;s caseload — Trading Starts, In Work Tracking,
+            Outcomes, funding, business plans and earnings analysis. The main Dashboard covers what needs
+            attention today.
+          </>
+        }
+      />
 
       <PortalQrCard />
 
@@ -274,12 +278,13 @@ export default async function AdditionalInformationPage({
           </Link>
         </div>
         {unreviewedSubmissions.length === 0 ? (
-          <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
-            No submissions awaiting review.
-          </p>
+          <Card padding="sm">
+            <p className="text-sm text-slate-500">No submissions awaiting review.</p>
+          </Card>
         ) : (
-          <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white shadow-sm">
-            {unreviewedSubmissions.slice(0, 5).map((row) => (
+          <Card padding="none" className="overflow-hidden">
+            <ul className="divide-y divide-slate-100">
+              {unreviewedSubmissions.slice(0, 5).map((row) => (
               <li key={row.entry.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
                 <div>
                   <p className="font-medium text-slate-800">{row.participantName}</p>
@@ -294,6 +299,7 @@ export default async function AdditionalInformationPage({
               </li>
             ))}
           </ul>
+          </Card>
         )}
       </section>
 
@@ -303,11 +309,11 @@ export default async function AdditionalInformationPage({
           <p className="text-xs text-slate-500">Everything needing action, most urgent first.</p>
         </div>
         {stats.workQueue.length === 0 ? (
-          <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
-            Nothing needs attention right now.
-          </p>
+          <Card padding="sm">
+            <p className="text-sm text-slate-500">Nothing needs attention right now.</p>
+          </Card>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <Card padding="none" className="overflow-hidden">
             <ul className="divide-y divide-slate-100">
               {stats.workQueue.map((item, index) => (
                 <li key={`${item.type}-${item.participantId}-${index}`} className="p-3">
@@ -324,7 +330,7 @@ export default async function AdditionalInformationPage({
                 </li>
               ))}
             </ul>
-          </div>
+          </Card>
         )}
       </section>
 
@@ -337,11 +343,11 @@ export default async function AdditionalInformationPage({
           </p>
         </div>
         {stats.gseClaimEligible.length === 0 ? (
-          <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
-            No participants currently marked as GSE or Claim Closed.
-          </p>
+          <Card padding="sm">
+            <p className="text-sm text-slate-500">No participants currently marked as GSE or Claim Closed.</p>
+          </Card>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <Card padding="none" className="overflow-hidden">
             <ul className="divide-y divide-slate-100">
               {stats.gseClaimEligible.map((row) => (
                 <li key={`${row.participantId}-${row.reason}`} className="p-3">
@@ -358,7 +364,7 @@ export default async function AdditionalInformationPage({
                 </li>
               ))}
             </ul>
-          </div>
+          </Card>
         )}
       </section>
 
@@ -371,9 +377,9 @@ export default async function AdditionalInformationPage({
           </p>
         </div>
         {stats.outcomeIntelligence.length === 0 ? (
-          <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
-            No participants currently in In Work Tracking.
-          </p>
+          <Card padding="sm">
+            <p className="text-sm text-slate-500">No participants currently in In Work Tracking.</p>
+          </Card>
         ) : (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {stats.outcomeIntelligence.map((row) => (
@@ -436,16 +442,15 @@ export default async function AdditionalInformationPage({
           </p>
         </div>
         {stats.transferredToIwt.length === 0 ? (
-          <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
-            No participants currently transferred to another IWT advisor.
-          </p>
+          <Card padding="sm">
+            <p className="text-sm text-slate-500">
+              No participants currently transferred to another IWT advisor.
+            </p>
+          </Card>
         ) : (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {stats.transferredToIwt.map((row) => (
-              <div
-                key={row.tradingStart.id}
-                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-              >
+              <Card key={row.tradingStart.id} padding="sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-medium text-slate-900">{row.participantName}</p>
                   <div className="flex items-center gap-2">
@@ -488,7 +493,7 @@ export default async function AdditionalInformationPage({
                     {new Date(row.gse.deadlineDate).toLocaleDateString("en-GB")}
                   </p>
                 )}
-              </div>
+              </Card>
             ))}
           </div>
         )}
@@ -510,10 +515,10 @@ function WorkQueueCard({
 }) {
   const hasChildren = Children.toArray(children).length > 0;
   return (
-    <section className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm ${className ?? ""}`}>
+    <Card className={className}>
       <h2 className="mb-4 text-sm font-semibold text-slate-900">{title}</h2>
       {hasChildren ? <ul className="divide-y divide-slate-100">{children}</ul> : <p className="text-sm text-slate-500">{emptyText}</p>}
-    </section>
+    </Card>
   );
 }
 

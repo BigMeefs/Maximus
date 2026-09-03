@@ -6,6 +6,8 @@ import Badge from "@/components/badge";
 import ReferralQrCard from "@/components/self-employment/referral-qr-card";
 import ReferralActions from "@/components/self-employment/referral-actions";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
+import Card from "@/components/ui/card";
+import PageHeader from "@/components/ui/page-header";
 
 const STATUS_TABS: { value: ReferralStatus | "all"; label: string }[] = [
   { value: "new", label: "New" },
@@ -39,13 +41,10 @@ export default async function ReferralsPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Referrals</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Potential Self Employment referrals sent to {advisor.full_name}, plus any unassigned
-          referrals.
-        </p>
-      </div>
+      <PageHeader
+        title="Referrals"
+        description={`Potential Self Employment referrals sent to ${advisor.full_name}, plus any unassigned referrals.`}
+      />
 
       <ReferralQrCard />
 
@@ -66,7 +65,7 @@ export default async function ReferralsPage({
         ))}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <Card padding="none" className="overflow-hidden">
         {referrals.length === 0 ? (
           <p className="p-8 text-center text-sm text-slate-500">No referrals in this view.</p>
         ) : (
@@ -124,7 +123,7 @@ export default async function ReferralsPage({
             </Table>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

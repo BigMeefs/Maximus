@@ -2,6 +2,7 @@
 
 import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { MonthlyIncomePoint } from "@/lib/trading-start-rules";
+import Card from "@/components/ui/card";
 
 export default function IncomeAnalyticsChart({ monthly }: { monthly: MonthlyIncomePoint[] }) {
   if (monthly.length === 0) {
@@ -16,7 +17,7 @@ export default function IncomeAnalyticsChart({ monthly }: { monthly: MonthlyInco
   }));
 
   return (
-    <div className="h-72 w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <Card padding="sm" className="h-72 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -29,6 +30,6 @@ export default function IncomeAnalyticsChart({ monthly }: { monthly: MonthlyInco
           <Line type="monotone" dataKey="Net Profit" stroke="#059669" strokeWidth={2} dot={{ r: 3 }} />
         </ComposedChart>
       </ResponsiveContainer>
-    </div>
+    </Card>
   );
 }

@@ -2,6 +2,8 @@ import StatCard from "@/components/stat-card";
 import SyncDashboardChart from "@/components/data-sync/sync-dashboard-chart";
 import { getSyncDashboardStats } from "@/lib/actions/data-sync";
 import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
+import PageHeader from "@/components/ui/page-header";
 
 export default async function DataSyncPage({
   params,
@@ -14,25 +16,23 @@ export default async function DataSyncPage({
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Data Sync</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Import participant data from Power BI exports and keep track of every import that&apos;s run.
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="secondary" href={`${basePath}/mapping`}>
-            Field mappings
-          </Button>
-          <Button variant="secondary" href={`${basePath}/history`}>
-            Import history
-          </Button>
-          <Button href={`${basePath}/import`} className="inline-flex items-center justify-center">
-            + New import
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Data Sync"
+        description="Import participant data from Power BI exports and keep track of every import that's run."
+        actions={
+          <>
+            <Button variant="secondary" href={`${basePath}/mapping`}>
+              Field mappings
+            </Button>
+            <Button variant="secondary" href={`${basePath}/history`}>
+              Import history
+            </Button>
+            <Button href={`${basePath}/import`} className="inline-flex items-center justify-center">
+              + New import
+            </Button>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard
@@ -50,10 +50,10 @@ export default async function DataSyncPage({
         <StatCard label="Imports this month" value={stats.importsThisMonth} />
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <Card padding="lg">
         <h2 className="mb-4 text-sm font-semibold text-slate-900">Recent import activity</h2>
         <SyncDashboardChart batches={stats.recentBatches} />
-      </div>
+      </Card>
     </div>
   );
 }

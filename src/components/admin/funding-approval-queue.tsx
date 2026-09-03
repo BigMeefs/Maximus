@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { FundingApprovalRow } from "@/lib/data/funding-approvals";
 import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
 import {
   approveFundingRequest,
   rejectFundingRequest,
@@ -16,9 +17,9 @@ const initialState: FundingFormState = {};
 export default function FundingApprovalQueue({ rows }: { rows: FundingApprovalRow[] }) {
   if (rows.length === 0) {
     return (
-      <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
-        No funding requests are awaiting manager approval.
-      </p>
+      <Card padding="sm">
+        <p className="text-sm text-slate-500">No funding requests are awaiting manager approval.</p>
+      </Card>
     );
   }
 
@@ -39,7 +40,7 @@ function FundingApprovalCard({ row }: { row: FundingApprovalRow }) {
   const [rejectState, rejectAction, rejecting] = useActionState(boundReject, initialState);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <Card padding="sm">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           {row.advisorId ? (
@@ -115,7 +116,7 @@ function FundingApprovalCard({ row }: { row: FundingApprovalRow }) {
           <p className="text-xs text-slate-500">Enter your name above to enable approve/reject.</p>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
 

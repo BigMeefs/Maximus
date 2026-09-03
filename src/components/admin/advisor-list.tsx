@@ -5,6 +5,7 @@ import Link from "next/link";
 import Badge from "@/components/badge";
 import Button from "@/components/ui/button";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
+import Card from "@/components/ui/card";
 import type { AdvisorWithOffice } from "@/lib/data/advisor";
 import type { Office } from "@/types/database";
 import { createAdvisor, setAdvisorStatus, type AdminFormState } from "@/lib/actions/admin";
@@ -79,7 +80,7 @@ export default function AdvisorList({
         </div>
       </form>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <Card padding="none" className="overflow-hidden">
         <Table>
           <THead>
             <tr>
@@ -101,7 +102,7 @@ export default function AdvisorList({
             ))}
           </TBody>
         </Table>
-      </div>
+      </Card>
     </div>
   );
 }

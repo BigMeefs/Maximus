@@ -6,6 +6,7 @@ import Badge from "@/components/badge";
 import AdvisorEditForm from "@/components/admin/advisor-edit-form";
 import AdvisorPinManager from "@/components/admin/advisor-pin-manager";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
+import Card from "@/components/ui/card";
 
 export default async function AdminAdvisorDetailPage({
   params,
@@ -64,7 +65,7 @@ export default async function AdminAdvisorDetailPage({
         {!caseload || caseload.length === 0 ? (
           <p className="text-sm text-slate-500">No participants assigned.</p>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <Card padding="none" className="overflow-hidden">
             <Table>
               <THead>
                 <tr>
@@ -92,7 +93,7 @@ export default async function AdminAdvisorDetailPage({
                 ))}
               </TBody>
             </Table>
-          </div>
+          </Card>
         )}
       </div>
     </div>

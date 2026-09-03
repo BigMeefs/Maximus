@@ -3,6 +3,8 @@ import { listAdvisors } from "@/lib/data/advisor";
 import { getRecentTransfers } from "@/lib/actions/transfer";
 import TransferTool from "@/components/admin/transfer-tool";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
+import Card from "@/components/ui/card";
+import PageHeader from "@/components/ui/page-header";
 
 export default async function AdminTransferPage() {
   const supabase = await createClient();
@@ -21,14 +23,10 @@ export default async function AdminTransferPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Transfer participants</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Move one or many participants to a different advisor. Their office updates
-          automatically, and every other record — notes, documents, funding, AI summaries,
-          Gateway progress — stays exactly as it is.
-        </p>
-      </div>
+      <PageHeader
+        title="Transfer participants"
+        description="Move one or many participants to a different advisor. Their office updates automatically, and every other record — notes, documents, funding, AI summaries, Gateway progress — stays exactly as it is."
+      />
 
       <TransferTool participants={participants ?? []} advisors={activeAdvisors} />
 
@@ -37,7 +35,7 @@ export default async function AdminTransferPage() {
         {transfers.length === 0 ? (
           <p className="text-sm text-slate-500">No transfers recorded yet.</p>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <Card padding="none" className="overflow-hidden">
             <Table>
               <THead>
                 <tr>
@@ -64,7 +62,7 @@ export default async function AdminTransferPage() {
                 ))}
               </TBody>
             </Table>
-          </div>
+          </Card>
         )}
       </div>
     </div>

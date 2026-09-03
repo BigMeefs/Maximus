@@ -1,5 +1,6 @@
 import Badge, { statusTone } from "@/components/badge";
 import RagSelector from "@/components/participant/rag-selector";
+import Card from "@/components/ui/card";
 import clsx from "clsx";
 import type { Appointment, Participant, RagStatus } from "@/types/database";
 
@@ -12,7 +13,7 @@ function ProgressCard({
 }) {
   const tone = percent >= 90 ? "bg-emerald-500" : percent >= 50 ? "bg-amber-500" : "bg-red-500";
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <Card padding="sm">
       <div className="flex items-center justify-between text-sm">
         <span className="font-medium text-slate-500">{label}</span>
         <span className="font-semibold text-slate-900">{percent}%</span>
@@ -20,16 +21,16 @@ function ProgressCard({
       <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
         <div className={clsx("h-full rounded-full transition-all", tone)} style={{ width: `${percent}%` }} />
       </div>
-    </div>
+    </Card>
   );
 }
 
 function InfoCard({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <Card padding="sm">
       <p className="text-sm font-medium text-slate-500">{label}</p>
       <div className="mt-2 text-sm font-semibold text-slate-900">{children}</div>
-    </div>
+    </Card>
   );
 }
 
@@ -52,7 +53,7 @@ export default function SelfEmploymentOverview({
 }) {
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <Card>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
@@ -71,7 +72,7 @@ export default function SelfEmploymentOverview({
             {participant.business_stage}
           </Badge>
         </div>
-      </div>
+      </Card>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         <InfoCard label="Business Sector">

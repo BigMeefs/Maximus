@@ -2,6 +2,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import type { MonthlyProgressPoint } from "@/lib/data/reports";
+import Card from "@/components/ui/card";
 
 export default function MonthlyProgressChart({ points }: { points: MonthlyProgressPoint[] }) {
   if (points.length === 0) {
@@ -15,7 +16,7 @@ export default function MonthlyProgressChart({ points }: { points: MonthlyProgre
   }));
 
   return (
-    <div className="h-72 w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <Card padding="sm" className="h-72 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -27,6 +28,6 @@ export default function MonthlyProgressChart({ points }: { points: MonthlyProgre
           <Bar dataKey="Expenses" fill="#f97316" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
-    </div>
+    </Card>
   );
 }

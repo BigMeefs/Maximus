@@ -3,6 +3,7 @@ import { getActiveNotificationsForAdvisor } from "@/lib/data/notifications";
 import { syncAutoNotificationsForAdvisor } from "@/lib/data/notification-rules";
 import { createClient } from "@/lib/supabase/server";
 import NotificationQueue, { type NotificationRow } from "@/components/notifications/notification-queue";
+import PageHeader from "@/components/ui/page-header";
 
 export default async function NotificationsPage({
   params,
@@ -34,14 +35,10 @@ export default async function NotificationsPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Notifications</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Your live work queue — everything below needs a look. Marking something reviewed removes it from
-          this list immediately; it isn&apos;t deleted, just moved to the audit trail (Admin Dashboard →
-          Notification History).
-        </p>
-      </div>
+      <PageHeader
+        title="Notifications"
+        description="Your live work queue — everything below needs a look. Marking something reviewed removes it from this list immediately; it isn't deleted, just moved to the audit trail (Admin Dashboard → Notification History)."
+      />
 
       <NotificationQueue notifications={rows} advisorId={advisorId} reviewedByName={currentAdvisor.full_name} />
     </div>

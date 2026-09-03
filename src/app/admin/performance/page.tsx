@@ -3,6 +3,8 @@ import { getAdvisorMplPerformance } from "@/lib/data/advisor-mpl-performance";
 import MplSettingsForm from "@/components/admin/mpl-settings-form";
 import Badge from "@/components/badge";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
+import Card from "@/components/ui/card";
+import PageHeader from "@/components/ui/page-header";
 
 function pctTone(pct: number | null): "slate" | "green" | "amber" | "red" {
   if (pct === null) return "slate";
@@ -22,13 +24,10 @@ export default async function AdminPerformancePage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Performance Targets</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Set the monthly Minimum Performance Level (MPL) for Trading Starts and Outcomes, and see how
-          each advisor is tracking against it.
-        </p>
-      </div>
+      <PageHeader
+        title="Performance Targets"
+        description="Set the monthly Minimum Performance Level (MPL) for Trading Starts and Outcomes, and see how each advisor is tracking against it."
+      />
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
@@ -63,11 +62,11 @@ export default async function AdminPerformancePage() {
           </p>
         ) : null}
         {rows.length === 0 ? (
-          <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
-            No active advisors found.
-          </p>
+          <Card padding="sm">
+            <p className="text-sm text-slate-500">No active advisors found.</p>
+          </Card>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <Card padding="none" className="overflow-x-auto">
             <Table>
               <THead>
                 <tr>
@@ -110,7 +109,7 @@ export default async function AdminPerformancePage() {
                 ))}
               </TBody>
             </Table>
-          </div>
+          </Card>
         )}
       </section>
     </div>

@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import type { ReferralSubmitState } from "@/lib/actions/referrals";
 import Field from "@/components/ui/field";
 import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
 
 const initialState: ReferralSubmitState = {};
 
@@ -20,7 +21,7 @@ export default function ReferralFlow({ options }: { options: ReferralOption[] })
 
   if (!selected) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <Card padding="lg">
         <p className="mb-4 text-sm font-medium text-slate-900">
           Which SE advisor would you like to refer this participant to?
         </p>
@@ -36,7 +37,7 @@ export default function ReferralFlow({ options }: { options: ReferralOption[] })
             </button>
           ))}
         </div>
-      </div>
+      </Card>
     );
   }
 
@@ -48,16 +49,16 @@ function ReferralForm({ option, onChangeAdvisor }: { option: ReferralOption; onC
 
   if (state.success) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+      <Card padding="lg" className="text-center">
         <p className="text-lg font-semibold text-slate-900">Referral submitted successfully.</p>
         <p className="mt-1 text-sm text-slate-600">Thank you — it will be reviewed shortly.</p>
         <p className="mt-3 text-xs text-slate-400">Reference: {state.success.referralId.slice(0, 8)}</p>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <Card padding="lg">
       <div className="mb-4 flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm">
         <p className="text-slate-600">
           SE advisor: <span className="font-medium text-slate-900">{option.name}</span>
@@ -91,6 +92,6 @@ function ReferralForm({ option, onChangeAdvisor }: { option: ReferralOption; onC
           {pending ? "Submitting..." : "Submit Referral"}
         </Button>
       </form>
-    </div>
+    </Card>
   );
 }

@@ -5,6 +5,7 @@ import Badge from "@/components/badge";
 import type { NotificationHistoryRow } from "@/lib/data/notifications";
 import { archiveNotification, deleteNotificationPermanently, restoreNotification } from "@/lib/actions/notifications";
 import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
 
 function statusBadgeTone(status: string) {
   if (status === "Archived") return "slate" as const;
@@ -18,9 +19,9 @@ export default function NotificationHistoryList({ rows }: { rows: NotificationHi
 
   if (items.length === 0) {
     return (
-      <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
-        No notifications match these filters.
-      </p>
+      <Card padding="sm">
+        <p className="text-sm text-slate-500">No notifications match these filters.</p>
+      </Card>
     );
   }
 
@@ -58,7 +59,7 @@ function HistoryRow({
   const [pending, startTransition] = useTransition();
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <Card padding="sm">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-medium text-slate-900">{row.title}</p>
@@ -126,6 +127,6 @@ function HistoryRow({
           Delete permanently
         </button>
       </div>
-    </div>
+    </Card>
   );
 }

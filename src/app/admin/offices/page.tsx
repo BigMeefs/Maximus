@@ -1,5 +1,6 @@
 import { listAdvisors, listOffices } from "@/lib/data/advisor";
 import OfficeList from "@/components/admin/office-list";
+import PageHeader from "@/components/ui/page-header";
 
 export default async function AdminOfficesPage() {
   const [offices, advisors] = await Promise.all([listOffices(), listAdvisors()]);
@@ -11,13 +12,10 @@ export default async function AdminOfficesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Offices</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Unlimited offices — archiving an office hides it from new advisor assignments without
-          affecting advisors or participants already linked to it.
-        </p>
-      </div>
+      <PageHeader
+        title="Offices"
+        description="Unlimited offices — archiving an office hides it from new advisor assignments without affecting advisors or participants already linked to it."
+      />
       <OfficeList offices={offices} advisorCountByOffice={advisorCountByOffice} />
     </div>
   );

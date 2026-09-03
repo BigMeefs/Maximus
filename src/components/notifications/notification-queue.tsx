@@ -5,6 +5,7 @@ import Badge from "@/components/badge";
 import type { Notification, NotificationType } from "@/types/database";
 import { markNotificationReviewed } from "@/lib/actions/notifications";
 import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
 
 export type NotificationRow = Notification & { participantName: string | null };
 
@@ -49,12 +50,12 @@ export default function NotificationQueue({
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+      <Card padding="none" className="p-8 text-center">
         <p className="text-2xl">✅</p>
         <p className="mt-2 text-sm font-medium text-slate-700">
           You&apos;re all caught up. No notifications require your attention.
         </p>
-      </div>
+      </Card>
     );
   }
 
@@ -91,7 +92,7 @@ function NotificationCard({
     : null;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <Card padding="sm">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex items-start gap-3">
           <span aria-hidden className="text-xl leading-none">
@@ -128,6 +129,6 @@ function NotificationCard({
           </Button>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

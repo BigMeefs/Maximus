@@ -2,6 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { MonthlyTrendPoint } from "@/lib/data/reports";
+import Card from "@/components/ui/card";
 
 export default function TradingStartTrendsChart({ points }: { points: MonthlyTrendPoint[] }) {
   if (points.length === 0) {
@@ -15,7 +16,7 @@ export default function TradingStartTrendsChart({ points }: { points: MonthlyTre
   }));
 
   return (
-    <div className="h-72 w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <Card padding="sm" className="h-72 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -27,6 +28,6 @@ export default function TradingStartTrendsChart({ points }: { points: MonthlyTre
           <Bar dataKey="Outcomes" fill="#059669" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
-    </div>
+    </Card>
   );
 }

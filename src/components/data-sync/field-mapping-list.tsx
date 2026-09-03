@@ -5,6 +5,7 @@ import type { ImportFieldMapping } from "@/types/database";
 import { IMPORTABLE_FIELDS } from "@/lib/data-sync/field-mapping";
 import { deleteFieldMapping } from "@/lib/actions/data-sync";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
+import Card from "@/components/ui/card";
 
 const LABEL_BY_FIELD = new Map<string, string>(IMPORTABLE_FIELDS.map((f) => [f.field, f.label]));
 
@@ -27,7 +28,7 @@ export default function FieldMappingList({ mappings }: { mappings: ImportFieldMa
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <Card padding="none" className="overflow-hidden">
       <Table>
         <THead>
           <tr>
@@ -57,6 +58,6 @@ export default function FieldMappingList({ mappings }: { mappings: ImportFieldMa
           ))}
         </TBody>
       </Table>
-    </div>
+    </Card>
   );
 }

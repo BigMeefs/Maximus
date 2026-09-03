@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Badge from "@/components/badge";
 import { setAdvisorPin, unlockAdvisorPin, type AdvisorPinManageState } from "@/lib/actions/advisor-pin";
 import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
 
 const initialState: AdvisorPinManageState = {};
 
@@ -23,7 +24,7 @@ export default function AdvisorPinManager({
   const boundUnlock = unlockAdvisorPin.bind(null, advisorId);
 
   return (
-    <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <Card padding="lg" className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-slate-900">Advisor Passcode (PIN)</h2>
         <div className="flex items-center gap-2">
@@ -76,6 +77,6 @@ export default function AdvisorPinManager({
         {state.error && <span className="text-sm text-red-600">{state.error}</span>}
         {state.success && <span className="text-sm text-emerald-600">{state.success}</span>}
       </form>
-    </div>
+    </Card>
   );
 }

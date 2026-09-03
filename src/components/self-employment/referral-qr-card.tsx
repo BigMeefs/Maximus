@@ -1,6 +1,7 @@
 import QRCode from "qrcode";
 import { getSiteOrigin } from "@/lib/site-url";
 import CopyLinkButton from "@/components/copy-link-button";
+import Card from "@/components/ui/card";
 
 export default async function ReferralQrCard() {
   const origin = await getSiteOrigin();
@@ -8,7 +9,7 @@ export default async function ReferralQrCard() {
   const qrDataUrl = await QRCode.toDataURL(referralUrl, { margin: 1, width: 160 });
 
   return (
-    <section className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center">
+    <Card className="flex flex-col gap-4 sm:flex-row sm:items-center">
       {/* eslint-disable-next-line @next/next/no-img-element -- a data: URI can't go through next/image's remote loader */}
       <img
         src={qrDataUrl}
@@ -29,6 +30,6 @@ export default async function ReferralQrCard() {
           <CopyLinkButton value={referralUrl} />
         </div>
       </div>
-    </section>
+    </Card>
   );
 }

@@ -36,6 +36,7 @@ import {
 import { getNextBestAction } from "@/lib/next-best-action";
 import { computeJourneyTimeline } from "@/lib/journey-timeline";
 import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
 
 export default async function ParticipantProfilePage({
   params,
@@ -131,7 +132,7 @@ export default async function ParticipantProfilePage({
         </Link>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <Card padding="lg">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div>
             <div className="flex flex-wrap items-center gap-3">
@@ -201,7 +202,7 @@ export default async function ParticipantProfilePage({
             {participant.social_media_links || "—"}
           </Info>
         </dl>
-      </div>
+      </Card>
 
       <NextBestActionPanel recommendation={nextBestAction} />
 
@@ -217,7 +218,7 @@ export default async function ParticipantProfilePage({
 
       <HealthScorePanel participantId={id} scores={healthScores} />
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <Card padding="lg">
         <Tabs
           initialTab={tab}
           tabs={[
@@ -352,7 +353,7 @@ export default async function ParticipantProfilePage({
             },
           ]}
         />
-      </div>
+      </Card>
     </div>
   );
 }

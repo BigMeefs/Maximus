@@ -3,6 +3,8 @@ import Badge from "@/components/badge";
 import DownloadErrorsButton from "@/components/data-sync/download-errors-button";
 import { getImportBatch, getImportBatchErrors } from "@/lib/actions/data-sync";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
+import Card from "@/components/ui/card";
+import PageHeader from "@/components/ui/page-header";
 import type { ImportStatus } from "@/types/database";
 
 function statusTone(status: ImportStatus) {
@@ -22,12 +24,10 @@ export default async function ImportBatchDetailPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">{batch.file_name}</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Imported by {batch.imported_by} on {new Date(batch.created_at).toLocaleString("en-GB")}
-        </p>
-      </div>
+      <PageHeader
+        title={batch.file_name}
+        description={`Imported by ${batch.imported_by} on ${new Date(batch.created_at).toLocaleString("en-GB")}`}
+      />
 
       <div className="flex items-center gap-3">
         <Badge tone={statusTone(batch.status)}>{batch.status}</Badge>
@@ -52,7 +52,7 @@ export default async function ImportBatchDetailPage({
         {errors.length === 0 ? (
           <p className="text-sm text-slate-500">No row errors on this import.</p>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <Card padding="none" className="overflow-hidden">
             <Table>
               <THead>
                 <tr>
@@ -69,7 +69,7 @@ export default async function ImportBatchDetailPage({
                 ))}
               </TBody>
             </Table>
-          </div>
+          </Card>
         )}
       </div>
     </div>

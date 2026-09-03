@@ -1,6 +1,7 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import Card from "@/components/ui/card";
 
 // Fixed-order categorical palette (existing Tailwind 600-weight hues already
 // used elsewhere in this app's badges/charts) — series keep the same color
@@ -39,7 +40,7 @@ export default function MonthlyBreakdownChart({
 
   return (
     <div className="space-y-2">
-      <div className="h-72 w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <Card padding="sm" className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -52,7 +53,7 @@ export default function MonthlyBreakdownChart({
             ))}
           </BarChart>
         </ResponsiveContainer>
-      </div>
+      </Card>
       {hiddenCount > 0 && (
         <p className="text-xs text-slate-500">
           Showing the top {MAX_SERIES} by volume — {hiddenCount} more hidden. Use the filters above to narrow the view.

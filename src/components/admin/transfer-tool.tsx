@@ -5,6 +5,7 @@ import type { AdvisorWithOffice } from "@/lib/data/advisor";
 import { transferParticipants, type TransferFormState } from "@/lib/actions/transfer";
 import Button from "@/components/ui/button";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
+import Card from "@/components/ui/card";
 
 type ParticipantRow = {
   id: string;
@@ -108,7 +109,7 @@ export default function TransferTool({
         </select>
       </div>
 
-      <div className="max-h-[24rem] overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <Card padding="none" className="max-h-[24rem] overflow-auto">
         <Table>
           <THead className="sticky top-0">
             <tr>
@@ -154,7 +155,7 @@ export default function TransferTool({
             )}
           </TBody>
         </Table>
-      </div>
+      </Card>
 
       <div className="flex flex-wrap items-end gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
         <div>

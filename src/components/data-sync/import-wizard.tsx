@@ -10,6 +10,7 @@ import { previewImport, runImport, saveFieldMapping, type ImportRunResult } from
 import type { AdvisorWithOffice } from "@/lib/data/advisor";
 import Button from "@/components/ui/button";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
+import Card from "@/components/ui/card";
 
 type Step = "upload" | "map" | "preview" | "summary";
 
@@ -209,7 +210,7 @@ export default function ImportWizard({
             <span className="font-medium text-red-600">*</span> are required.
           </p>
 
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <Card padding="none" className="overflow-hidden">
             <Table>
               <THead>
                 <tr>
@@ -245,7 +246,7 @@ export default function ImportWizard({
                 ))}
               </TBody>
             </Table>
-          </div>
+          </Card>
 
           <label className="flex items-center gap-2 text-sm text-slate-600">
             <input
@@ -280,7 +281,7 @@ export default function ImportWizard({
             <PreviewStat label="Blocked (errors)" value={counts.error} tone="red" />
           </div>
 
-          <div className="max-h-[28rem] overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <Card padding="none" className="max-h-[28rem] overflow-auto">
             <Table>
               <THead className="sticky top-0">
                 <tr>
@@ -319,7 +320,7 @@ export default function ImportWizard({
                 ))}
               </TBody>
             </Table>
-          </div>
+          </Card>
           {preview.length > PREVIEW_ROW_LIMIT && (
             <p className="text-xs text-slate-500">
               Showing the first {PREVIEW_ROW_LIMIT} of {preview.length} rows.

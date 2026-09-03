@@ -5,6 +5,8 @@ import TradingStartTrendsChart from "@/components/reports/trading-start-trends-c
 import ReportFilters from "@/components/reports/report-filters";
 import AdvisorPerformanceTable from "@/components/reports/advisor-performance-table";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
+import Card from "@/components/ui/card";
+import PageHeader from "@/components/ui/page-header";
 import {
   getCompanyReportStats,
   getExpenseApprovalReport,
@@ -57,19 +59,14 @@ export default async function ReportsPage({
 
   return (
     <div className="space-y-10">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Reports</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          The Manager Dashboard — company-wide breakdowns across every office and advisor.
-        </p>
-      </div>
+      <PageHeader
+        title="Reports"
+        description="The Manager Dashboard — company-wide breakdowns across every office and advisor."
+      />
 
       <ReportFilters offices={offices} advisors={advisors} />
 
-      <a
-        href="/admin/funding-approvals"
-        className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
-      >
+      <Card href="/admin/funding-approvals" padding="sm" hoverable className="flex items-center justify-between">
         <div>
           <h2 className="text-sm font-semibold text-slate-900">Funding Approval Queue</h2>
           <p className="mt-0.5 text-xs text-slate-500">Requests over £100 awaiting a manager decision.</p>
@@ -77,7 +74,7 @@ export default async function ReportsPage({
         <Badge tone={pendingFundingApprovals > 0 ? "amber" : "green"}>
           {pendingFundingApprovals} pending
         </Badge>
-      </a>
+      </Card>
 
       <div>
         <h2 className="mb-3 text-sm font-semibold text-slate-900">Office Overview</h2>
@@ -95,7 +92,7 @@ export default async function ReportsPage({
       </div>
 
       <Section title="Expenses" subtitle="Funding requests by month, broken down by approval status.">
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Card padding="none" className="overflow-x-auto">
           <Table>
             <THead>
               <tr>
@@ -122,7 +119,7 @@ export default async function ReportsPage({
               ))}
             </TBody>
           </Table>
-        </div>
+        </Card>
       </Section>
 
       <Section title="By office" subtitle="Compare caseload size and readiness across offices.">
@@ -149,7 +146,7 @@ export default async function ReportsPage({
         {officeStats.length === 0 ? (
           <p className="text-sm text-slate-500">No offices found.</p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <Card padding="none" className="overflow-x-auto">
             <Table>
               <THead>
                 <tr>
@@ -188,7 +185,7 @@ export default async function ReportsPage({
                 ))}
               </TBody>
             </Table>
-          </div>
+          </Card>
         )}
       </Section>
 
@@ -224,7 +221,7 @@ export default async function ReportsPage({
         </Section>
 
         <Section title="Funding status">
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <Card padding="none" className="overflow-hidden">
             <Table>
               <THead>
                 <tr>
@@ -245,7 +242,7 @@ export default async function ReportsPage({
                 ))}
               </TBody>
             </Table>
-          </div>
+          </Card>
           <p className="mt-2 text-xs text-slate-500">Total received across all offices: {currency.format(fundingReceived)}</p>
         </Section>
       </div>
@@ -345,14 +342,14 @@ export default async function ReportsPage({
           />
         </Section>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <Card padding="sm">
           <p className="text-sm text-slate-600">
             Want to compare performance month by month, or as a chart?{" "}
             <Link href="/reports/performance-tracker" className="font-medium text-indigo-600 hover:underline">
               Open the Performance Tracker →
             </Link>
           </p>
-        </div>
+        </Card>
 
         <Section title="Monthly trends" subtitle="Trading Starts and Outcomes recorded per month, company-wide.">
           <TradingStartTrendsChart points={tsStats.monthlyTrends} />
@@ -388,7 +385,7 @@ function BarList({ items, total }: { items: { label: string; count: number }[]; 
   }
 
   return (
-    <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <Card padding="sm" className="space-y-2">
       {items.map((item) => (
         <div key={item.label} className="flex items-center gap-3">
           <span className="w-40 shrink-0 truncate text-sm text-slate-700">{item.label}</span>
@@ -401,7 +398,7 @@ function BarList({ items, total }: { items: { label: string; count: number }[]; 
           <span className="w-8 shrink-0 text-right text-sm font-medium text-slate-900">{item.count}</span>
         </div>
       ))}
-    </div>
+    </Card>
   );
 }
 
@@ -421,7 +418,7 @@ function PerformanceTable<T extends PerformanceRow>({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <Card padding="none" className="overflow-hidden">
       <Table>
         <THead>
           <tr>
@@ -446,6 +443,6 @@ function PerformanceTable<T extends PerformanceRow>({
           ))}
         </TBody>
       </Table>
-    </div>
+    </Card>
   );
 }

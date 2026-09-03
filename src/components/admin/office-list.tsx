@@ -4,6 +4,7 @@ import { useActionState, useState, useTransition } from "react";
 import Badge from "@/components/badge";
 import Button from "@/components/ui/button";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
+import Card from "@/components/ui/card";
 import type { Office } from "@/types/database";
 import {
   createOffice,
@@ -44,7 +45,7 @@ export default function OfficeList({
         {createState.error && <span className="text-sm text-red-600">{createState.error}</span>}
       </form>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <Card padding="none" className="overflow-hidden">
         <Table>
           <THead>
             <tr>
@@ -64,7 +65,7 @@ export default function OfficeList({
             ))}
           </TBody>
         </Table>
-      </div>
+      </Card>
     </div>
   );
 }

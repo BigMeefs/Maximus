@@ -5,6 +5,7 @@ import { lookupParticipantByEmail, submitPortalIncomeEntry, type PortalSubmitSta
 import { calculateMileageCost } from "@/lib/mileage";
 import Field from "@/components/ui/field";
 import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
 
 const currency = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
 
@@ -67,7 +68,7 @@ function EmailStep({
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <Card padding="lg">
       <p className="mb-4 text-sm text-slate-600">
         Enter the email address on your Self Employment record to submit this month&apos;s income
         tracker.
@@ -91,7 +92,7 @@ function EmailStep({
           Employment Advisor.
         </p>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -125,7 +126,7 @@ function IncomeForm({
   const netProfit = (Number(grossIncome) || 0) - (Number(businessExpenses) || 0) - mileageCost;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <Card padding="lg">
       <p className="mb-4 text-sm text-slate-600">
         Hi {firstName} — fill in this month&apos;s figures below.
       </p>
@@ -196,7 +197,7 @@ function IncomeForm({
           {pending ? "Submitting..." : "Submit"}
         </Button>
       </form>
-    </div>
+    </Card>
   );
 }
 
@@ -212,7 +213,7 @@ function SuccessStep({
   onSubmitAnother: () => void;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+    <Card padding="lg" className="text-center">
       <p className="text-lg font-semibold text-slate-900">Thanks, {firstName}!</p>
       <p className="mt-1 text-sm text-slate-600">Your income tracker entry has been submitted.</p>
       <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
@@ -228,7 +229,7 @@ function SuccessStep({
       <Button type="button" variant="secondary" onClick={onSubmitAnother} className="mt-5">
         Submit another entry
       </Button>
-    </div>
+    </Card>
   );
 }
 

@@ -1,6 +1,11 @@
-import Link from "next/link";
 import clsx from "clsx";
+import Card from "@/components/ui/card";
 
+// Phase 2: stronger number/label hierarchy (bolder value; smaller, uppercase
+// caption label — the same caption convention already used for the
+// participant-profile detail labels), now built on the shared Card
+// primitive. Tone colours, the underlying metric, and href behaviour are
+// all unchanged from Phase 1.
 export default function StatCard({
   label,
   value,
@@ -12,19 +17,12 @@ export default function StatCard({
   href?: string;
   tone?: "default" | "warning" | "danger";
 }) {
-  const content = (
-    <div
-      className={clsx(
-        "rounded-xl border bg-white p-5 shadow-sm transition-shadow hover:shadow-md",
-        tone === "warning" && "border-amber-200",
-        tone === "danger" && "border-red-200",
-        tone === "default" && "border-slate-200",
-      )}
-    >
-      <p className="text-sm font-medium text-slate-500">{label}</p>
+  return (
+    <Card href={href} tone={tone} hoverable>
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
       <p
         className={clsx(
-          "mt-2 text-3xl font-semibold",
+          "mt-2 text-3xl font-bold tabular-nums",
           tone === "warning" && "text-amber-600",
           tone === "danger" && "text-red-600",
           tone === "default" && "text-slate-900",
@@ -32,16 +30,6 @@ export default function StatCard({
       >
         {value}
       </p>
-    </div>
+    </Card>
   );
-
-  if (href) {
-    return (
-      <Link href={href} className="block">
-        {content}
-      </Link>
-    );
-  }
-
-  return content;
 }

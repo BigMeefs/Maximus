@@ -4,6 +4,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { NOTIFICATION_STATUSES, NOTIFICATION_TYPES, type NotificationType, type NotificationStatus } from "@/types/database";
 import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
 
 type OfficeOption = { id: string; name: string };
 type AdvisorOption = { id: string; full_name: string; office_id: string };
@@ -59,7 +60,7 @@ export default function NotificationHistoryFilters({
   const hasFilters = Boolean(officeId || advisorId || participant || type || status || from || to || search);
 
   return (
-    <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <Card padding="sm" className="flex flex-wrap items-end gap-3">
       <label className="text-xs font-medium text-slate-600">
         Search
         <input
@@ -163,6 +164,6 @@ export default function NotificationHistoryFilters({
           Clear filters
         </Button>
       )}
-    </div>
+    </Card>
   );
 }

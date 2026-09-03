@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import clsx from "clsx";
 import type { HealthScores } from "@/lib/business-rules";
 import { updateHealthConfidence } from "@/lib/actions/participant-attributes";
+import Card from "@/components/ui/card";
 
 const LABELS: { key: keyof HealthScores; label: string }[] = [
   { key: "planning", label: "Planning" },
@@ -31,7 +32,7 @@ export default function HealthScorePanel({
   const [pending, startTransition] = useTransition();
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <Card>
       <h2 className="mb-4 text-sm font-semibold text-slate-900">
         Business Health Score
       </h2>
@@ -71,6 +72,6 @@ export default function HealthScorePanel({
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }

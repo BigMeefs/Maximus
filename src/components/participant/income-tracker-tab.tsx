@@ -19,6 +19,7 @@ import Badge from "@/components/badge";
 import Field from "@/components/ui/field";
 import Button from "@/components/ui/button";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
+import Card from "@/components/ui/card";
 
 const currency = new Intl.NumberFormat("en-GB", {
   style: "currency",
@@ -209,7 +210,7 @@ export default function IncomeTrackerTab({
           so the tracker can match their submissions.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Card padding="none" className="overflow-x-auto">
           <Table>
             <THead>
               <tr>
@@ -270,7 +271,7 @@ export default function IncomeTrackerTab({
               ))}
             </TBody>
           </Table>
-        </div>
+        </Card>
       )}
     </div>
   );

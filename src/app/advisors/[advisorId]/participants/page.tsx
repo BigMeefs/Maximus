@@ -6,6 +6,8 @@ import Badge, { statusTone } from "@/components/badge";
 import ParticipantFilters from "@/components/participant-filters";
 import Button from "@/components/ui/button";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
+import Card from "@/components/ui/card";
+import PageHeader from "@/components/ui/page-header";
 import type { RagStatus } from "@/types/database";
 
 function ragTone(status: RagStatus) {
@@ -68,29 +70,25 @@ export default async function ParticipantsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">
-            {advisor.full_name}&apos;s Participants
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {rows.length} of {participants?.length ?? 0} participants
-          </p>
-        </div>
-        <Button href={`${basePath}/new`} className="inline-flex items-center justify-center">
-          + Add participant
-        </Button>
-      </div>
+      <PageHeader
+        title={`${advisor.full_name}'s Participants`}
+        description={`${rows.length} of ${participants?.length ?? 0} participants`}
+        actions={
+          <Button href={`${basePath}/new`} className="inline-flex items-center justify-center">
+            + Add participant
+          </Button>
+        }
+      />
 
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <Card padding="sm">
         <ParticipantFilters
           basePath={basePath}
           defaultQuery={q}
           defaultFilter={filter}
         />
-      </div>
+      </Card>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <Card padding="none" className="overflow-hidden">
         {rows.length === 0 ? (
           <p className="p-8 text-center text-sm text-slate-500">
             No participants match your search.
@@ -151,7 +149,7 @@ export default async function ParticipantsPage({
             </TBody>
           </Table>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ParticipantForm from "@/components/participant-form";
 import { updateParticipant } from "@/app/advisors/[advisorId]/participants/actions";
+import Card from "@/components/ui/card";
+import PageHeader from "@/components/ui/page-header";
 
 export default async function EditParticipantPage({
   params,
@@ -31,21 +33,16 @@ export default async function EditParticipantPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">
-          Edit participant
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">{participant.ptp_name}</p>
-      </div>
+      <PageHeader title="Edit participant" description={participant.ptp_name} />
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <Card padding="lg">
         <ParticipantForm
           currentAdvisorName={assignedAdvisor?.full_name ?? "Unknown advisor"}
           participant={participant}
           action={boundAction}
           submitLabel="Save changes"
         />
-      </div>
+      </Card>
     </div>
   );
 }
