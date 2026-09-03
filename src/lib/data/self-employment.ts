@@ -117,6 +117,10 @@ export type SelfEmploymentDashboard = {
   forecastOutcomes: number;
   outcomesAchieved: number;
   actionsToday: number;
+  // Rolling 3 months (this month + the 2 preceding) of Trading Starts this
+  // advisor originated — for the Dashboard's compact stats section. Same
+  // original_advisor_id attribution as tradingStartsAchieved/tradingStartsThisMonth.
+  tradingStartsRolling3Months: { month: string; count: number }[];
 };
 
 // ---------------------------------------------------------------------------
@@ -421,6 +425,17 @@ export async function getSelfEmploymentDashboard(
     isThisMonth(ts.trading_start_date, now),
   ).length;
 
+  // Rolling 3 months — reuses originalTradingStarts already fetched above,
+  // no extra query.
+  const tradingStartsRolling3Months = Array.from({ length: 3 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (2 - i), 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    return {
+      month: d.toLocaleDateString("en-GB", { month: "long" }),
+      count: (originalTradingStarts ?? []).filter((ts) => ts.trading_start_date.slice(0, 7) === key).length,
+    };
+  });
+
   const outcomesThisMonth = [...(outcomesForCaseload ?? []), ...(outcomesForOriginal ?? [])].filter(
     (o, index, all) => all.findIndex((x) => x.id === o.id) === index && isThisMonth(o.outcome_date, now),
   ).length;
@@ -459,5 +474,6 @@ export async function getSelfEmploymentDashboard(
     forecastOutcomes,
     outcomesAchieved: (outcomesForOriginal ?? []).filter((o) => o.outcome_achieved).length,
     actionsToday: workQueue.length,
+    tradingStartsRolling3Months,
   };
 }

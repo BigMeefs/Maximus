@@ -1,22 +1,31 @@
 import Link from "next/link";
 import { Children } from "react";
-import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getDaysRemaining } from "@/lib/participant";
 import { getAdvisorOrNotFound } from "@/lib/data/advisor";
-import { getAdvisorWorkQueue } from "@/lib/data/advisor-workqueue";
 import { getSelfEmploymentDashboard } from "@/lib/data/self-employment";
-import { getAdvisorPerformanceSummary } from "@/lib/data/performance-tracker";
 import { getActiveAnnouncements } from "@/lib/data/announcements";
 import { getActiveNotificationCount, getActiveNotificationsForAdvisor } from "@/lib/data/notifications";
 import { syncAutoNotificationsForAdvisor } from "@/lib/data/notification-rules";
+import { getProgrammeSettings } from "@/lib/data/programme-settings";
 import StatCard from "@/components/stat-card";
-import Badge, { statusTone } from "@/components/badge";
+import Badge from "@/components/badge";
 import TouchLastVisit from "@/components/touch-last-visit";
 
 const EXPIRING_THRESHOLD_DAYS = 30;
 const currency = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
 
+// ---------------------------------------------------------------------------
+// The main Advisor Dashboard — a daily command centre, not a full analytics
+// view. It's the merge of what used to be two separate pages (Dashboard +
+// Self Employment dashboard, see the nav): this page keeps only what needs
+// an advisor's attention today or a quick caseload overview; everything
+// else that used to live on either page (funding, outstanding actions,
+// missing business plans list, GSE/Claim Closed eligibility, Outcome
+// Intelligence, Transferred to IWT, full performance/forecasting, the
+// Income Tracker Portal link) moved to "Additional Information"
+// (src/app/advisors/[advisorId]/self-employment/page.tsx) — nothing was
+// deleted, only relocated.
 export default async function DashboardPage({
   params,
 }: {
@@ -26,9 +35,6 @@ export default async function DashboardPage({
   const advisor = await getAdvisorOrNotFound(advisorId);
   const supabase = await createClient();
 
-  const cookieStore = await cookies();
-  const lastVisitAt = cookieStore.get(`last_visit_${advisorId}`)?.value ?? null;
-
   // The Dashboard is one of the two places (with the Notifications page
   // itself) that refreshes the computed-condition notifications before
   // reading them — see src/lib/data/notification-rules.ts.
@@ -36,59 +42,29 @@ export default async function DashboardPage({
 
   const { data: participants } = await supabase
     .from("participants")
-    .select("id, ptp_name, business_name, scheme_start_date, status")
+    .select(
+      "id, ptp_name, business_name, scheme_start_date, status, rag_status, gateway_booked_status, gateway_appointment_date",
+    )
     .eq("advisor_id", advisorId)
     .order("scheme_start_date", { ascending: true });
 
   const rows = participants ?? [];
   const participantIds = rows.map((p) => p.id);
 
-  const [
-    { data: businessPlans },
-    { data: actionItems },
-    { data: fundingRecords },
-    { data: incomeEntries },
-    workQueue,
-    selfEmployment,
-    announcements,
-    unreadNotifications,
-    activeNotifications,
-    performanceSummary,
-  ] = await Promise.all([
-    participantIds.length
-      ? supabase
-          .from("business_plans")
-          .select("participant_id, status")
-          .in("participant_id", participantIds)
-      : Promise.resolve({ data: [] }),
-    participantIds.length
-      ? supabase
-          .from("action_plan_items")
-          .select("id, participant_id, status, description, target_date")
-          .in("participant_id", participantIds)
-          .neq("status", "Complete")
-      : Promise.resolve({ data: [] }),
-    participantIds.length
-      ? supabase
-          .from("funding_records")
-          .select("id, participant_id, application_status, amount_requested, amount_approved, decision_date")
-          .in("participant_id", participantIds)
-          .order("decision_date", { ascending: false })
-      : Promise.resolve({ data: [] }),
-    participantIds.length
-      ? supabase.from("income_tracker_entries").select("participant_id, month").in("participant_id", participantIds)
-      : Promise.resolve({ data: [] }),
-    getAdvisorWorkQueue(advisorId, lastVisitAt),
-    getSelfEmploymentDashboard(advisorId, advisor.full_name),
-    getActiveAnnouncements(),
-    getActiveNotificationCount(advisorId),
-    getActiveNotificationsForAdvisor(advisorId),
-    getAdvisorPerformanceSummary(advisorId),
-  ]);
-
-  const businessPlanByParticipant = new Map(
-    (businessPlans ?? []).map((bp) => [bp.participant_id, bp]),
-  );
+  const [{ data: businessPlans }, { data: incomeEntries }, selfEmployment, announcements, unreadNotifications, activeNotifications, settings] =
+    await Promise.all([
+      participantIds.length
+        ? supabase.from("business_plans").select("participant_id, status, file_path").in("participant_id", participantIds)
+        : Promise.resolve({ data: [] }),
+      participantIds.length
+        ? supabase.from("income_tracker_entries").select("participant_id, month").in("participant_id", participantIds)
+        : Promise.resolve({ data: [] }),
+      getSelfEmploymentDashboard(advisorId, advisor.full_name),
+      getActiveAnnouncements(),
+      getActiveNotificationCount(advisorId),
+      getActiveNotificationsForAdvisor(advisorId),
+      getProgrammeSettings(),
+    ]);
 
   const withDaysRemaining = rows.map((p) => ({
     ...p,
@@ -98,31 +74,6 @@ export default async function DashboardPage({
   const expiring = withDaysRemaining
     .filter((p) => p.daysRemaining <= EXPIRING_THRESHOLD_DAYS)
     .sort((a, b) => a.daysRemaining - b.daysRemaining);
-
-  const missingBusinessPlans = rows.filter((p) => {
-    const plan = businessPlanByParticipant.get(p.id);
-    return !plan || plan.status === "Not Started";
-  });
-
-  const participantInfoById = new Map(
-    rows.map((p) => [p.id, { name: p.ptp_name, business: p.business_name }]),
-  );
-  const outstandingActions = (actionItems ?? []).map((a) => ({
-    ...a,
-    participantId: a.participant_id,
-    participantName: participantInfoById.get(a.participant_id)?.name ?? "",
-  }));
-
-  const fundingRows = (fundingRecords ?? []).map((f) => ({
-    ...f,
-    participantName: participantInfoById.get(f.participant_id)?.name ?? "",
-  }));
-  const pendingFunding = fundingRows.filter(
-    (f) => f.application_status === "Pending Manager Approval",
-  );
-  const recentFundingDecisions = fundingRows.filter(
-    (f) => f.application_status === "Approved" || f.application_status === "Declined",
-  );
 
   const now = new Date();
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -137,32 +88,53 @@ export default async function DashboardPage({
       latestIncomeMonthByParticipant.get(p.id)?.slice(0, 7) !== currentMonthKey,
   );
 
+  // ---- Gateways Coming Up: participants with a booked Gateway appointment,
+  // soonest first — existing gateway_booked_status / gateway_appointment_date
+  // fields, not a new calculation. ----
+  const gatewaysComingUp = rows
+    .filter((p) => p.gateway_booked_status === "Booked" && p.gateway_appointment_date)
+    .sort((a, b) => (a.gateway_appointment_date ?? "").localeCompare(b.gateway_appointment_date ?? ""));
+
+  // ---- Compact stats section ----
+  const ragCounts = {
+    Green: rows.filter((p) => p.rag_status === "Green").length,
+    Amber: rows.filter((p) => p.rag_status === "Amber").length,
+    Red: rows.filter((p) => p.rag_status === "Red").length,
+  };
+  const businessPlansUploaded = (businessPlans ?? []).filter((bp) => bp.file_path).length;
+
   const participantsHref = `/advisors/${advisorId}/participants`;
-  const selfEmploymentHref = `/advisors/${advisorId}/self-employment`;
-  const approachingTradingStart = [
-    ...selfEmployment.tsIntelligence.map((r) => ({ participantId: r.participantId, participantName: r.participantName, detail: `Eligible (NGSE) since ${r.dateEligible}` })),
-    ...selfEmployment.gseClaimEligible.map((r) => ({ participantId: r.participantId, participantName: r.participantName, detail: r.detail })),
-  ];
+  const additionalInfoHref = `/advisors/${advisorId}/self-employment`;
+  const tradingStartTabHref = (participantId: string) => `${participantsHref}/${participantId}?tab=trading-start`;
 
   const actionCount =
-    workQueue.gatewayIncomplete.length +
-    pendingFunding.length +
-    approachingTradingStart.length +
+    incomeTrackerAlerts.length +
+    expiring.length +
+    selfEmployment.tsIntelligence.length +
+    gatewaysComingUp.length +
     unreadNotifications;
 
   return (
     <div className="space-y-8">
       <TouchLastVisit advisorId={advisorId} />
 
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">
-          Welcome back, {advisor.full_name}
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {actionCount > 0
-            ? `${actionCount} item${actionCount === 1 ? "" : "s"} need your attention today.`
-            : "Nothing needs your attention right now — nice and quiet."}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">
+            Welcome back, {advisor.full_name}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {actionCount > 0
+              ? `${actionCount} item${actionCount === 1 ? "" : "s"} need your attention today.`
+              : "Nothing needs your attention right now — nice and quiet."}
+          </p>
+        </div>
+        <Link
+          href={additionalInfoHref}
+          className="shrink-0 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          Additional Information →
+        </Link>
       </div>
 
       {announcements.length > 0 && (
@@ -176,45 +148,19 @@ export default async function DashboardPage({
         </section>
       )}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard label="Caseload size" value={rows.length} href={participantsHref} />
-        <StatCard
-          label="Requiring a Gateway"
-          value={workQueue.gatewayIncomplete.length}
-          tone={workQueue.gatewayIncomplete.length > 0 ? "warning" : "default"}
-        />
-        <StatCard
-          label="Funding awaiting approval"
-          value={pendingFunding.length}
-          tone={pendingFunding.length > 0 ? "warning" : "default"}
-        />
-        <StatCard
-          label="Approaching Trading Start"
-          value={approachingTradingStart.length}
-        />
         <StatCard
           label="Notifications"
           value={unreadNotifications}
           href={`/advisors/${advisorId}/notifications`}
           tone={unreadNotifications > 0 ? "warning" : "default"}
         />
-      </div>
-
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-sm font-semibold text-slate-900">Your Performance</h2>
-        <p className="mt-1 text-xs text-slate-500">
-          Trading Starts and Outcomes stay credited to you as the original advisor, even after a
-          participant transfers to an IWT advisor for support.
-        </p>
-        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          <StatCard label="Trading Starts this month" value={performanceSummary.tradingStartsThisMonth} />
-          <StatCard label="Trading Starts this year" value={performanceSummary.tradingStartsThisYear} />
-          <StatCard label="Outcomes this month" value={performanceSummary.outcomesThisMonth} />
-          <StatCard label="Outcomes this year" value={performanceSummary.outcomesThisYear} />
-          <StatCard label="Lifetime Trading Starts" value={performanceSummary.lifetimeTradingStarts} />
-          <StatCard label="Lifetime Outcomes" value={performanceSummary.lifetimeOutcomes} />
-          <StatCard label="Current conversion rate" value={`${performanceSummary.conversionRate}%`} />
-        </div>
+        <StatCard
+          label="Eligible for NGSE Trading Start"
+          value={selfEmployment.tsIntelligence.length}
+          tone={selfEmployment.tsIntelligence.length > 0 ? "warning" : "default"}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -235,75 +181,6 @@ export default async function DashboardPage({
           )}
         </WorkQueueCard>
 
-        <WorkQueueCard title="Participants requiring a Gateway" emptyText="Everyone's Gateway is complete.">
-          {workQueue.gatewayIncomplete.slice(0, 6).map((r) => (
-            <Row key={r.participantId} href={`${participantsHref}/${r.participantId}?tab=gateway`} name={r.participantName}>
-              <Badge tone="amber">{r.percent}% complete</Badge>
-            </Row>
-          ))}
-        </WorkQueueCard>
-
-        <WorkQueueCard title="Funding" emptyText="No funding activity across your caseload.">
-          {pendingFunding.slice(0, 5).map((f) => (
-            <Row key={f.id} href={`${participantsHref}/${f.participant_id}?tab=funding`} name={f.participantName}>
-              <Badge tone="amber">Awaiting approval</Badge>
-            </Row>
-          ))}
-          {recentFundingDecisions.slice(0, 5).map((f) => (
-            <Row key={f.id} href={`${participantsHref}/${f.participant_id}?tab=funding`} name={f.participantName}>
-              <Badge tone={f.application_status === "Approved" ? "green" : "red"}>{f.application_status}</Badge>
-            </Row>
-          ))}
-        </WorkQueueCard>
-
-        <WorkQueueCard
-          title="Income submitted since you were last here"
-          emptyText="No new Income Tracker submissions since your last visit."
-        >
-          {workQueue.recentIncomeSubmissions.slice(0, 6).map((r, i) => (
-            <Row
-              key={`${r.participantId}-${i}`}
-              href={`${participantsHref}/${r.participantId}?tab=income-tracker`}
-              name={r.participantName}
-            >
-              <Badge tone="green">Net {currency.format(r.netProfit)}</Badge>
-            </Row>
-          ))}
-        </WorkQueueCard>
-
-        <WorkQueueCard title="Approaching Trading Start" emptyText="No participants close to a Trading Start right now.">
-          {approachingTradingStart.slice(0, 6).map((r, i) => (
-            <Row key={`${r.participantId}-${i}`} href={`${participantsHref}/${r.participantId}?tab=trading-start`} name={r.participantName}>
-              <Badge tone="green">Eligible</Badge>
-            </Row>
-          ))}
-        </WorkQueueCard>
-
-        <WorkQueueCard title="Transferred to IWT" emptyText="No participants currently transferred to another IWT advisor.">
-          {selfEmployment.transferredToIwt.slice(0, 6).map((r) => (
-            <Row
-              key={r.tradingStart.id}
-              href={`${participantsHref}/${r.participantId}?tab=trading-start`}
-              name={r.participantName}
-            >
-              <Badge tone="slate">{r.iwtAdvisorName}</Badge>
-            </Row>
-          ))}
-          {selfEmployment.transferredToIwt.length > 0 && (
-            <Link href={selfEmploymentHref} className="mt-3 block text-xs font-medium text-indigo-600 hover:underline">
-              View full detail on the Self Employment dashboard →
-            </Link>
-          )}
-        </WorkQueueCard>
-
-        <WorkQueueCard title="Recently achieved Trading Starts" emptyText="No Trading Starts in the last 14 days.">
-          {workQueue.recentTradingStarts.slice(0, 6).map((r) => (
-            <Row key={r.participantId} href={`${participantsHref}/${r.participantId}?tab=trading-start`} name={r.participantName}>
-              <Badge tone="green">{new Date(r.tradingStartDate).toLocaleDateString("en-GB")}</Badge>
-            </Row>
-          ))}
-        </WorkQueueCard>
-
         <WorkQueueCard title="Income Tracker alerts" emptyText={`Every active participant has logged income for ${currentMonthKey}.`}>
           {incomeTrackerAlerts.slice(0, 6).map((p) => (
             <Row key={p.id} href={`${participantsHref}/${p.id}?tab=income-tracker`} name={p.ptp_name} subtitle={p.business_name}>
@@ -322,33 +199,104 @@ export default async function DashboardPage({
           ))}
         </WorkQueueCard>
 
-        <WorkQueueCard title="Missing business plans" emptyText="Every participant has a business plan in progress or complete.">
-          {missingBusinessPlans.slice(0, 6).map((p) => (
-            <Row key={p.id} href={`${participantsHref}/${p.id}?tab=business-plan`} name={p.ptp_name} subtitle={p.business_name}>
-              <Badge tone="red">Not started</Badge>
-            </Row>
-          ))}
-        </WorkQueueCard>
-
-        <WorkQueueCard title="Outstanding actions" emptyText="No outstanding actions across your caseload." className="lg:col-span-2">
-          {outstandingActions.slice(0, 8).map((a) => (
-            <Row key={a.id} href={`${participantsHref}/${a.participantId}?tab=action-plan`} name={a.participantName} subtitle={a.description}>
-              <Badge tone={statusTone(a.status)}>{a.status}</Badge>
+        <WorkQueueCard title="Gateways coming up" emptyText="No Gateway appointments currently booked.">
+          {gatewaysComingUp.slice(0, 6).map((p) => (
+            <Row key={p.id} href={`${participantsHref}/${p.id}?tab=gateway`} name={p.ptp_name} subtitle={p.business_name}>
+              <Badge tone="indigo">
+                {p.gateway_appointment_date ? new Date(p.gateway_appointment_date).toLocaleDateString("en-GB") : "—"}
+              </Badge>
             </Row>
           ))}
         </WorkQueueCard>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <p className="text-sm text-slate-600">
-          Trading Start intelligence, Outcome progress and earnings analysis in full depth live on
-          the dedicated{" "}
-          <Link href={selfEmploymentHref} className="font-medium text-indigo-600 hover:underline">
-            Self Employment dashboard
-          </Link>
-          .
-        </p>
-      </div>
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900">Eligible for NGSE Trading Start</h2>
+          <p className="text-xs text-slate-500">
+            Detected automatically once any two Income Tracker months (not necessarily consecutive)
+            average £{settings.ngse_average_threshold.toLocaleString("en-GB")} net profit or more between
+            them (configurable in Programme Settings) — a Trading Start is never created automatically,
+            an advisor must confirm.
+          </p>
+        </div>
+        {selfEmployment.tsIntelligence.length === 0 ? (
+          <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
+            No participants currently meet the NGSE Trading Start threshold.
+          </p>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Participant</th>
+                    <th className="px-4 py-3">Month 1 Net Profit</th>
+                    <th className="px-4 py-3">Month 2 Net Profit</th>
+                    <th className="px-4 py-3">Date Eligible</th>
+                    <th className="px-4 py-3" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {selfEmployment.tsIntelligence.map((row) => (
+                    <tr key={row.participantId}>
+                      <td className="px-4 py-3 font-medium text-slate-900">{row.participantName}</td>
+                      <td className="px-4 py-3 text-slate-600">{currency.format(row.month1NetProfit)}</td>
+                      <td className="px-4 py-3 text-slate-600">{currency.format(row.month2NetProfit)}</td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {row.dateEligible ? new Date(row.dateEligible).toLocaleDateString("en-GB") : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link
+                          href={tradingStartTabHref(row.participantId)}
+                          className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500"
+                        >
+                          Create Trading Start
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* ---- Compact Stats section ---- */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-slate-900">Stats</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm font-medium text-slate-500">RAG breakdown</p>
+            <div className="mt-3 flex items-center gap-4">
+              <span className="flex items-center gap-1.5 text-sm text-slate-700">
+                <Badge tone="green">{ragCounts.Green}</Badge> Green
+              </span>
+              <span className="flex items-center gap-1.5 text-sm text-slate-700">
+                <Badge tone="amber">{ragCounts.Amber}</Badge> Amber
+              </span>
+              <span className="flex items-center gap-1.5 text-sm text-slate-700">
+                <Badge tone="red">{ragCounts.Red}</Badge> Red
+              </span>
+            </div>
+          </div>
+
+          <StatCard label="Business plans uploaded" value={businessPlansUploaded} />
+
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm font-medium text-slate-500">Trading Starts — rolling 3 months</p>
+            <div className="mt-3 space-y-1 text-sm text-slate-700">
+              {selfEmployment.tradingStartsRolling3Months.map((m) => (
+                <div key={m.month} className="flex items-center justify-between">
+                  <span>{m.month}</span>
+                  <span className="font-semibold text-slate-900">{m.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
