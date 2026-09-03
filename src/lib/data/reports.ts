@@ -684,3 +684,77 @@ export async function getOfficeReportStats(filters?: ReportFilters): Promise<Off
     };
   });
 }
+
+// ---------------------------------------------------------------------------
+// Expenses by approval status — replaces the old "Monthly progress"
+// income/expenses chart on the Reports page. This app has no separate
+// "expense" table with its own approval workflow; the existing
+// funding_records table (funding_application_status: Draft / Applied /
+// Pending Manager Approval / Approved / Declined / Received) is the
+// existing approval data for money requested/spent on a participant's
+// self-employment setup, so it's reused here, bucketed down to the three
+// statuses asked for. Grouped by application_date (falling back to
+// created_at when a record has no application_date, so every record still
+// lands in a month) for the current month and the two preceding months.
+// ---------------------------------------------------------------------------
+export type ExpenseApprovalMonthRow = {
+  month: string;
+  monthLabel: string;
+  approved: number;
+  pending: number;
+  rejected: number;
+};
+
+const EXPENSE_STATUS_BUCKET: Record<FundingApplicationStatus, "approved" | "pending" | "rejected"> = {
+  Draft: "pending",
+  Applied: "pending",
+  "Pending Manager Approval": "pending",
+  Approved: "approved",
+  Declined: "rejected",
+  Received: "approved",
+};
+
+export async function getExpenseApprovalReport(filters?: ReportFilters): Promise<ExpenseApprovalMonthRow[]> {
+  const supabase = await createClient();
+  const [advisors, { data: participants }, { data: fundingRows }] = await Promise.all([
+    listAdvisors(),
+    supabase.from("participants").select("id, advisor_id"),
+    supabase.from("funding_records").select("participant_id, application_status, application_date, created_at"),
+  ]);
+
+  const allowedAdvisorIds = filters?.advisorId
+    ? new Set([filters.advisorId])
+    : filters?.officeId
+      ? new Set(advisors.filter((a) => a.office_id === filters.officeId).map((a) => a.id))
+      : null;
+
+  const participantAdvisorById = new Map((participants ?? []).map((p) => [p.id, p.advisor_id]));
+  const scopedFunding = (fundingRows ?? []).filter((f) => {
+    if (!allowedAdvisorIds) return true;
+    const advisorId = participantAdvisorById.get(f.participant_id);
+    return !!advisorId && allowedAdvisorIds.has(advisorId);
+  });
+
+  const now = new Date();
+  const months = Array.from({ length: 3 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (2 - i), 1);
+    return {
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      label: d.toLocaleDateString("en-GB", { month: "long", year: "numeric" }),
+    };
+  }).reverse();
+
+  return months.map(({ key, label }) => {
+    const rowsForMonth = scopedFunding.filter((f) => (f.application_date ?? f.created_at)?.slice(0, 7) === key);
+    let approved = 0;
+    let pending = 0;
+    let rejected = 0;
+    for (const f of rowsForMonth) {
+      const bucket = EXPENSE_STATUS_BUCKET[f.application_status];
+      if (bucket === "approved") approved += 1;
+      else if (bucket === "pending") pending += 1;
+      else rejected += 1;
+    }
+    return { month: key, monthLabel: label, approved, pending, rejected };
+  });
+}

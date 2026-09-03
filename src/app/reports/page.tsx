@@ -1,12 +1,12 @@
 import Link from "next/link";
 import StatCard from "@/components/stat-card";
 import Badge from "@/components/badge";
-import MonthlyProgressChart from "@/components/reports/monthly-progress-chart";
 import TradingStartTrendsChart from "@/components/reports/trading-start-trends-chart";
 import ReportFilters from "@/components/reports/report-filters";
 import AdvisorPerformanceTable from "@/components/reports/advisor-performance-table";
 import {
   getCompanyReportStats,
+  getExpenseApprovalReport,
   getOfficeReportStats,
   getTradingStartReportStats,
   type ReportFilters as ReportFiltersType,
@@ -38,12 +38,13 @@ export default async function ReportsPage({
     dateRange,
   };
 
-  const [stats, tsStats, officeStats, offices, advisors] = await Promise.all([
+  const [stats, tsStats, officeStats, offices, advisors, expenseReport] = await Promise.all([
     getCompanyReportStats(filters),
     getTradingStartReportStats(filters),
     getOfficeReportStats(filters),
     listOffices(),
     listAdvisors(),
+    getExpenseApprovalReport(filters),
   ]);
 
   const gatewayReadyTotal = stats.byGatewayStatus.find((b) => b.label === "Ready")?.count ?? 0;
@@ -92,8 +93,35 @@ export default async function ReportsPage({
         </div>
       </div>
 
-      <Section title="Monthly progress" subtitle="Income and expenses reported across all participants, by month.">
-        <MonthlyProgressChart points={stats.monthlyProgress} />
+      <Section title="Expenses" subtitle="Funding requests by month, broken down by approval status.">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-4 py-3">Month</th>
+                <th className="px-4 py-3">Approved</th>
+                <th className="px-4 py-3">Pending</th>
+                <th className="px-4 py-3">Rejected</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {expenseReport.map((row) => (
+                <tr key={row.month}>
+                  <td className="px-4 py-3 font-medium text-slate-900">{row.monthLabel}</td>
+                  <td className="px-4 py-3">
+                    <Badge tone="green">{row.approved}</Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge tone="amber">{row.pending}</Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge tone="red">{row.rejected}</Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Section>
 
       <Section title="By office" subtitle="Compare caseload size and readiness across offices.">

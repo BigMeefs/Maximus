@@ -87,6 +87,16 @@ export default async function AdminOverviewPage() {
           </p>
         </Link>
         <Link
+          href="/admin/performance"
+          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+        >
+          <h2 className="text-sm font-semibold text-slate-900">Performance Targets</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Set the monthly Trading Starts / Outcomes MPL and see each advisor&apos;s performance against
+            it.
+          </p>
+        </Link>
+        <Link
           href="/admin/announcements"
           className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
         >

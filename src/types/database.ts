@@ -291,6 +291,19 @@ export type ProgrammeSettings = {
   updated_by: string | null;
 };
 
+// Minimum Performance Level — one row per calendar month
+// (effective_month, always the 1st). See src/lib/data/mpl.ts for how the
+// applicable target for a given month is resolved.
+export type MplTarget = {
+  id: string;
+  effective_month: string;
+  trading_starts_mpl: number;
+  outcomes_mpl: number;
+  created_at: string;
+  updated_at: string;
+  updated_by: string | null;
+};
+
 // ---------------------------------------------------------------------------
 // Notifications — a live advisor work queue backed by a real table (see
 // supabase/migrations/0018_notifications.sql). Only New / Unread / Action
@@ -718,6 +731,16 @@ export type Database = {
         Row: ProgrammeSettings;
         Insert: Partial<ProgrammeSettings>;
         Update: Partial<ProgrammeSettings>;
+        Relationships: [];
+      };
+      mpl_targets: {
+        Row: MplTarget;
+        Insert: Partial<MplTarget> & {
+          effective_month: string;
+          trading_starts_mpl: number;
+          outcomes_mpl: number;
+        };
+        Update: Partial<MplTarget>;
         Relationships: [];
       };
       announcements: {
