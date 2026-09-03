@@ -3,6 +3,8 @@
 import { useActionState, useMemo, useState } from "react";
 import type { AdvisorWithOffice } from "@/lib/data/advisor";
 import { transferParticipants, type TransferFormState } from "@/lib/actions/transfer";
+import Button from "@/components/ui/button";
+import { Table, THead, Th, TBody } from "@/components/ui/table";
 
 type ParticipantRow = {
   id: string;
@@ -107,24 +109,24 @@ export default function TransferTool({
       </div>
 
       <div className="max-h-[24rem] overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full text-left text-sm">
-          <thead className="sticky top-0 border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <Table>
+          <THead className="sticky top-0">
             <tr>
-              <th className="px-4 py-3">
+              <Th>
                 <input
                   type="checkbox"
                   checked={allFilteredSelected}
                   onChange={toggleAll}
                   className="h-4 w-4 rounded border-slate-300"
                 />
-              </th>
-              <th className="px-4 py-3">PTP Name</th>
-              <th className="px-4 py-3">Iconi ID</th>
-              <th className="px-4 py-3">Business</th>
-              <th className="px-4 py-3">Current advisor</th>
+              </Th>
+              <Th>PTP Name</Th>
+              <Th>Iconi ID</Th>
+              <Th>Business</Th>
+              <Th>Current advisor</Th>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
+          </THead>
+          <TBody>
             {filtered.map((p) => (
               <tr key={p.id} className="hover:bg-slate-50">
                 <td className="px-4 py-3">
@@ -150,8 +152,8 @@ export default function TransferTool({
                 </td>
               </tr>
             )}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </div>
 
       <div className="flex flex-wrap items-end gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
@@ -183,13 +185,9 @@ export default function TransferTool({
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
           />
         </div>
-        <button
-          type="submit"
-          disabled={pending || selected.size === 0}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-        >
+        <Button type="submit" disabled={pending || selected.size === 0}>
           {pending ? "Transferring..." : "Transfer"}
-        </button>
+        </Button>
       </div>
 
       {state.error && <p className="text-sm text-red-600">{state.error}</p>}

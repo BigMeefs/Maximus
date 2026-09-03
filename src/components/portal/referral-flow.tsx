@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import type { ReferralSubmitState } from "@/lib/actions/referrals";
+import Field from "@/components/ui/field";
+import Button from "@/components/ui/button";
 
 const initialState: ReferralSubmitState = {};
 
@@ -85,34 +87,10 @@ function ReferralForm({ option, onChangeAdvisor }: { option: ReferralOption; onC
 
         {state.error && <p className="text-sm text-red-600">{state.error}</p>}
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-        >
+        <Button type="submit" disabled={pending} className="w-full">
           {pending ? "Submitting..." : "Submit Referral"}
-        </button>
+        </Button>
       </form>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  required,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-xs font-medium text-slate-600">
-        {label}
-        {required && <span className="text-red-500"> *</span>}
-      </label>
-      {children}
     </div>
   );
 }

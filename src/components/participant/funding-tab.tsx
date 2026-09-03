@@ -3,6 +3,8 @@
 import { useActionState, useRef, useState, useTransition } from "react";
 import { FUNDING_SOURCES, type FundingApplicationStatus, type FundingRecord } from "@/types/database";
 import Badge from "@/components/badge";
+import Field from "@/components/ui/field";
+import Button from "@/components/ui/button";
 import {
   createFundingRecord,
   deleteFundingRecord,
@@ -118,13 +120,9 @@ export default function FundingTab({
           </Field>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-          >
+          <Button type="submit" disabled={pending}>
             {pending ? "Saving..." : "Add funding record"}
-          </button>
+          </Button>
           {state.error && <span className="text-sm text-red-600">{state.error}</span>}
         </div>
       </form>
@@ -241,13 +239,9 @@ function FundingRecordCard({ record }: { record: FundingRecord }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-          >
+          <Button type="submit" variant="secondary" size="compact" disabled={pending}>
             {pending ? "Saving..." : "Save changes"}
-          </button>
+          </Button>
           <button
             type="button"
             disabled={deleting}
@@ -338,25 +332,3 @@ function SummaryStat({ label, value }: { label: string; value: string }) {
 
 const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200";
-
-function Field({
-  label,
-  required,
-  className,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={className}>
-      <label className="mb-1 block text-xs font-medium text-slate-600">
-        {label}
-        {required && <span className="text-red-500"> *</span>}
-      </label>
-      {children}
-    </div>
-  );
-}

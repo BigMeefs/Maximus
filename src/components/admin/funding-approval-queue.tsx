@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { FundingApprovalRow } from "@/lib/data/funding-approvals";
+import Button from "@/components/ui/button";
 import {
   approveFundingRequest,
   rejectFundingRequest,
@@ -103,13 +104,9 @@ function FundingApprovalCard({ row }: { row: FundingApprovalRow }) {
           <form action={rejectAction} className="space-y-2">
             <label className="mb-1 block text-xs font-medium text-slate-600">Rejection notes (optional)</label>
             <textarea name="manager_notes" rows={2} className={inputClass} />
-            <button
-              type="submit"
-              disabled={rejecting || !managerName.trim()}
-              className="rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
-            >
+            <Button type="submit" variant="danger" disabled={rejecting || !managerName.trim()}>
               {rejecting ? "Rejecting..." : "Reject"}
-            </button>
+            </Button>
             {rejectState.error && <p className="text-sm text-red-600">{rejectState.error}</p>}
           </form>
         </div>

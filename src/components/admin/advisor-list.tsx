@@ -3,6 +3,8 @@
 import { useActionState, useTransition } from "react";
 import Link from "next/link";
 import Badge from "@/components/badge";
+import Button from "@/components/ui/button";
+import { Table, THead, Th, TBody } from "@/components/ui/table";
 import type { AdvisorWithOffice } from "@/lib/data/advisor";
 import type { Office } from "@/types/database";
 import { createAdvisor, setAdvisorStatus, type AdminFormState } from "@/lib/actions/admin";
@@ -70,30 +72,26 @@ export default function AdvisorList({
           />
         </div>
         <div className="flex items-center gap-3 lg:col-span-4">
-          <button
-            type="submit"
-            disabled={creating}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-          >
+          <Button type="submit" disabled={creating}>
             {creating ? "Adding..." : "Add advisor"}
-          </button>
+          </Button>
           {createState.error && <span className="text-sm text-red-600">{createState.error}</span>}
         </div>
       </form>
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <Table>
+          <THead>
             <tr>
-              <th className="px-4 py-3">Name</th>
-              <th className="hidden px-4 py-3 sm:table-cell">Office</th>
-              <th className="hidden px-4 py-3 lg:table-cell">Job title</th>
-              <th className="px-4 py-3">Caseload</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3" />
+              <Th>Name</Th>
+              <Th className="hidden sm:table-cell">Office</Th>
+              <Th className="hidden lg:table-cell">Job title</Th>
+              <Th>Caseload</Th>
+              <Th>Status</Th>
+              <Th />
             </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
+          </THead>
+          <TBody>
             {advisors.map((advisor) => (
               <AdvisorRow
                 key={advisor.id}
@@ -101,8 +99,8 @@ export default function AdvisorList({
                 caseload={caseloadCounts.get(advisor.id) ?? 0}
               />
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </div>
     </div>
   );

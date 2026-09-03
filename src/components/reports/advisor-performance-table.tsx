@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Button from "@/components/ui/button";
+import { Table, THead, Th, TBody } from "@/components/ui/table";
 
 export type AdvisorPerformanceRow = {
   advisorId: string;
@@ -89,25 +91,21 @@ export default function AdvisorPerformanceTable({
           placeholder="Search advisor or office..."
           className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
         />
-        <button
-          type="button"
-          onClick={() => downloadCsv(exportFilename, toCsv(visibleRows))}
-          className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
+        <Button type="button" variant="secondary" size="sm" onClick={() => downloadCsv(exportFilename, toCsv(visibleRows))}>
           Export CSV
-        </button>
+        </Button>
       </div>
 
       {visibleRows.length === 0 ? (
         <p className="text-sm text-slate-500">No advisors match your search.</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <Table>
+            <THead>
               <tr>
-                <th className="px-4 py-3">#</th>
+                <Th>#</Th>
                 {COLUMNS.map((c) => (
-                  <th key={c.key} className="px-4 py-3">
+                  <Th key={c.key}>
                     <button
                       type="button"
                       onClick={() => toggleSort(c.key)}
@@ -116,11 +114,11 @@ export default function AdvisorPerformanceTable({
                       {c.label}
                       {sortKey === c.key && <span>{sortDir === "asc" ? "▲" : "▼"}</span>}
                     </button>
-                  </th>
+                  </Th>
                 ))}
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
+            </THead>
+            <TBody>
               {visibleRows.map((row, index) => (
                 <tr key={row.advisorId}>
                   <td className="px-4 py-3 text-slate-400">{index + 1}</td>
@@ -133,8 +131,8 @@ export default function AdvisorPerformanceTable({
                   <td className="px-4 py-3 text-slate-600">{row.iwtCaseload}</td>
                 </tr>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         </div>
       )}
     </div>

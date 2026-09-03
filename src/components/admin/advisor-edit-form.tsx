@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import type { Advisor, Office } from "@/types/database";
 import { updateAdvisor, type AdminFormState } from "@/lib/actions/admin";
+import Button from "@/components/ui/button";
 
 const initialState: AdminFormState = {};
 
@@ -66,13 +67,9 @@ export default function AdvisorEditForm({
       </div>
 
       <div className="flex items-center gap-3 sm:col-span-2">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Saving..." : "Save changes"}
-        </button>
+        </Button>
         {state.error && <span className="text-sm text-red-600">{state.error}</span>}
       </div>
     </form>

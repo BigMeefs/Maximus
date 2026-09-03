@@ -35,6 +35,7 @@ import {
 } from "@/lib/business-rules";
 import { getNextBestAction } from "@/lib/next-best-action";
 import { computeJourneyTimeline } from "@/lib/journey-timeline";
+import Button from "@/components/ui/button";
 
 export default async function ParticipantProfilePage({
   params,
@@ -155,12 +156,9 @@ export default async function ParticipantProfilePage({
             <p className="text-sm text-slate-500">{participant.business_name}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Link
-              href={`${basePath}/${id}/edit`}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
+            <Button variant="secondary" size="compact" href={`${basePath}/${id}/edit`}>
               Edit
-            </Link>
+            </Button>
             <DeleteParticipantButton action={boundDelete} />
           </div>
         </div>

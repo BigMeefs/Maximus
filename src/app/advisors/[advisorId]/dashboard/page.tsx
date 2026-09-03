@@ -11,6 +11,8 @@ import { getProgrammeSettings } from "@/lib/data/programme-settings";
 import StatCard from "@/components/stat-card";
 import Badge from "@/components/badge";
 import TouchLastVisit from "@/components/touch-last-visit";
+import Button from "@/components/ui/button";
+import { Table, THead, Th, TBody } from "@/components/ui/table";
 
 const EXPIRING_THRESHOLD_DAYS = 30;
 const currency = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
@@ -129,12 +131,9 @@ export default async function DashboardPage({
               : "Nothing needs your attention right now — nice and quiet."}
           </p>
         </div>
-        <Link
-          href={additionalInfoHref}
-          className="shrink-0 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
+        <Button variant="secondary" href={additionalInfoHref} className="shrink-0">
           Additional Information →
-        </Link>
+        </Button>
       </div>
 
       {announcements.length > 0 && (
@@ -227,17 +226,17 @@ export default async function DashboardPage({
         ) : (
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <Table>
+                <THead>
                   <tr>
-                    <th className="px-4 py-3">Participant</th>
-                    <th className="px-4 py-3">Month 1 Net Profit</th>
-                    <th className="px-4 py-3">Month 2 Net Profit</th>
-                    <th className="px-4 py-3">Date Eligible</th>
-                    <th className="px-4 py-3" />
+                    <Th>Participant</Th>
+                    <Th>Month 1 Net Profit</Th>
+                    <Th>Month 2 Net Profit</Th>
+                    <Th>Date Eligible</Th>
+                    <Th />
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
+                </THead>
+                <TBody>
                   {selfEmployment.tsIntelligence.map((row) => (
                     <tr key={row.participantId}>
                       <td className="px-4 py-3 font-medium text-slate-900">{row.participantName}</td>
@@ -247,17 +246,14 @@ export default async function DashboardPage({
                         {row.dateEligible ? new Date(row.dateEligible).toLocaleDateString("en-GB") : "—"}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Link
-                          href={tradingStartTabHref(row.participantId)}
-                          className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500"
-                        >
+                        <Button href={tradingStartTabHref(row.participantId)} size="xs">
                           Create Trading Start
-                        </Link>
+                        </Button>
                       </td>
                     </tr>
                   ))}
-                </tbody>
-              </table>
+                </TBody>
+              </Table>
             </div>
           </div>
         )}

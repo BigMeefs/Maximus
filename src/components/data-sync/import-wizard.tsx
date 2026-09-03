@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import Link from "next/link";
 import clsx from "clsx";
 import { parseImportFile, type ParsedSheet } from "@/lib/data-sync/parse";
 import { IMPORTABLE_FIELDS, suggestFieldMapping } from "@/lib/data-sync/field-mapping";
@@ -9,6 +8,8 @@ import type { FieldMapping, ParticipantTargetField } from "@/lib/data-sync/types
 import type { ImportPreviewRow, ImportRowOutcome } from "@/lib/data-sync/preview";
 import { previewImport, runImport, saveFieldMapping, type ImportRunResult } from "@/lib/actions/data-sync";
 import type { AdvisorWithOffice } from "@/lib/data/advisor";
+import Button from "@/components/ui/button";
+import { Table, THead, Th, TBody } from "@/components/ui/table";
 
 type Step = "upload" | "map" | "preview" | "summary";
 
@@ -167,13 +168,9 @@ export default function ImportWizard({
             <p className="text-sm font-medium text-slate-700">
               Drag and drop a .xlsx or .csv file exported from Power BI, or
             </p>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-            >
+            <Button type="button" onClick={() => fileInputRef.current?.click()}>
               Choose a file
-            </button>
+            </Button>
             <input
               ref={fileInputRef}
               type="file"
@@ -213,14 +210,14 @@ export default function ImportWizard({
           </p>
 
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <Table>
+              <THead>
                 <tr>
-                  <th className="px-4 py-3">CRM field</th>
-                  <th className="px-4 py-3">Spreadsheet column</th>
+                  <Th>CRM field</Th>
+                  <Th>Spreadsheet column</Th>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+              </THead>
+              <TBody>
                 {IMPORTABLE_FIELDS.map((def) => (
                   <tr key={def.field}>
                     <td className="px-4 py-3">
@@ -246,8 +243,8 @@ export default function ImportWizard({
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
 
           <label className="flex items-center gap-2 text-sm text-slate-600">
@@ -261,21 +258,12 @@ export default function ImportWizard({
           </label>
 
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={startOver}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
+            <Button type="button" variant="secondary" onClick={startOver}>
               Start over
-            </button>
-            <button
-              type="button"
-              disabled={!requiredFieldsMapped || isPending}
-              onClick={handlePreview}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-            >
+            </Button>
+            <Button type="button" disabled={!requiredFieldsMapped || isPending} onClick={handlePreview}>
               {isPending ? "Checking..." : "Preview & validate"}
-            </button>
+            </Button>
             {!requiredFieldsMapped && (
               <span className="text-sm text-red-600">Map all required fields to continue.</span>
             )}
@@ -293,17 +281,17 @@ export default function ImportWizard({
           </div>
 
           <div className="max-h-[28rem] overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="sticky top-0 border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <Table>
+              <THead className="sticky top-0">
                 <tr>
-                  <th className="px-4 py-3">Row</th>
-                  <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3">Business</th>
-                  <th className="px-4 py-3">Outcome</th>
-                  <th className="px-4 py-3">Notes</th>
+                  <Th>Row</Th>
+                  <Th>Name</Th>
+                  <Th>Business</Th>
+                  <Th>Outcome</Th>
+                  <Th>Notes</Th>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+              </THead>
+              <TBody>
                 {preview.slice(0, PREVIEW_ROW_LIMIT).map((row) => (
                   <tr key={row.rowNumber} className={row.outcome === "error" ? "bg-red-50/50" : undefined}>
                     <td className="px-4 py-3 text-slate-500">{row.rowNumber}</td>
@@ -329,8 +317,8 @@ export default function ImportWizard({
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
           {preview.length > PREVIEW_ROW_LIMIT && (
             <p className="text-xs text-slate-500">
@@ -361,21 +349,16 @@ export default function ImportWizard({
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setStep("map")}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
+            <Button type="button" variant="secondary" onClick={() => setStep("map")}>
               Back to mapping
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               disabled={isPending || counts.create + counts.update === 0}
               onClick={handleConfirmImport}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
             >
               {isPending ? "Importing..." : "Confirm & import"}
-            </button>
+            </Button>
             {counts.create + counts.update === 0 && (
               <span className="text-sm text-red-600">No rows are ready to import.</span>
             )}
@@ -408,25 +391,15 @@ export default function ImportWizard({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href={`/advisors/${advisorId}/data-sync/history/${result.batchId}`}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-            >
+            <Button href={`/advisors/${advisorId}/data-sync/history/${result.batchId}`}>
               View import details
-            </Link>
-            <Link
-              href={`/advisors/${advisorId}/participants`}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
+            </Button>
+            <Button variant="secondary" href={`/advisors/${advisorId}/participants`}>
               Go to participants
-            </Link>
-            <button
-              type="button"
-              onClick={startOver}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
+            </Button>
+            <Button type="button" variant="secondary" onClick={startOver}>
               Import another file
-            </button>
+            </Button>
           </div>
         </div>
       )}

@@ -5,6 +5,7 @@ import type { ReferralStatus } from "@/types/database";
 import Badge from "@/components/badge";
 import ReferralQrCard from "@/components/self-employment/referral-qr-card";
 import ReferralActions from "@/components/self-employment/referral-actions";
+import { Table, THead, Th, TBody } from "@/components/ui/table";
 
 const STATUS_TABS: { value: ReferralStatus | "all"; label: string }[] = [
   { value: "new", label: "New" },
@@ -70,19 +71,19 @@ export default async function ReferralsPage({
           <p className="p-8 text-center text-sm text-slate-500">No referrals in this view.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <Table>
+              <THead>
                 <tr>
-                  <th className="px-4 py-3">SE Advisor</th>
-                  <th className="px-4 py-3">Advisor</th>
-                  <th className="px-4 py-3">Participant ENG</th>
-                  <th className="px-4 py-3">Business Idea</th>
-                  <th className="px-4 py-3">Date of Submission</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Action</th>
+                  <Th>SE Advisor</Th>
+                  <Th>Advisor</Th>
+                  <Th>Participant ENG</Th>
+                  <Th>Business Idea</Th>
+                  <Th>Date of Submission</Th>
+                  <Th>Status</Th>
+                  <Th>Action</Th>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+              </THead>
+              <TBody>
                 {referrals.map((r) => (
                   <tr key={r.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3 text-slate-600">
@@ -119,8 +120,8 @@ export default async function ReferralsPage({
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
         )}
       </div>

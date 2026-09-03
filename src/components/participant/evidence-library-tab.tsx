@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { EVIDENCE_CATEGORIES, type EvidenceFile } from "@/types/database";
+import Button from "@/components/ui/button";
 import {
   deleteEvidenceFile,
   getEvidenceFileUrl,
@@ -68,13 +69,9 @@ export default function EvidenceLibraryTab({
             </option>
           ))}
         </select>
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Uploading..." : "Upload evidence"}
-        </button>
+        </Button>
         {error && <span className="text-sm text-red-600">{error}</span>}
       </form>
 

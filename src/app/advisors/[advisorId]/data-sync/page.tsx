@@ -1,7 +1,7 @@
-import Link from "next/link";
 import StatCard from "@/components/stat-card";
 import SyncDashboardChart from "@/components/data-sync/sync-dashboard-chart";
 import { getSyncDashboardStats } from "@/lib/actions/data-sync";
+import Button from "@/components/ui/button";
 
 export default async function DataSyncPage({
   params,
@@ -22,24 +22,15 @@ export default async function DataSyncPage({
           </p>
         </div>
         <div className="flex gap-3">
-          <Link
-            href={`${basePath}/mapping`}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
+          <Button variant="secondary" href={`${basePath}/mapping`}>
             Field mappings
-          </Link>
-          <Link
-            href={`${basePath}/history`}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
+          </Button>
+          <Button variant="secondary" href={`${basePath}/history`}>
             Import history
-          </Link>
-          <Link
-            href={`${basePath}/import`}
-            className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-          >
+          </Button>
+          <Button href={`${basePath}/import`} className="inline-flex items-center justify-center">
             + New import
-          </Link>
+          </Button>
         </div>
       </div>
 

@@ -25,6 +25,8 @@ import {
 import { computeParticipantHealth, type ParticipantHealth } from "@/lib/participant-health";
 import HealthBadge from "@/components/participant/health-badge";
 import Badge from "@/components/badge";
+import Field from "@/components/ui/field";
+import Button from "@/components/ui/button";
 import {
   addIwtReview,
   closeClaim,
@@ -198,13 +200,9 @@ function NoTradingStart({
         ))}
 
       {!showForm ? (
-        <button
-          type="button"
-          onClick={() => setShowForm(true)}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-        >
+        <Button type="button" onClick={() => setShowForm(true)}>
           Create Trading Start
-        </button>
+        </Button>
       ) : (
         <form action={formAction} className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -257,20 +255,12 @@ function NoTradingStart({
             </Field>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-            >
+            <Button type="submit" disabled={pending}>
               {pending ? "Creating..." : "Confirm Trading Start"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
               Cancel
-            </button>
+            </Button>
             {state.error && <span className="text-sm text-red-600">{state.error}</span>}
           </div>
         </form>
@@ -417,13 +407,9 @@ function IwtPanel({
           </Field>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-          >
+          <Button type="submit" variant="secondary" size="compact" disabled={pending}>
             {pending ? "Saving..." : "Log review"}
-          </button>
+          </Button>
           {state.error && <span className="text-sm text-red-600">{state.error}</span>}
         </div>
       </form>
@@ -589,13 +575,9 @@ function OutcomeSection({
           </Field>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-          >
+          <Button type="submit" disabled={pending}>
             {pending ? "Saving..." : outcome ? "Update outcome" : "Record outcome"}
-          </button>
+          </Button>
           {state.error && <span className="text-sm text-red-600">{state.error}</span>}
         </div>
       </form>
@@ -605,28 +587,6 @@ function OutcomeSection({
 
 const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200";
-
-function Field({
-  label,
-  required,
-  className,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={className}>
-      <label className="mb-1 block text-xs font-medium text-slate-600">
-        {label}
-        {required && <span className="text-red-500"> *</span>}
-      </label>
-      {children}
-    </div>
-  );
-}
 
 function Info({
   label,

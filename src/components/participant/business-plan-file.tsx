@@ -6,6 +6,7 @@ import {
   getBusinessPlanFileUrl,
   uploadBusinessPlanFile,
 } from "@/lib/actions/business-plan";
+import Button from "@/components/ui/button";
 
 export default function BusinessPlanFile({
   participantId,
@@ -79,13 +80,9 @@ export default function BusinessPlanFile({
         required
         className="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
       />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-60"
-      >
+      <Button type="submit" size="sm" disabled={pending}>
         {pending ? "Uploading..." : "Upload"}
-      </button>
+      </Button>
       {error && <span className="text-sm text-red-600">{error}</span>}
     </form>
   );

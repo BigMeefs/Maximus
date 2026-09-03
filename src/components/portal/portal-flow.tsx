@@ -3,6 +3,8 @@
 import { useActionState, useState, useTransition } from "react";
 import { lookupParticipantByEmail, submitPortalIncomeEntry, type PortalSubmitState } from "@/lib/actions/portal";
 import { calculateMileageCost } from "@/lib/mileage";
+import Field from "@/components/ui/field";
+import Button from "@/components/ui/button";
 
 const currency = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
 
@@ -79,13 +81,9 @@ function EmailStep({
           placeholder="you@example.com"
           className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
         />
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-        >
+        <Button type="submit" disabled={pending} className="w-full">
           {pending ? "Checking..." : "Continue"}
-        </button>
+        </Button>
       </form>
       {notFound && (
         <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
@@ -194,13 +192,9 @@ function IncomeForm({
 
         {state.error && <p className="text-sm text-red-600">{state.error}</p>}
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-        >
+        <Button type="submit" disabled={pending} className="w-full">
           {pending ? "Submitting..." : "Submit"}
-        </button>
+        </Button>
       </form>
     </div>
   );
@@ -231,36 +225,12 @@ function SuccessStep({
           <span className="font-semibold text-slate-900">{currency.format(netProfit)}</span>
         </div>
       </div>
-      <button
-        type="button"
-        onClick={onSubmitAnother}
-        className="mt-5 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-      >
+      <Button type="button" variant="secondary" onClick={onSubmitAnother} className="mt-5">
         Submit another entry
-      </button>
+      </Button>
     </div>
   );
 }
 
 const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200";
-
-function Field({
-  label,
-  required,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-xs font-medium text-slate-600">
-        {label}
-        {required && <span className="text-red-500"> *</span>}
-      </label>
-      {children}
-    </div>
-  );
-}

@@ -6,6 +6,8 @@ import {
   updateProgrammeSettings,
   type ProgrammeSettingsFormState,
 } from "@/lib/actions/programme-settings";
+import Field from "@/components/ui/field";
+import Button from "@/components/ui/button";
 
 const initialState: ProgrammeSettingsFormState = {};
 
@@ -65,13 +67,9 @@ export default function ProgrammeSettingsForm({ settings }: { settings: Programm
       </div>
 
       <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Saving..." : "Save settings"}
-        </button>
+        </Button>
         {state.error && <span className="text-sm text-red-600">{state.error}</span>}
       </div>
 
@@ -83,25 +81,5 @@ export default function ProgrammeSettingsForm({ settings }: { settings: Programm
         </p>
       )}
     </form>
-  );
-}
-
-function Field({
-  label,
-  required,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-xs font-medium text-slate-600">
-        {label}
-        {required && <span className="text-red-500"> *</span>}
-      </label>
-      {children}
-    </div>
   );
 }

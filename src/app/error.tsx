@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Button from "@/components/ui/button";
 
 export default function ErrorPage({
   error,
@@ -39,13 +40,9 @@ export default function ErrorPage({
             An unexpected error occurred while loading this page.
           </p>
         )}
-        <button
-          type="button"
-          onClick={reset}
-          className="mt-6 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-        >
+        <Button type="button" onClick={reset} className="mt-6">
           Try again
-        </button>
+        </Button>
       </div>
     </div>
   );

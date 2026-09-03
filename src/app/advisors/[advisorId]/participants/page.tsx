@@ -4,6 +4,8 @@ import { getDaysRemaining } from "@/lib/participant";
 import { getAdvisorOrNotFound } from "@/lib/data/advisor";
 import Badge, { statusTone } from "@/components/badge";
 import ParticipantFilters from "@/components/participant-filters";
+import Button from "@/components/ui/button";
+import { Table, THead, Th, TBody } from "@/components/ui/table";
 import type { RagStatus } from "@/types/database";
 
 function ragTone(status: RagStatus) {
@@ -75,12 +77,9 @@ export default async function ParticipantsPage({
             {rows.length} of {participants?.length ?? 0} participants
           </p>
         </div>
-        <Link
-          href={`${basePath}/new`}
-          className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-        >
+        <Button href={`${basePath}/new`} className="inline-flex items-center justify-center">
           + Add participant
-        </Link>
+        </Button>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -97,21 +96,19 @@ export default async function ParticipantsPage({
             No participants match your search.
           </p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <Table>
+            <THead>
               <tr>
-                <th className="px-4 py-3">PTP Name</th>
-                <th className="hidden px-4 py-3 md:table-cell">Iconi ID</th>
-                <th className="hidden px-4 py-3 sm:table-cell">Business</th>
-                <th className="px-4 py-3">RAG</th>
-                <th className="hidden px-4 py-3 md:table-cell">Stage</th>
-                <th className="px-4 py-3">Days remaining</th>
-                <th className="hidden px-4 py-3 lg:table-cell">
-                  Business plan
-                </th>
+                <Th>PTP Name</Th>
+                <Th className="hidden md:table-cell">Iconi ID</Th>
+                <Th className="hidden sm:table-cell">Business</Th>
+                <Th>RAG</Th>
+                <Th className="hidden md:table-cell">Stage</Th>
+                <Th>Days remaining</Th>
+                <Th className="hidden lg:table-cell">Business plan</Th>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
+            </THead>
+            <TBody>
               {rows.map((p) => (
                 <tr key={p.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3">
@@ -151,8 +148,8 @@ export default async function ParticipantsPage({
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         )}
       </div>
     </div>

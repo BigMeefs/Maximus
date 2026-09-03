@@ -1,18 +1,10 @@
-import clsx from "clsx";
 import type { HealthTone } from "@/lib/participant-health";
+import Badge from "@/components/badge";
 
-const TONE_CLASSES: Record<HealthTone, string> = {
-  green: "bg-emerald-100 text-emerald-700",
-  amber: "bg-amber-100 text-amber-700",
-  red: "bg-red-100 text-red-700",
-};
-
-const TONE_DOT: Record<HealthTone, string> = {
-  green: "bg-emerald-500",
-  amber: "bg-amber-500",
-  red: "bg-red-500",
-};
-
+// Thin wrapper around the shared Badge primitive (Phase 1 consolidation).
+// tone/label are still driven entirely by participant-health.ts's
+// business logic — unchanged. size="lg" + dot reproduce this component's
+// original px-3 py-1 font-semibold + coloured-dot styling exactly.
 export default function HealthBadge({
   tone,
   label,
@@ -23,15 +15,8 @@ export default function HealthBadge({
   className?: string;
 }) {
   return (
-    <span
-      className={clsx(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
-        TONE_CLASSES[tone],
-        className,
-      )}
-    >
-      <span aria-hidden className={clsx("h-1.5 w-1.5 rounded-full", TONE_DOT[tone])} />
+    <Badge tone={tone} size="lg" dot className={className}>
       {label}
-    </span>
+    </Badge>
   );
 }

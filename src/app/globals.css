@@ -11,6 +11,25 @@
 :root {
   --background: #ffffff;
   --foreground: #0f172a;
+
+  /*
+   * Semantic colour tokens — Phase 1 UI foundation. These name the app's
+   * existing real colours (the same hex values already used throughout
+   * as bg-indigo-600, text-emerald-600, etc.) so future work can refer to
+   * a role ("the danger colour") instead of a literal Tailwind shade.
+   * This is not a recolour: nothing that already uses e.g. bg-red-600
+   * directly is changed by adding these, and no new hue is introduced.
+   */
+  --color-canvas: #f8fafc; /* slate-50 — the shell/page background behind cards */
+  --color-surface: #ffffff; /* cards, panels, inputs */
+  --color-line: #e2e8f0; /* slate-200 — the near-universal card/input border */
+  --color-ink: #0f172a; /* slate-900, same as --foreground */
+  --color-ink-muted: #64748b; /* slate-500 — captions, secondary text */
+  --color-primary: #4f46e5; /* indigo-600 — primary actions, links, active states */
+  --color-success: #059669; /* emerald-600 — achieved, complete, green RAG */
+  --color-warning: #d97706; /* amber-600 — pending, approaching, amber RAG */
+  --color-danger: #dc2626; /* red-600 — overdue, at risk, rejected */
+  --color-info: #2563eb; /* blue-600 — e.g. In Work Tracking status */
 }
 
 @theme inline {
@@ -18,6 +37,17 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --color-canvas: var(--color-canvas);
+  --color-surface: var(--color-surface);
+  --color-line: var(--color-line);
+  --color-ink: var(--color-ink);
+  --color-ink-muted: var(--color-ink-muted);
+  --color-primary: var(--color-primary);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
+  --color-info: var(--color-info);
 }
 
 body {

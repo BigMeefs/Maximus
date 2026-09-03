@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import type { ImportFieldMapping } from "@/types/database";
 import { IMPORTABLE_FIELDS } from "@/lib/data-sync/field-mapping";
 import { deleteFieldMapping } from "@/lib/actions/data-sync";
+import { Table, THead, Th, TBody } from "@/components/ui/table";
 
 const LABEL_BY_FIELD = new Map<string, string>(IMPORTABLE_FIELDS.map((f) => [f.field, f.label]));
 
@@ -27,15 +28,15 @@ export default function FieldMappingList({ mappings }: { mappings: ImportFieldMa
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <table className="w-full text-left text-sm">
-        <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <Table>
+        <THead>
           <tr>
-            <th className="px-4 py-3">Spreadsheet column</th>
-            <th className="px-4 py-3">CRM field</th>
-            <th className="px-4 py-3" />
+            <Th>Spreadsheet column</Th>
+            <Th>CRM field</Th>
+            <Th />
           </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
+        </THead>
+        <TBody>
           {rows.map((mapping) => (
             <tr key={mapping.id}>
               <td className="px-4 py-3 text-slate-900">{mapping.source_column}</td>
@@ -54,8 +55,8 @@ export default function FieldMappingList({ mappings }: { mappings: ImportFieldMa
               </td>
             </tr>
           ))}
-        </tbody>
-      </table>
+        </TBody>
+      </Table>
     </div>
   );
 }

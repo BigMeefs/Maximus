@@ -4,6 +4,7 @@ import Badge from "@/components/badge";
 import TradingStartTrendsChart from "@/components/reports/trading-start-trends-chart";
 import ReportFilters from "@/components/reports/report-filters";
 import AdvisorPerformanceTable from "@/components/reports/advisor-performance-table";
+import { Table, THead, Th, TBody } from "@/components/ui/table";
 import {
   getCompanyReportStats,
   getExpenseApprovalReport,
@@ -95,16 +96,16 @@ export default async function ReportsPage({
 
       <Section title="Expenses" subtitle="Funding requests by month, broken down by approval status.">
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <Table>
+            <THead>
               <tr>
-                <th className="px-4 py-3">Month</th>
-                <th className="px-4 py-3">Approved</th>
-                <th className="px-4 py-3">Pending</th>
-                <th className="px-4 py-3">Rejected</th>
+                <Th>Month</Th>
+                <Th>Approved</Th>
+                <Th>Pending</Th>
+                <Th>Rejected</Th>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
+            </THead>
+            <TBody>
               {expenseReport.map((row) => (
                 <tr key={row.month}>
                   <td className="px-4 py-3 font-medium text-slate-900">{row.monthLabel}</td>
@@ -119,8 +120,8 @@ export default async function ReportsPage({
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         </div>
       </Section>
 
@@ -149,23 +150,23 @@ export default async function ReportsPage({
           <p className="text-sm text-slate-500">No offices found.</p>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <Table>
+              <THead>
                 <tr>
-                  <th className="px-4 py-3">Office</th>
-                  <th className="px-4 py-3">Trading Starts</th>
-                  <th className="px-4 py-3">Outcomes</th>
-                  <th className="px-4 py-3">GSE</th>
-                  <th className="px-4 py-3">NGSE</th>
-                  <th className="px-4 py-3">Claim Closed</th>
-                  <th className="px-4 py-3">Active IWT</th>
-                  <th className="px-4 py-3">Funding Requests</th>
-                  <th className="px-4 py-3">Funding Approved</th>
-                  <th className="px-4 py-3">Funding Rejected</th>
-                  <th className="px-4 py-3">Income Tracker Compliance</th>
+                  <Th>Office</Th>
+                  <Th>Trading Starts</Th>
+                  <Th>Outcomes</Th>
+                  <Th>GSE</Th>
+                  <Th>NGSE</Th>
+                  <Th>Claim Closed</Th>
+                  <Th>Active IWT</Th>
+                  <Th>Funding Requests</Th>
+                  <Th>Funding Approved</Th>
+                  <Th>Funding Rejected</Th>
+                  <Th>Income Tracker Compliance</Th>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+              </THead>
+              <TBody>
                 {officeStats.map((row) => (
                   <tr key={row.officeId}>
                     <td className="px-4 py-3 font-medium text-slate-900">{row.officeName}</td>
@@ -185,8 +186,8 @@ export default async function ReportsPage({
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
         )}
       </Section>
@@ -224,16 +225,16 @@ export default async function ReportsPage({
 
         <Section title="Funding status">
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <Table>
+              <THead>
                 <tr>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Count</th>
-                  <th className="px-4 py-3">Approved</th>
-                  <th className="px-4 py-3">Received</th>
+                  <Th>Status</Th>
+                  <Th>Count</Th>
+                  <Th>Approved</Th>
+                  <Th>Received</Th>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+              </THead>
+              <TBody>
                 {stats.byFundingStatus.map((f) => (
                   <tr key={f.label}>
                     <td className="px-4 py-3 font-medium text-slate-900">{f.label}</td>
@@ -242,8 +243,8 @@ export default async function ReportsPage({
                     <td className="px-4 py-3 text-slate-600">{currency.format(f.totalReceived)}</td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
           <p className="mt-2 text-xs text-slate-500">Total received across all offices: {currency.format(fundingReceived)}</p>
         </Section>
@@ -421,16 +422,16 @@ function PerformanceTable<T extends PerformanceRow>({
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <table className="w-full text-left text-sm">
-        <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <Table>
+        <THead>
           <tr>
-            <th className="px-4 py-3">{nameHeader}</th>
-            <th className="px-4 py-3">Participants</th>
-            <th className="px-4 py-3">Gateway ready</th>
-            <th className="px-4 py-3">Gateway completed</th>
+            <Th>{nameHeader}</Th>
+            <Th>Participants</Th>
+            <Th>Gateway ready</Th>
+            <Th>Gateway completed</Th>
           </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
+        </THead>
+        <TBody>
           {rows.map((row) => (
             <tr key={row.label}>
               <td className="px-4 py-3">{renderName ? renderName(row) : row.label}</td>
@@ -443,8 +444,8 @@ function PerformanceTable<T extends PerformanceRow>({
               </td>
             </tr>
           ))}
-        </tbody>
-      </table>
+        </TBody>
+      </Table>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import type { BusinessPlan, Participant } from "@/types/database";
 import { runAiAssistant, type AiAssistantState } from "@/lib/actions/ai-assistant";
+import Button from "@/components/ui/button";
 
 const QUICK_ACTIONS = [
   {
@@ -127,13 +128,9 @@ export default function AiAssistantTab({
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
           />
         </div>
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Thinking..." : "Ask the assistant"}
-        </button>
+        </Button>
       </form>
 
       {state.error && (

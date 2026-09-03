@@ -2,6 +2,7 @@ import { getAllMplTargets, getMplForMonth, monthKeyOf } from "@/lib/data/mpl";
 import { getAdvisorMplPerformance } from "@/lib/data/advisor-mpl-performance";
 import MplSettingsForm from "@/components/admin/mpl-settings-form";
 import Badge from "@/components/badge";
+import { Table, THead, Th, TBody } from "@/components/ui/table";
 
 function pctTone(pct: number | null): "slate" | "green" | "amber" | "red" {
   if (pct === null) return "slate";
@@ -67,21 +68,21 @@ export default async function AdminPerformancePage() {
           </p>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <Table>
+              <THead>
                 <tr>
-                  <th className="px-4 py-3">Advisor</th>
-                  <th className="px-4 py-3">Trading Starts</th>
-                  <th className="px-4 py-3">TS % Achieved</th>
-                  <th className="px-4 py-3">Outcomes</th>
-                  <th className="px-4 py-3">Outcomes % Achieved</th>
-                  <th className="px-4 py-3">TS 3M %</th>
-                  <th className="px-4 py-3">Outcomes 3M %</th>
-                  <th className="px-4 py-3">TS 6M %</th>
-                  <th className="px-4 py-3">Outcomes 6M %</th>
+                  <Th>Advisor</Th>
+                  <Th>Trading Starts</Th>
+                  <Th>TS % Achieved</Th>
+                  <Th>Outcomes</Th>
+                  <Th>Outcomes % Achieved</Th>
+                  <Th>TS 3M %</Th>
+                  <Th>Outcomes 3M %</Th>
+                  <Th>TS 6M %</Th>
+                  <Th>Outcomes 6M %</Th>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+              </THead>
+              <TBody>
                 {rows.map((row) => (
                   <tr key={row.advisorId}>
                     <td className="px-4 py-3 font-medium text-slate-900">{row.advisorName}</td>
@@ -107,8 +108,8 @@ export default async function AdminPerformancePage() {
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
         )}
       </section>

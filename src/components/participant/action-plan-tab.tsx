@@ -3,6 +3,7 @@
 import { useActionState, useTransition } from "react";
 import type { ActionPlanItem, ActionStatus } from "@/types/database";
 import Badge, { statusTone } from "@/components/badge";
+import Button from "@/components/ui/button";
 import {
   createActionPlanItem,
   deleteActionPlanItem,
@@ -68,13 +69,9 @@ export default function ActionPlanTab({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-          >
+          <Button type="submit" disabled={pending}>
             {pending ? "Adding..." : "Add action"}
-          </button>
+          </Button>
           {state.error && (
             <span className="text-sm text-red-600">{state.error}</span>
           )}

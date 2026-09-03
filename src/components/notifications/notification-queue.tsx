@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import Badge from "@/components/badge";
 import type { Notification, NotificationType } from "@/types/database";
 import { markNotificationReviewed } from "@/lib/actions/notifications";
+import Button from "@/components/ui/button";
 
 export type NotificationRow = Notification & { participantName: string | null };
 
@@ -123,12 +123,9 @@ function NotificationCard({
           {pending ? "Marking..." : "✓ Mark as Reviewed"}
         </button>
         {participantHref && (
-          <Link
-            href={participantHref}
-            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
+          <Button variant="secondary" size="sm" href={participantHref}>
             {row.participantName ?? "Open participant"}
-          </Link>
+          </Button>
         )}
       </div>
     </div>

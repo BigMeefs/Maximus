@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { acceptReferral, rejectReferral } from "@/lib/actions/referrals";
+import Button from "@/components/ui/button";
 
 export default function ReferralActions({
   referralId,
@@ -48,14 +49,9 @@ export default function ReferralActions({
         >
           Accept
         </button>
-        <button
-          type="button"
-          disabled={pending}
-          onClick={handleReject}
-          className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"
-        >
+        <Button type="button" variant="danger" size="xs" disabled={pending} onClick={handleReject}>
           Reject
-        </button>
+        </Button>
       </div>
       {message && <p className="max-w-xs text-right text-xs text-slate-500">{message}</p>}
     </div>

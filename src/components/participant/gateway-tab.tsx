@@ -5,6 +5,7 @@ import clsx from "clsx";
 import type { ChecklistEntry } from "@/lib/business-rules";
 import { GATEWAY_OUTCOMES, type EvidenceFile, type GatewayBookedStatus, type GatewayOutcome } from "@/types/database";
 import { toggleReadinessItem, updateGatewayBooking, updateGatewayNotes, type ReadinessChecklistField } from "@/lib/actions/gateway";
+import Button from "@/components/ui/button";
 
 const BOOKED_STATUSES: GatewayBookedStatus[] = ["Not Booked", "Booked", "Completed"];
 
@@ -187,13 +188,9 @@ export default function GatewayReadinessTab({
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={bookingPending}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-            >
+            <Button type="submit" disabled={bookingPending}>
               {bookingPending ? "Saving..." : "Save Gateway booking"}
-            </button>
+            </Button>
           </form>
         </div>
 
@@ -221,13 +218,9 @@ export default function GatewayReadinessTab({
             placeholder="Notes on Gateway readiness, blockers, next actions..."
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
           />
-          <button
-            type="submit"
-            disabled={notesPending}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-          >
+          <Button type="submit" disabled={notesPending}>
             {notesPending ? "Saving..." : "Save notes"}
-          </button>
+          </Button>
         </form>
       </div>
     </section>

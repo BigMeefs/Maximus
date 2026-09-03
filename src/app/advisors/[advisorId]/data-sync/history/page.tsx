@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Badge from "@/components/badge";
 import { getImportHistory } from "@/lib/actions/data-sync";
+import { Table, THead, Th, TBody } from "@/components/ui/table";
 import type { ImportStatus } from "@/types/database";
 
 function statusTone(status: ImportStatus) {
@@ -26,18 +27,18 @@ export default async function ImportHistoryPage({
         {batches.length === 0 ? (
           <p className="p-8 text-center text-sm text-slate-500">No imports yet.</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <Table>
+            <THead>
               <tr>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">File</th>
-                <th className="hidden px-4 py-3 sm:table-cell">Imported by</th>
-                <th className="px-4 py-3">Rows</th>
-                <th className="hidden px-4 py-3 lg:table-cell">Created / Updated / Errors</th>
-                <th className="px-4 py-3">Status</th>
+                <Th>Date</Th>
+                <Th>File</Th>
+                <Th className="hidden sm:table-cell">Imported by</Th>
+                <Th>Rows</Th>
+                <Th className="hidden lg:table-cell">Created / Updated / Errors</Th>
+                <Th>Status</Th>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
+            </THead>
+            <TBody>
               {batches.map((b) => (
                 <tr key={b.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3 text-slate-600">
@@ -62,8 +63,8 @@ export default async function ImportHistoryPage({
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         )}
       </div>
     </div>

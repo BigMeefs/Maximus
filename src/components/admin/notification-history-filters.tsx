@@ -3,6 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { NOTIFICATION_STATUSES, NOTIFICATION_TYPES, type NotificationType, type NotificationStatus } from "@/types/database";
+import Button from "@/components/ui/button";
 
 type OfficeOption = { id: string; name: string };
 type AdvisorOption = { id: string; full_name: string; office_id: string };
@@ -158,13 +159,9 @@ export default function NotificationHistoryFilters({
         />
       </label>
       {hasFilters && (
-        <button
-          type="button"
-          onClick={() => router.push(pathname)}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
+        <Button type="button" variant="secondary" onClick={() => router.push(pathname)}>
           Clear filters
-        </button>
+        </Button>
       )}
     </div>
   );

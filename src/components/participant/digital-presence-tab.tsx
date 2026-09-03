@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { DIGITAL_PLATFORMS, DIGITAL_PRESENCE_STATUSES, type DigitalPresenceItem, type DigitalPresenceStatus } from "@/types/database";
 import { isDigitalPresenceDone } from "@/lib/business-rules";
 import { updateDigitalPresenceItem } from "@/lib/actions/digital-presence";
+import Button from "@/components/ui/button";
 
 const STATUS_BADGE: Record<DigitalPresenceStatus, string> = {
   Complete: "bg-emerald-100 text-emerald-700",
@@ -130,13 +131,9 @@ function PlatformRow({
         className="w-full min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
       />
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-      >
+      <Button type="submit" variant="secondary" size="compact" disabled={pending} className="whitespace-nowrap">
         {pending ? "Saving..." : "Save"}
-      </button>
+      </Button>
     </form>
   );
 }

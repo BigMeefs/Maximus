@@ -16,6 +16,9 @@ import {
 } from "@/lib/trading-start-rules";
 import IncomeAnalyticsChart from "@/components/participant/income-analytics-chart";
 import Badge from "@/components/badge";
+import Field from "@/components/ui/field";
+import Button from "@/components/ui/button";
+import { Table, THead, Th, TBody } from "@/components/ui/table";
 
 const currency = new Intl.NumberFormat("en-GB", {
   style: "currency",
@@ -193,13 +196,9 @@ export default function IncomeTrackerTab({
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-          >
+          <Button type="submit" disabled={pending}>
             {pending ? "Saving..." : "Save entry"}
-          </button>
+          </Button>
           {state.error && <span className="text-sm text-red-600">{state.error}</span>}
         </div>
       </form>
@@ -211,22 +210,22 @@ export default function IncomeTrackerTab({
         </p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <Table>
+            <THead>
               <tr>
-                <th className="px-4 py-3">Month</th>
-                <th className="px-4 py-3">Date submitted</th>
-                <th className="px-4 py-3">Income</th>
-                <th className="px-4 py-3">Expense</th>
-                <th className="px-4 py-3">Miles</th>
-                <th className="px-4 py-3">Mileage</th>
-                <th className="px-4 py-3">Net Profit</th>
-                <th className="px-4 py-3">Source</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3" />
+                <Th>Month</Th>
+                <Th>Date submitted</Th>
+                <Th>Income</Th>
+                <Th>Expense</Th>
+                <Th>Miles</Th>
+                <Th>Mileage</Th>
+                <Th>Net Profit</Th>
+                <Th>Source</Th>
+                <Th>Status</Th>
+                <Th />
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
+            </THead>
+            <TBody>
               {[...entries].reverse().map((entry) => (
                 <tr key={entry.id}>
                   <td className="px-4 py-3 font-medium text-slate-900">{formatMonth(entry.month)}</td>
@@ -269,8 +268,8 @@ export default function IncomeTrackerTab({
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         </div>
       )}
     </div>
@@ -327,25 +326,3 @@ function SummaryStat({ label, value }: { label: string; value: string }) {
 
 const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200";
-
-function Field({
-  label,
-  required,
-  className,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={className}>
-      <label className="mb-1 block text-xs font-medium text-slate-600">
-        {label}
-        {required && <span className="text-red-500"> *</span>}
-      </label>
-      {children}
-    </div>
-  );
-}

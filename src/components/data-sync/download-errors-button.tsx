@@ -1,6 +1,7 @@
 "use client";
 
 import type { ImportError } from "@/types/database";
+import Button from "@/components/ui/button";
 
 export default function DownloadErrorsButton({
   errors,
@@ -26,13 +27,8 @@ export default function DownloadErrorsButton({
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleDownload}
-      disabled={errors.length === 0}
-      className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-    >
+    <Button type="button" variant="secondary" onClick={handleDownload} disabled={errors.length === 0}>
       Download error report
-    </button>
+    </Button>
   );
 }

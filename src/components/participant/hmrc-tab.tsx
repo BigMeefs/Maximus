@@ -3,6 +3,8 @@
 import { useActionState } from "react";
 import { BUSINESS_STRUCTURES, type HmrcBusinessInfo } from "@/types/database";
 import { updateHmrcInfo, type HmrcFormState } from "@/lib/actions/hmrc";
+import Field from "@/components/ui/field";
+import Button from "@/components/ui/button";
 
 const initialState: HmrcFormState = {};
 
@@ -19,7 +21,7 @@ export default function HmrcTab({
   return (
     <form action={formAction} className="max-w-2xl space-y-5">
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        <Field label="Business Structure">
+        <Field label="Business Structure" size="md">
           <select
             name="business_structure"
             defaultValue={hmrc?.business_structure ?? ""}
@@ -34,7 +36,7 @@ export default function HmrcTab({
           </select>
         </Field>
 
-        <Field label="UTR Number">
+        <Field label="UTR Number" size="md">
           <input
             name="utr_number"
             defaultValue={hmrc?.utr_number ?? ""}
@@ -81,7 +83,7 @@ export default function HmrcTab({
           </label>
         </div>
 
-        <Field label="Notes (optional)" className="sm:col-span-2">
+        <Field label="Notes (optional)" size="md" className="sm:col-span-2">
           <textarea
             name="notes"
             rows={3}
@@ -95,33 +97,12 @@ export default function HmrcTab({
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{state.error}</p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? "Saving..." : "Save HMRC & business information"}
-      </button>
+      </Button>
     </form>
   );
 }
 
 const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200";
-
-function Field({
-  label,
-  className,
-  children,
-}: {
-  label: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={className}>
-      <label className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
-      {children}
-    </div>
-  );
-}

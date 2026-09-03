@@ -4,6 +4,8 @@ import { useActionState } from "react";
 import type { Participant } from "@/types/database";
 import type { ParticipantFormState } from "@/app/advisors/[advisorId]/participants/actions";
 import { BUSINESS_SECTOR_SUGGESTIONS } from "@/lib/constants";
+import Field from "@/components/ui/field";
+import Button from "@/components/ui/button";
 
 const initialState: ParticipantFormState = {};
 
@@ -26,7 +28,7 @@ export default function ParticipantForm({
   return (
     <form action={formAction} className="space-y-5">
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        <Field label="PTP Name" htmlFor="ptp_name" required>
+        <Field label="PTP Name" htmlFor="ptp_name" required size="md">
           <input
             id="ptp_name"
             name="ptp_name"
@@ -36,7 +38,7 @@ export default function ParticipantForm({
           />
         </Field>
 
-        <Field label="Iconi ID" htmlFor="iconi_id">
+        <Field label="Iconi ID" htmlFor="iconi_id" size="md">
           <input
             id="iconi_id"
             name="iconi_id"
@@ -48,7 +50,7 @@ export default function ParticipantForm({
           </p>
         </Field>
 
-        <Field label="Business Name" htmlFor="business_name" required>
+        <Field label="Business Name" htmlFor="business_name" required size="md">
           <input
             id="business_name"
             name="business_name"
@@ -58,7 +60,7 @@ export default function ParticipantForm({
           />
         </Field>
 
-        <Field label="Business Sector" htmlFor="business_sector">
+        <Field label="Business Sector" htmlFor="business_sector" size="md">
           <input
             id="business_sector"
             name="business_sector"
@@ -74,7 +76,7 @@ export default function ParticipantForm({
           </datalist>
         </Field>
 
-        <Field label="Advisor" htmlFor="advisor_display">
+        <Field label="Advisor" htmlFor="advisor_display" size="md">
           <input
             id="advisor_display"
             disabled
@@ -86,7 +88,7 @@ export default function ParticipantForm({
           </p>
         </Field>
 
-        <Field label="Email" htmlFor="email">
+        <Field label="Email" htmlFor="email" size="md">
           <input
             id="email"
             name="email"
@@ -100,7 +102,7 @@ export default function ParticipantForm({
           </p>
         </Field>
 
-        <Field label="Previous Advisor" htmlFor="previous_advisor">
+        <Field label="Previous Advisor" htmlFor="previous_advisor" size="md">
           <input
             id="previous_advisor"
             name="previous_advisor"
@@ -110,7 +112,7 @@ export default function ParticipantForm({
           />
         </Field>
 
-        <Field label="Scheme Start Date" htmlFor="scheme_start_date" required>
+        <Field label="Scheme Start Date" htmlFor="scheme_start_date" required size="md">
           <input
             id="scheme_start_date"
             name="scheme_start_date"
@@ -121,7 +123,7 @@ export default function ParticipantForm({
           />
         </Field>
 
-        <Field label="Gateway Target Date" htmlFor="gateway_target_date">
+        <Field label="Gateway Target Date" htmlFor="gateway_target_date" size="md">
           <input
             id="gateway_target_date"
             name="gateway_target_date"
@@ -131,7 +133,7 @@ export default function ParticipantForm({
           />
         </Field>
 
-        <Field label="Website" htmlFor="website">
+        <Field label="Website" htmlFor="website" size="md">
           <input
             id="website"
             name="website"
@@ -145,6 +147,7 @@ export default function ParticipantForm({
         <Field
           label="Social Media Links"
           htmlFor="social_media_links"
+          size="md"
           className="sm:col-span-2"
         >
           <textarea
@@ -165,13 +168,9 @@ export default function ParticipantForm({
       )}
 
       <div className="flex justify-end gap-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Saving..." : submitLabel}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -179,30 +178,3 @@ export default function ParticipantForm({
 
 const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200";
-
-function Field({
-  label,
-  htmlFor,
-  required,
-  className,
-  children,
-}: {
-  label: string;
-  htmlFor: string;
-  required?: boolean;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={className}>
-      <label
-        htmlFor={htmlFor}
-        className="mb-1 block text-sm font-medium text-slate-700"
-      >
-        {label}
-        {required && <span className="text-red-500"> *</span>}
-      </label>
-      {children}
-    </div>
-  );
-}

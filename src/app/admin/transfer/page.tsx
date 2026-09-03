@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { listAdvisors } from "@/lib/data/advisor";
 import { getRecentTransfers } from "@/lib/actions/transfer";
 import TransferTool from "@/components/admin/transfer-tool";
+import { Table, THead, Th, TBody } from "@/components/ui/table";
 
 export default async function AdminTransferPage() {
   const supabase = await createClient();
@@ -37,16 +38,16 @@ export default async function AdminTransferPage() {
           <p className="text-sm text-slate-500">No transfers recorded yet.</p>
         ) : (
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <Table>
+              <THead>
                 <tr>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">From</th>
-                  <th className="px-4 py-3">To</th>
-                  <th className="px-4 py-3">Notes</th>
+                  <Th>Date</Th>
+                  <Th>From</Th>
+                  <Th>To</Th>
+                  <Th>Notes</Th>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+              </THead>
+              <TBody>
                 {transfers.map((t) => (
                   <tr key={t.id}>
                     <td className="px-4 py-3 text-slate-600">
@@ -61,8 +62,8 @@ export default async function AdminTransferPage() {
                     <td className="px-4 py-3 text-slate-500">{t.notes || "—"}</td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
         )}
       </div>

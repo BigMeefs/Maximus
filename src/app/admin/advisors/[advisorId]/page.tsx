@@ -5,6 +5,7 @@ import { listOffices } from "@/lib/data/advisor";
 import Badge from "@/components/badge";
 import AdvisorEditForm from "@/components/admin/advisor-edit-form";
 import AdvisorPinManager from "@/components/admin/advisor-pin-manager";
+import { Table, THead, Th, TBody } from "@/components/ui/table";
 
 export default async function AdminAdvisorDetailPage({
   params,
@@ -64,15 +65,15 @@ export default async function AdminAdvisorDetailPage({
           <p className="text-sm text-slate-500">No participants assigned.</p>
         ) : (
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <Table>
+              <THead>
                 <tr>
-                  <th className="px-4 py-3">PTP Name</th>
-                  <th className="px-4 py-3">Business</th>
-                  <th className="px-4 py-3">Stage</th>
+                  <Th>PTP Name</Th>
+                  <Th>Business</Th>
+                  <Th>Stage</Th>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+              </THead>
+              <TBody>
                 {caseload.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3">
@@ -89,8 +90,8 @@ export default async function AdminAdvisorDetailPage({
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
         )}
       </div>

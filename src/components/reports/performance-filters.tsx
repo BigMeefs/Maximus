@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
+import Button from "@/components/ui/button";
 
 type OfficeOption = { id: string; name: string };
 type AdvisorOption = { id: string; full_name: string; office_id: string };
@@ -107,13 +108,9 @@ export default function PerformanceFilters({
         </select>
       </label>
       {hasFilters && (
-        <button
-          type="button"
-          onClick={() => router.push("/reports/performance-tracker")}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
+        <Button type="button" variant="secondary" onClick={() => router.push("/reports/performance-tracker")}>
           Clear filters
-        </button>
+        </Button>
       )}
     </div>
   );

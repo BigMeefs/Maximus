@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Badge from "@/components/badge";
 import DownloadErrorsButton from "@/components/data-sync/download-errors-button";
 import { getImportBatch, getImportBatchErrors } from "@/lib/actions/data-sync";
+import { Table, THead, Th, TBody } from "@/components/ui/table";
 import type { ImportStatus } from "@/types/database";
 
 function statusTone(status: ImportStatus) {
@@ -52,22 +53,22 @@ export default async function ImportBatchDetailPage({
           <p className="text-sm text-slate-500">No row errors on this import.</p>
         ) : (
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <Table>
+              <THead>
                 <tr>
-                  <th className="px-4 py-3">Row</th>
-                  <th className="px-4 py-3">Error</th>
+                  <Th>Row</Th>
+                  <Th>Error</Th>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+              </THead>
+              <TBody>
                 {errors.map((e) => (
                   <tr key={e.id}>
                     <td className="px-4 py-3 text-slate-500">{e.row_number}</td>
                     <td className="px-4 py-3 text-slate-700">{e.error_message}</td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
         )}
       </div>

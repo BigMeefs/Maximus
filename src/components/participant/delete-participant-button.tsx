@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import Button from "@/components/ui/button";
 
 export default function DeleteParticipantButton({
   action,
@@ -10,8 +11,10 @@ export default function DeleteParticipantButton({
   const [pending, startTransition] = useTransition();
 
   return (
-    <button
+    <Button
       type="button"
+      variant="danger"
+      size="compact"
       disabled={pending}
       onClick={() => {
         if (
@@ -24,9 +27,8 @@ export default function DeleteParticipantButton({
           });
         }
       }}
-      className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"
     >
       {pending ? "Deleting..." : "Delete"}
-    </button>
+    </Button>
   );
 }

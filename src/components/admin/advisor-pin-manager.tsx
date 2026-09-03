@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Badge from "@/components/badge";
 import { setAdvisorPin, unlockAdvisorPin, type AdvisorPinManageState } from "@/lib/actions/advisor-pin";
+import Button from "@/components/ui/button";
 
 const initialState: AdvisorPinManageState = {};
 
@@ -69,13 +70,9 @@ export default function AdvisorPinManager({
             className="w-32 rounded-lg border border-slate-300 bg-white px-3 py-2 text-center text-sm tracking-[0.4em] text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
           />
         </div>
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Saving..." : hasPin ? "Change PIN" : "Set PIN"}
-        </button>
+        </Button>
         {state.error && <span className="text-sm text-red-600">{state.error}</span>}
         {state.success && <span className="text-sm text-emerald-600">{state.success}</span>}
       </form>

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Badge from "@/components/badge";
 import type { NotificationHistoryRow } from "@/lib/data/notifications";
 import { archiveNotification, deleteNotificationPermanently, restoreNotification } from "@/lib/actions/notifications";
+import Button from "@/components/ui/button";
 
 function statusBadgeTone(status: string) {
   if (status === "Archived") return "slate" as const;
@@ -79,8 +80,10 @@ function HistoryRow({
         />
 
         {row.status === "Archived" ? (
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             disabled={pending}
             onClick={() =>
               startTransition(async () => {
@@ -88,13 +91,14 @@ function HistoryRow({
                 onRestored();
               })
             }
-            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
           >
             Restore
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             disabled={pending || !actorName.trim()}
             onClick={() =>
               startTransition(async () => {
@@ -102,10 +106,9 @@ function HistoryRow({
                 onArchived();
               })
             }
-            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
           >
             Archive
-          </button>
+          </Button>
         )}
 
         <button
