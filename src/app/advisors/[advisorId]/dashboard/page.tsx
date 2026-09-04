@@ -15,6 +15,7 @@ import Button from "@/components/ui/button";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
 import Card from "@/components/ui/card";
 import PageHeader from "@/components/ui/page-header";
+import AnnouncementTicker from "@/components/announcement-ticker";
 
 const EXPIRING_THRESHOLD_DAYS = 30;
 const currency = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
@@ -136,16 +137,7 @@ export default async function DashboardPage({
         }
       />
 
-      {announcements.length > 0 && (
-        <section className="space-y-2">
-          {announcements.map((a) => (
-            <div key={a.id} className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
-              <p className="text-sm font-semibold text-indigo-900">{a.title}</p>
-              <p className="mt-0.5 text-sm text-indigo-800">{a.body}</p>
-            </div>
-          ))}
-        </section>
-      )}
+      <AnnouncementTicker announcements={announcements} />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard label="Caseload size" value={rows.length} href={participantsHref} />

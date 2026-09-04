@@ -55,3 +55,59 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/*
+ * Advisor dashboard announcement ticker — see
+ * src/components/announcement-ticker.tsx. The track renders the active
+ * announcements twice back-to-back and scrolls exactly one copy's width
+ * (translateX(-50%) of a `width: max-content` flex row), so the loop from
+ * the last announcement back to the first is seamless regardless of how
+ * many announcements there are or how long they are.
+ */
+.announcement-ticker {
+  overflow: hidden;
+}
+
+.announcement-ticker__track {
+  display: flex;
+  width: max-content;
+  animation: announcement-ticker-scroll var(--announcement-ticker-duration, 30s) linear infinite;
+}
+
+.announcement-ticker:hover .announcement-ticker__track {
+  animation-play-state: paused;
+}
+
+@keyframes announcement-ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Respect prefers-reduced-motion: stop the scroll and show the
+   announcements as a plain, static, wrapping line instead of a moving
+   marquee. The duplicated copy (kept for the seamless loop above, and
+   already aria-hidden) is hidden outright so nothing repeats visually. */
+@media (prefers-reduced-motion: reduce) {
+  .announcement-ticker {
+    overflow: visible;
+  }
+
+  .announcement-ticker__track {
+    animation: none;
+    transform: none;
+    display: block;
+    width: auto;
+  }
+
+  .announcement-ticker__track [data-ticker-copy="duplicate"] {
+    display: none;
+  }
+
+  .announcement-ticker__track > div:not([data-ticker-copy="duplicate"]) {
+    flex-wrap: wrap;
+  }
+}
