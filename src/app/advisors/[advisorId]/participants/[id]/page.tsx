@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getParticipantDetail } from "@/lib/data/participant";
 import { getDaysRemaining } from "@/lib/participant";
 import Badge, { statusTone } from "@/components/badge";
-import Tabs from "@/components/tabs";
+import GroupedTabs from "@/components/ui/grouped-tabs";
 import DeleteParticipantButton from "@/components/participant/delete-participant-button";
 import BusinessPlanTab from "@/components/participant/business-plan-tab";
 import IncomeTrackerTab from "@/components/participant/income-tracker-tab";
@@ -219,137 +219,167 @@ export default async function ParticipantProfilePage({
       <HealthScorePanel participantId={id} scores={healthScores} />
 
       <Card padding="lg">
-        <Tabs
+        <GroupedTabs
           initialTab={tab}
-          tabs={[
+          groups={[
             {
-              id: "business-plan",
-              label: "Business Plan",
-              content: (
-                <BusinessPlanTab participantId={id} businessPlan={businessPlan} />
-              ),
+              id: "progress",
+              label: "Progress",
+              items: [
+                {
+                  id: "journey",
+                  label: "Journey",
+                  content: (
+                    <JourneyTab
+                      participantId={id}
+                      currentStage={participant.business_stage}
+                      stageUpdatedAt={participant.business_stage_updated_at}
+                      milestones={journeyMilestones}
+                    />
+                  ),
+                },
+                {
+                  id: "trading-start",
+                  label: "Trading Start & IWT",
+                  content: (
+                    <TradingStartTab
+                      participantId={id}
+                      advisorId={advisorId}
+                      advisors={advisors}
+                      participant={participant}
+                      incomeTrackerEntries={incomeTrackerEntries}
+                      currentTradingStart={currentTradingStart}
+                      iwtReviews={iwtReviews}
+                      outcome={outcome}
+                      settings={programmeSettings}
+                    />
+                  ),
+                },
+                {
+                  id: "gateway",
+                  label: "Gateway",
+                  content: (
+                    <GatewayReadinessTab
+                      participantId={id}
+                      advisorId={advisorId}
+                      entries={gatewayReadiness.entries}
+                      percent={gatewayReadiness.percent}
+                      gatewayTargetDate={participant.gateway_target_date}
+                      gatewayNotes={participant.gateway_notes}
+                      gatewayBookedStatus={participant.gateway_booked_status}
+                      gatewayAppointmentDate={participant.gateway_appointment_date}
+                      gatewayOutcome={participant.gateway_outcome}
+                      evidenceFiles={evidenceFiles}
+                    />
+                  ),
+                },
+                {
+                  id: "status-history",
+                  label: "Status History",
+                  content: <StatusTimeline history={statusHistory} />,
+                },
+              ],
             },
             {
-              id: "journey",
-              label: "Journey",
-              content: (
-                <JourneyTab
-                  participantId={id}
-                  currentStage={participant.business_stage}
-                  stageUpdatedAt={participant.business_stage_updated_at}
-                  milestones={journeyMilestones}
-                />
-              ),
+              id: "business",
+              label: "Business",
+              items: [
+                {
+                  id: "business-plan",
+                  label: "Business Plan",
+                  content: (
+                    <BusinessPlanTab participantId={id} businessPlan={businessPlan} />
+                  ),
+                },
+                {
+                  id: "hmrc",
+                  label: "HMRC & Business",
+                  content: <HmrcTab participantId={id} hmrc={hmrc} />,
+                },
+                {
+                  id: "digital-presence",
+                  label: "Digital Presence",
+                  content: (
+                    <DigitalPresenceTab participantId={id} items={digitalPresence} />
+                  ),
+                },
+              ],
             },
             {
-              id: "trading-start",
-              label: "Trading Start & IWT",
-              content: (
-                <TradingStartTab
-                  participantId={id}
-                  advisorId={advisorId}
-                  advisors={advisors}
-                  participant={participant}
-                  incomeTrackerEntries={incomeTrackerEntries}
-                  currentTradingStart={currentTradingStart}
-                  iwtReviews={iwtReviews}
-                  outcome={outcome}
-                  settings={programmeSettings}
-                />
-              ),
+              id: "financial",
+              label: "Financial",
+              items: [
+                {
+                  id: "income-tracker",
+                  label: "Income Tracker",
+                  content: (
+                    <IncomeTrackerTab
+                      participantId={id}
+                      entries={incomeTrackerEntries}
+                      tradingStart={currentTradingStart}
+                      settings={programmeSettings}
+                    />
+                  ),
+                },
+                {
+                  id: "funding",
+                  label: "Funding",
+                  content: <FundingTab participantId={id} records={fundingRecords} />,
+                },
+              ],
             },
             {
-              id: "status-history",
-              label: "Status History",
-              content: <StatusTimeline history={statusHistory} />,
+              id: "documents",
+              label: "Documents",
+              items: [
+                {
+                  id: "evidence",
+                  label: "Evidence Vault",
+                  content: (
+                    <EvidenceLibraryTab participantId={id} files={evidenceFiles} />
+                  ),
+                },
+              ],
             },
             {
-              id: "gateway",
-              label: "Gateway",
-              content: (
-                <GatewayReadinessTab
-                  participantId={id}
-                  advisorId={advisorId}
-                  entries={gatewayReadiness.entries}
-                  percent={gatewayReadiness.percent}
-                  gatewayTargetDate={participant.gateway_target_date}
-                  gatewayNotes={participant.gateway_notes}
-                  gatewayBookedStatus={participant.gateway_booked_status}
-                  gatewayAppointmentDate={participant.gateway_appointment_date}
-                  gatewayOutcome={participant.gateway_outcome}
-                  evidenceFiles={evidenceFiles}
-                />
-              ),
-            },
-            {
-              id: "funding",
-              label: "Funding",
-              content: <FundingTab participantId={id} records={fundingRecords} />,
-            },
-            {
-              id: "income-tracker",
-              label: "Income Tracker",
-              content: (
-                <IncomeTrackerTab
-                  participantId={id}
-                  entries={incomeTrackerEntries}
-                  tradingStart={currentTradingStart}
-                  settings={programmeSettings}
-                />
-              ),
-            },
-            {
-              id: "hmrc",
-              label: "HMRC & Business",
-              content: <HmrcTab participantId={id} hmrc={hmrc} />,
-            },
-            {
-              id: "digital-presence",
-              label: "Digital Presence",
-              content: (
-                <DigitalPresenceTab participantId={id} items={digitalPresence} />
-              ),
-            },
-            {
-              id: "evidence",
-              label: "Evidence Vault",
-              content: (
-                <EvidenceLibraryTab participantId={id} files={evidenceFiles} />
-              ),
-            },
-            {
-              id: "action-plan",
-              label: "Action Plan",
-              content: (
-                <ActionPlanTab participantId={id} items={actionPlanItems} />
-              ),
-            },
-            {
-              id: "appointments",
-              label: "Appointment History",
-              content: (
-                <AppointmentsTab
-                  participantId={id}
-                  appointments={appointments}
-                  advisors={advisors}
-                  defaultAdvisorId={advisorId}
-                />
-              ),
-            },
-            {
-              id: "ai-assistant",
-              label: "AI Assistant",
-              content: (
-                <AiAssistantTab
-                  participantId={id}
-                  participant={participant}
-                  businessPlan={businessPlan}
-                  gatewayReadinessPercent={gatewayReadiness.percent}
-                  incompleteReadinessItems={gatewayReadiness.entries
-                    .filter((e) => !e.complete)
-                    .map((e) => e.label)}
-                />
-              ),
+              id: "activity",
+              label: "Activity",
+              items: [
+                {
+                  id: "action-plan",
+                  label: "Action Plan",
+                  content: (
+                    <ActionPlanTab participantId={id} items={actionPlanItems} />
+                  ),
+                },
+                {
+                  id: "appointments",
+                  label: "Appointment History",
+                  content: (
+                    <AppointmentsTab
+                      participantId={id}
+                      appointments={appointments}
+                      advisors={advisors}
+                      defaultAdvisorId={advisorId}
+                    />
+                  ),
+                },
+                {
+                  id: "ai-assistant",
+                  label: "AI Assistant",
+                  content: (
+                    <AiAssistantTab
+                      participantId={id}
+                      participant={participant}
+                      businessPlan={businessPlan}
+                      gatewayReadinessPercent={gatewayReadiness.percent}
+                      incompleteReadinessItems={gatewayReadiness.entries
+                        .filter((e) => !e.complete)
+                        .map((e) => e.label)}
+                    />
+                  ),
+                },
+              ],
             },
           ]}
         />

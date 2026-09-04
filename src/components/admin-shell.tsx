@@ -2,10 +2,9 @@
 
 import { useTransition } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import clsx from "clsx";
 import { logoutAdmin } from "@/lib/actions/admin-auth";
-import BrandMark from "@/components/brand-mark";
+import SidebarShell from "@/components/ui/sidebar-shell";
+import SidebarNav from "@/components/ui/sidebar-nav";
 
 export default function AdminShell({
   section,
@@ -18,61 +17,64 @@ export default function AdminShell({
   logoUrl: string | null;
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
   const [loggingOut, startLogoutTransition] = useTransition();
 
-  const links = [
-    { href: "/admin", label: "Admin Dashboard" },
-    { href: "/reports", label: "Reports" },
+  const groups = [
+    { label: "Overview", items: [{ href: "/admin", label: "Admin Dashboard" }] },
+    {
+      label: "People & Offices",
+      items: [
+        { href: "/admin/offices", label: "Offices" },
+        { href: "/admin/advisors", label: "Advisors" },
+        { href: "/admin/transfer", label: "Transfer Participants" },
+      ],
+    },
+    {
+      label: "Approvals & Settings",
+      items: [
+        { href: "/admin/funding-approvals", label: "Funding Approval Queue" },
+        { href: "/admin/programme-settings", label: "Programme Settings" },
+        { href: "/admin/organisation-settings", label: "Organisation Settings" },
+        { href: "/admin/announcements", label: "Announcements" },
+      ],
+    },
+    {
+      label: "Reporting",
+      items: [
+        { href: "/reports", label: "Reports" },
+        { href: "/admin/performance", label: "Performance Targets" },
+        { href: "/reports/performance-tracker", label: "Performance Tracker" },
+      ],
+    },
+    { label: "Audit", items: [{ href: "/admin/notifications", label: "Notification History" }] },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white px-4 py-3 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-6">
-            <Link href="/admin" className="flex items-center gap-2">
-              <BrandMark logoUrl={logoUrl} size="sm" />
-              <span className="text-sm font-semibold text-slate-900">{appName} — Management Portal</span>
-            </Link>
-            <nav className="flex gap-1">
-              {links.map((link) => {
-                const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={clsx(
-                      "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                      active
-                        ? "bg-[var(--brand-primary)] text-white"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-                    )}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/select-advisor" className="text-sm text-slate-500 hover:text-indigo-600">
-              ← Home
-            </Link>
-            <button
-              type="button"
-              disabled={loggingOut}
-              onClick={() =>
-                startLogoutTransition(() => logoutAdmin(section === "admin" ? "/admin" : "/reports"))
-              }
-              className="text-sm font-medium text-slate-600 hover:text-red-600 disabled:opacity-60"
-            >
-              Log out
-            </button>
-          </div>
+    <SidebarShell
+      brandHref="/admin"
+      appName={`${appName} — Management`}
+      logoUrl={logoUrl}
+      nav={<SidebarNav groups={groups} />}
+      footer={
+        <div className="space-y-2">
+          <Link
+            href="/select-advisor"
+            className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+          >
+            ← Home
+          </Link>
+          <button
+            type="button"
+            disabled={loggingOut}
+            onClick={() => startLogoutTransition(() => logoutAdmin(section === "admin" ? "/admin" : "/reports"))}
+            className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-red-600 disabled:opacity-60"
+          >
+            Log out
+          </button>
         </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">{children}</main>
-    </div>
+      }
+    >
+      {children}
+    </SidebarShell>
   );
 }
