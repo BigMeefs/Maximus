@@ -19,21 +19,27 @@ export default function AppShell({
 }) {
   const dashboardHref = `/advisors/${advisor.id}/dashboard`;
 
+  const iconProps = { "aria-hidden": true, className: "h-4 w-4 shrink-0", strokeWidth: 2 } as const;
+
   const groups = [
     {
       label: "Workspace",
       items: [
-        { href: dashboardHref, label: "Dashboard", icon: LayoutDashboard },
-        { href: `/advisors/${advisor.id}/self-employment`, label: "Additional Information", icon: TrendingUp },
-        { href: `/advisors/${advisor.id}/participants`, label: "Participants", icon: Users },
-        { href: `/advisors/${advisor.id}/referrals`, label: "Referrals", icon: Mail },
+        { href: dashboardHref, label: "Dashboard", icon: <LayoutDashboard {...iconProps} /> },
+        {
+          href: `/advisors/${advisor.id}/self-employment`,
+          label: "Additional Information",
+          icon: <TrendingUp {...iconProps} />,
+        },
+        { href: `/advisors/${advisor.id}/participants`, label: "Participants", icon: <Users {...iconProps} /> },
+        { href: `/advisors/${advisor.id}/referrals`, label: "Referrals", icon: <Mail {...iconProps} /> },
         {
           href: `/advisors/${advisor.id}/notifications`,
           label: "Notifications",
-          icon: Bell,
+          icon: <Bell {...iconProps} />,
           badge: unreadCount > 0 ? unreadCount : undefined,
         },
-        { href: `/advisors/${advisor.id}/data-sync`, label: "Data Sync", icon: RefreshCw },
+        { href: `/advisors/${advisor.id}/data-sync`, label: "Data Sync", icon: <RefreshCw {...iconProps} /> },
       ],
     },
   ];

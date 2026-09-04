@@ -33,34 +33,36 @@ export default function AdminShell({
 }) {
   const [loggingOut, startLogoutTransition] = useTransition();
 
+  const iconProps = { "aria-hidden": true, className: "h-4 w-4 shrink-0", strokeWidth: 2 } as const;
+
   const groups = [
-    { label: "Overview", items: [{ href: "/admin", label: "Admin Dashboard", icon: LayoutDashboard }] },
+    { label: "Overview", items: [{ href: "/admin", label: "Admin Dashboard", icon: <LayoutDashboard {...iconProps} /> }] },
     {
       label: "People & Offices",
       items: [
-        { href: "/admin/offices", label: "Offices", icon: Building2 },
-        { href: "/admin/advisors", label: "Advisors", icon: Users },
-        { href: "/admin/transfer", label: "Transfer Participants", icon: ArrowRightLeft },
+        { href: "/admin/offices", label: "Offices", icon: <Building2 {...iconProps} /> },
+        { href: "/admin/advisors", label: "Advisors", icon: <Users {...iconProps} /> },
+        { href: "/admin/transfer", label: "Transfer Participants", icon: <ArrowRightLeft {...iconProps} /> },
       ],
     },
     {
       label: "Approvals & Settings",
       items: [
-        { href: "/admin/funding-approvals", label: "Funding Approval Queue", icon: Banknote },
-        { href: "/admin/programme-settings", label: "Programme Settings", icon: SlidersHorizontal },
-        { href: "/admin/organisation-settings", label: "Organisation Settings", icon: Settings },
-        { href: "/admin/announcements", label: "Announcements", icon: Megaphone },
+        { href: "/admin/funding-approvals", label: "Funding Approval Queue", icon: <Banknote {...iconProps} /> },
+        { href: "/admin/programme-settings", label: "Programme Settings", icon: <SlidersHorizontal {...iconProps} /> },
+        { href: "/admin/organisation-settings", label: "Organisation Settings", icon: <Settings {...iconProps} /> },
+        { href: "/admin/announcements", label: "Announcements", icon: <Megaphone {...iconProps} /> },
       ],
     },
     {
       label: "Reporting",
       items: [
-        { href: "/reports", label: "Reports", icon: BarChart3 },
-        { href: "/admin/performance", label: "Performance Targets", icon: Target },
-        { href: "/reports/performance-tracker", label: "Performance Tracker", icon: TrendingUp },
+        { href: "/reports", label: "Reports", icon: <BarChart3 {...iconProps} /> },
+        { href: "/admin/performance", label: "Performance Targets", icon: <Target {...iconProps} /> },
+        { href: "/reports/performance-tracker", label: "Performance Tracker", icon: <TrendingUp {...iconProps} /> },
       ],
     },
-    { label: "Audit", items: [{ href: "/admin/notifications", label: "Notification History", icon: History }] },
+    { label: "Audit", items: [{ href: "/admin/notifications", label: "Notification History", icon: <History {...iconProps} /> }] },
   ];
 
   return (

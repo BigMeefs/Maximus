@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 // Shared sidebar navigation list — Phase 3, icons added in Phase 4. Used by
 // both the advisor workspace shell and the admin/reports shell so the two
@@ -12,7 +12,7 @@ import type { LucideIcon } from "lucide-react";
 // separately-authenticated areas (per-advisor PIN session vs. shared admin
 // passcode session — see AGENTS.md / README). This component only renders
 // links; it grants no access on its own.
-export type SidebarNavItem = { href: string; label: string; icon?: LucideIcon; badge?: number };
+export type SidebarNavItem = { href: string; label: string; icon?: ReactNode; badge?: number };
 export type SidebarNavGroup = { label?: string; items: SidebarNavItem[] };
 
 export default function SidebarNav({ groups, onNavigate }: { groups: SidebarNavGroup[]; onNavigate?: () => void }) {
@@ -52,7 +52,6 @@ function NavItem({
   active: boolean;
   onNavigate?: () => void;
 }) {
-  const Icon = item.icon;
   return (
     <Link
       href={item.href}
@@ -63,7 +62,7 @@ function NavItem({
         active ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
       )}
     >
-      {Icon && <Icon aria-hidden className="h-4 w-4 shrink-0" strokeWidth={2} />}
+      {item.icon}
       <span className="flex-1">{item.label}</span>
       {item.badge !== undefined && (
         <span
