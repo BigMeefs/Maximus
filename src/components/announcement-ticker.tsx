@@ -13,9 +13,9 @@ import type { Announcement } from "@/types/database";
 // manipulation, the actual motion is a plain CSS animation
 // (.announcement-ticker__item in globals.css). Hover-pause and
 // prefers-reduced-motion are both handled there too.
-const MIN_DURATION_SECONDS = 6;
-const MAX_DURATION_SECONDS = 20;
-const SECONDS_PER_CHARACTER = 0.15;
+const MIN_DURATION_SECONDS = 8.4;
+const MAX_DURATION_SECONDS = 28;
+const SECONDS_PER_CHARACTER = 0.21;
 
 function durationFor(announcement: Announcement): number {
   const length = announcement.title.length + announcement.body.length;
