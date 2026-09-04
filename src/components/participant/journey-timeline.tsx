@@ -3,6 +3,7 @@
 import { useState } from "react";
 import clsx from "clsx";
 import type { JourneyMilestone } from "@/lib/journey-timeline";
+import Badge from "@/components/badge";
 
 export default function JourneyTimeline({ milestones }: { milestones: JourneyMilestone[] }) {
   const [expandedId, setExpandedId] = useState<string | null>(
@@ -50,19 +51,19 @@ export default function JourneyTimeline({ milestones }: { milestones: JourneyMil
                         {milestone.label}
                       </span>
                       {milestone.status === "current" && (
-                        <span className="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                        <Badge tone="indigo" className="ml-2">
                           Current
-                        </span>
+                        </Badge>
                       )}
                       {milestone.notApplicable && (
-                        <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
+                        <Badge tone="slate" className="ml-2">
                           Not required
-                        </span>
+                        </Badge>
                       )}
                       {milestone.negative && (
-                        <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                        <Badge tone="red" className="ml-2">
                           Not achieved
-                        </span>
+                        </Badge>
                       )}
                     </span>
                     <span aria-hidden className="text-slate-400">

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import StatCard from "@/components/stat-card";
 import Badge from "@/components/badge";
 import TradingStartTrendsChart from "@/components/reports/trading-start-trends-chart";
@@ -7,6 +6,7 @@ import AdvisorPerformanceTable from "@/components/reports/advisor-performance-ta
 import { Table, THead, Th, TBody } from "@/components/ui/table";
 import Card from "@/components/ui/card";
 import PageHeader from "@/components/ui/page-header";
+import Button from "@/components/ui/button";
 import GroupedTabs from "@/components/ui/grouped-tabs";
 import {
   getCompanyReportStats,
@@ -63,6 +63,11 @@ export default async function ReportsPage({
       <PageHeader
         title="Reports"
         description="The Manager Dashboard — company-wide breakdowns across every office and advisor."
+        actions={
+          <Button variant="secondary" href="/reports/performance-tracker">
+            Performance Tracker →
+          </Button>
+        }
       />
 
       <ReportFilters offices={offices} advisors={advisors} />
@@ -294,51 +299,62 @@ export default async function ReportsPage({
                 id: "performance-content",
                 label: "Performance",
                 content: (
-                  <div className="space-y-4">
+                  <div className="space-y-8">
                     <div>
                       <h2 className="text-lg font-semibold text-slate-900">Trading Start, IWT &amp; Outcomes</h2>
                       <p className="mt-1 text-sm text-slate-500">
-                        {tsStats.periodLabel === "This month"
-                          ? "Period widgets below default to the current calendar month. Use the filters above to select a date range."
-                          : "Period widgets below reflect the selected filters."}
+                        How the caseload is performing right now, and the trend behind it.
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-7">
-                      <StatCard label="Trading Starts (period)" value={tsStats.tradingStartsInPeriod} />
-                      <StatCard label="Outcomes (period)" value={tsStats.outcomesInPeriod} />
-                      <StatCard label="IWT caseload" value={tsStats.iwtCaseloadSize} />
-                      <StatCard label="Forecast Outcomes" value={tsStats.forecastOutcomes} />
-                      <StatCard label="Outcome conversion rate" value={`${tsStats.outcomeConversionRate}%`} />
-                      <StatCard
-                        label="Approaching Outcome deadline"
-                        value={tsStats.approachingDeadline}
-                        tone={tsStats.approachingDeadline > 0 ? "warning" : "default"}
-                      />
-                      <StatCard
-                        label="Overdue reviews"
-                        value={tsStats.overdueReviews}
-                        tone={tsStats.overdueReviews > 0 ? "danger" : "default"}
-                      />
-                      <StatCard
-                        label="Participants at risk"
-                        value={tsStats.participantsAtRisk}
-                        tone={tsStats.participantsAtRisk > 0 ? "danger" : "default"}
-                      />
-                    </div>
+                    <Card>
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          Period snapshot
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                          {tsStats.periodLabel === "This month"
+                            ? "Defaults to the current calendar month — use the filters above to change it."
+                            : "Reflects the selected filters."}
+                        </p>
+                      </div>
 
-                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                      <StatCard label="Avg days to Trading Start" value={tsStats.avgDaysToTradingStart ?? "—"} />
-                      <StatCard
-                        label="Avg days Trading Start to Outcome"
-                        value={tsStats.avgDaysTradingStartToOutcome ?? "—"}
-                      />
-                      <StatCard
-                        label="Eligible for TS, not yet processed"
-                        value={tsStats.eligibleNotProcessed}
-                        tone={tsStats.eligibleNotProcessed > 0 ? "warning" : "default"}
-                      />
-                    </div>
+                      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-7">
+                        <StatCard label="Trading Starts (period)" value={tsStats.tradingStartsInPeriod} />
+                        <StatCard label="Outcomes (period)" value={tsStats.outcomesInPeriod} />
+                        <StatCard label="IWT caseload" value={tsStats.iwtCaseloadSize} />
+                        <StatCard label="Forecast Outcomes" value={tsStats.forecastOutcomes} />
+                        <StatCard label="Outcome conversion rate" value={`${tsStats.outcomeConversionRate}%`} />
+                        <StatCard
+                          label="Approaching Outcome deadline"
+                          value={tsStats.approachingDeadline}
+                          tone={tsStats.approachingDeadline > 0 ? "warning" : "default"}
+                        />
+                        <StatCard
+                          label="Overdue reviews"
+                          value={tsStats.overdueReviews}
+                          tone={tsStats.overdueReviews > 0 ? "danger" : "default"}
+                        />
+                        <StatCard
+                          label="Participants at risk"
+                          value={tsStats.participantsAtRisk}
+                          tone={tsStats.participantsAtRisk > 0 ? "danger" : "default"}
+                        />
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+                        <StatCard label="Avg days to Trading Start" value={tsStats.avgDaysToTradingStart ?? "—"} />
+                        <StatCard
+                          label="Avg days Trading Start to Outcome"
+                          value={tsStats.avgDaysTradingStartToOutcome ?? "—"}
+                        />
+                        <StatCard
+                          label="Eligible for TS, not yet processed"
+                          value={tsStats.eligibleNotProcessed}
+                          tone={tsStats.eligibleNotProcessed > 0 ? "warning" : "default"}
+                        />
+                      </div>
+                    </Card>
 
                     <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
                       <Section title="Trading Starts by reason">
@@ -369,6 +385,10 @@ export default async function ReportsPage({
                       </Section>
                     </div>
 
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Trends &amp; leaderboard
+                    </h3>
+
                     <Section
                       title="Team leaderboard — Trading Starts &amp; Outcomes by advisor"
                       subtitle="Attributed to the original advisor even after the participant transfers to an IWT advisor. Sort any column, search by advisor or office, and export the current view to CSV."
@@ -387,15 +407,6 @@ export default async function ReportsPage({
                         exportFilename="team-leaderboard.csv"
                       />
                     </Section>
-
-                    <Card padding="sm">
-                      <p className="text-sm text-slate-600">
-                        Want to compare performance month by month, or as a chart?{" "}
-                        <Link href="/reports/performance-tracker" className="font-medium text-indigo-600 hover:underline">
-                          Open the Performance Tracker →
-                        </Link>
-                      </p>
-                    </Card>
 
                     <Section title="Monthly trends" subtitle="Trading Starts and Outcomes recorded per month, company-wide.">
                       <TradingStartTrendsChart points={tsStats.monthlyTrends} />

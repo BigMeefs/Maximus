@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useTransition } from "react";
+import { useActionState, useRef, useState, useTransition } from "react";
 import type { Announcement } from "@/types/database";
 import {
   createAnnouncement,
@@ -9,6 +9,8 @@ import {
   type AnnouncementFormState,
 } from "@/lib/actions/announcements";
 import Button from "@/components/ui/button";
+import Badge from "@/components/badge";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 const initialState: AnnouncementFormState = {};
 
@@ -67,6 +69,7 @@ export default function AnnouncementsManager({ announcements }: { announcements:
 function AnnouncementRow({ announcement }: { announcement: Announcement }) {
   const [toggling, startToggleTransition] = useTransition();
   const [deleting, startDeleteTransition] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   return (
     <li className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -78,15 +81,9 @@ function AnnouncementRow({ announcement }: { announcement: Announcement }) {
             Posted {new Date(announcement.created_at).toLocaleDateString("en-GB")}
           </p>
         </div>
-        <span
-          className={
-            announcement.is_active
-              ? "shrink-0 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700"
-              : "shrink-0 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500"
-          }
-        >
+        <Badge tone={announcement.is_active ? "green" : "slate"} className="shrink-0">
           {announcement.is_active ? "Active" : "Hidden"}
-        </span>
+        </Badge>
       </div>
       <div className="mt-3 flex gap-3 border-t border-slate-100 pt-3">
         <button
@@ -102,16 +99,25 @@ function AnnouncementRow({ announcement }: { announcement: Announcement }) {
         <button
           type="button"
           disabled={deleting}
-          onClick={() => {
-            if (confirm("Delete this announcement?")) {
-              startDeleteTransition(() => deleteAnnouncement(announcement.id));
-            }
-          }}
+          onClick={() => setConfirmOpen(true)}
           className="text-sm font-medium text-red-600 hover:underline disabled:opacity-60"
         >
           Delete
         </button>
       </div>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete this announcement?"
+        description="This cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        pending={deleting}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          startDeleteTransition(() => deleteAnnouncement(announcement.id));
+        }}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </li>
   );
 }

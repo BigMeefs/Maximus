@@ -229,6 +229,7 @@ export default async function ParticipantProfilePage({
                 {
                   id: "journey",
                   label: "Journey",
+                  description: "Overall progress toward Trading Start and Outcome, from Referral to today.",
                   content: (
                     <JourneyTab
                       participantId={id}
@@ -241,6 +242,7 @@ export default async function ParticipantProfilePage({
                 {
                   id: "trading-start",
                   label: "Trading Start & IWT",
+                  description: "Confirm Trading Start, log In Work Tracking reviews, and record the Outcome.",
                   content: (
                     <TradingStartTab
                       participantId={id}
@@ -258,6 +260,7 @@ export default async function ParticipantProfilePage({
                 {
                   id: "gateway",
                   label: "Gateway",
+                  description: "Universal Credit Gateway readiness checklist and appointment booking.",
                   content: (
                     <GatewayReadinessTab
                       participantId={id}
@@ -276,6 +279,7 @@ export default async function ParticipantProfilePage({
                 {
                   id: "status-history",
                   label: "Status History",
+                  description: "A timeline of every status change for this participant.",
                   content: <StatusTimeline history={statusHistory} />,
                 },
               ],

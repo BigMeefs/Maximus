@@ -3,17 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
+import type { LucideIcon } from "lucide-react";
 
-// Shared sidebar navigation list — Phase 3. Used by both the advisor
-// workspace shell and the admin/reports shell so the two areas share one
-// navigation language (grouped links, same active-state treatment) even
-// though they remain separate, separately-authenticated areas (per-advisor
-// PIN session vs. shared admin passcode session — see AGENTS.md / README).
-// This component only renders links; it grants no access on its own.
-export type SidebarNavItem = { href: string; label: string; badge?: number };
+// Shared sidebar navigation list — Phase 3, icons added in Phase 4. Used by
+// both the advisor workspace shell and the admin/reports shell so the two
+// areas share one navigation language (grouped links, same active-state
+// treatment, same icon size/weight) even though they remain separate,
+// separately-authenticated areas (per-advisor PIN session vs. shared admin
+// passcode session — see AGENTS.md / README). This component only renders
+// links; it grants no access on its own.
+export type SidebarNavItem = { href: string; label: string; icon?: LucideIcon; badge?: number };
 export type SidebarNavGroup = { label?: string; items: SidebarNavItem[] };
 
-export default function SidebarNav({ groups }: { groups: SidebarNavGroup[] }) {
+export default function SidebarNav({ groups, onNavigate }: { groups: SidebarNavGroup[]; onNavigate?: () => void }) {
   const pathname = usePathname();
 
   // Pick the single longest (most specific) matching href across the whole
@@ -33,7 +35,7 @@ export default function SidebarNav({ groups }: { groups: SidebarNavGroup[] }) {
             <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{group.label}</p>
           )}
           {group.items.map((item) => (
-            <NavItem key={item.href} item={item} active={item.href === activeHref} />
+            <NavItem key={item.href} item={item} active={item.href === activeHref} onNavigate={onNavigate} />
           ))}
         </div>
       ))}
@@ -41,16 +43,27 @@ export default function SidebarNav({ groups }: { groups: SidebarNavGroup[] }) {
   );
 }
 
-function NavItem({ item, active }: { item: SidebarNavItem; active: boolean }) {
+function NavItem({
+  item,
+  active,
+  onNavigate,
+}: {
+  item: SidebarNavItem;
+  active: boolean;
+  onNavigate?: () => void;
+}) {
+  const Icon = item.icon;
   return (
     <Link
       href={item.href}
+      onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={clsx(
         "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500",
         active ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
       )}
     >
+      {Icon && <Icon aria-hidden className="h-4 w-4 shrink-0" strokeWidth={2} />}
       <span className="flex-1">{item.label}</span>
       {item.badge !== undefined && (
         <span

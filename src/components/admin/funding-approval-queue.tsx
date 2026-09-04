@@ -92,13 +92,9 @@ function FundingApprovalCard({ row }: { row: FundingApprovalRow }) {
           <form action={approveAction} className="space-y-2">
             <label className="mb-1 block text-xs font-medium text-slate-600">Approval notes (optional)</label>
             <textarea name="manager_notes" rows={2} className={inputClass} />
-            <button
-              type="submit"
-              disabled={approving || !managerName.trim()}
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
-            >
+            <Button type="submit" variant="success" disabled={approving || !managerName.trim()}>
               {approving ? "Approving..." : "Approve"}
-            </button>
+            </Button>
             {approveState.error && <p className="text-sm text-red-600">{approveState.error}</p>}
           </form>
 

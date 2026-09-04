@@ -110,8 +110,10 @@ function NotificationCard({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <button
+        <Button
           type="button"
+          variant="success"
+          size="sm"
           disabled={pending}
           onClick={() =>
             startTransition(async () => {
@@ -119,10 +121,9 @@ function NotificationCard({
               onReviewed();
             })
           }
-          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
         >
           {pending ? "Marking..." : "✓ Mark as Reviewed"}
-        </button>
+        </Button>
         {participantHref && (
           <Button variant="secondary" size="sm" href={participantHref}>
             {row.participantName ?? "Open participant"}

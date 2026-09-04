@@ -5,6 +5,7 @@ import { FUNDING_SOURCES, type FundingApplicationStatus, type FundingRecord } fr
 import Badge from "@/components/badge";
 import Field from "@/components/ui/field";
 import Button from "@/components/ui/button";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 import {
   createFundingRecord,
   deleteFundingRecord,
@@ -146,6 +147,7 @@ function FundingRecordCard({ record }: { record: FundingRecord }) {
   const [deleting, startDeleteTransition] = useTransition();
   const [uploading, startUploadTransition] = useTransition();
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   return (
     <li className="rounded-lg border border-slate-200 p-4">
@@ -245,11 +247,7 @@ function FundingRecordCard({ record }: { record: FundingRecord }) {
           <button
             type="button"
             disabled={deleting}
-            onClick={() => {
-              if (confirm("Delete this funding record?")) {
-                startDeleteTransition(() => deleteFundingRecord(record.id));
-              }
-            }}
+            onClick={() => setConfirmOpen(true)}
             className="text-sm font-medium text-red-600 hover:underline disabled:opacity-60"
           >
             Delete
@@ -257,6 +255,20 @@ function FundingRecordCard({ record }: { record: FundingRecord }) {
           {state.error && <span className="text-sm text-red-600">{state.error}</span>}
         </div>
       </form>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete this funding record?"
+        description="This cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        pending={deleting}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          startDeleteTransition(() => deleteFundingRecord(record.id));
+        }}
+        onCancel={() => setConfirmOpen(false)}
+      />
 
       {record.approved_by && (
         <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3 text-xs text-slate-600">

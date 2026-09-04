@@ -1,3 +1,4 @@
+import { LayoutDashboard, TrendingUp, Users, Mail, Bell, RefreshCw } from "lucide-react";
 import SidebarShell from "@/components/ui/sidebar-shell";
 import SidebarNav from "@/components/ui/sidebar-nav";
 import BackToAdvisorsLink from "@/components/back-to-advisors-link";
@@ -22,16 +23,17 @@ export default function AppShell({
     {
       label: "Workspace",
       items: [
-        { href: dashboardHref, label: "Dashboard" },
-        { href: `/advisors/${advisor.id}/self-employment`, label: "Additional Information" },
-        { href: `/advisors/${advisor.id}/participants`, label: "Participants" },
-        { href: `/advisors/${advisor.id}/referrals`, label: "Referrals" },
+        { href: dashboardHref, label: "Dashboard", icon: LayoutDashboard },
+        { href: `/advisors/${advisor.id}/self-employment`, label: "Additional Information", icon: TrendingUp },
+        { href: `/advisors/${advisor.id}/participants`, label: "Participants", icon: Users },
+        { href: `/advisors/${advisor.id}/referrals`, label: "Referrals", icon: Mail },
         {
           href: `/advisors/${advisor.id}/notifications`,
           label: "Notifications",
+          icon: Bell,
           badge: unreadCount > 0 ? unreadCount : undefined,
         },
-        { href: `/advisors/${advisor.id}/data-sync`, label: "Data Sync" },
+        { href: `/advisors/${advisor.id}/data-sync`, label: "Data Sync", icon: RefreshCw },
       ],
     },
   ];

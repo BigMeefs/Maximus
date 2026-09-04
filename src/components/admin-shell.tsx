@@ -2,6 +2,20 @@
 
 import { useTransition } from "react";
 import Link from "next/link";
+import {
+  LayoutDashboard,
+  Building2,
+  Users,
+  ArrowRightLeft,
+  Banknote,
+  SlidersHorizontal,
+  Settings,
+  Megaphone,
+  BarChart3,
+  Target,
+  TrendingUp,
+  History,
+} from "lucide-react";
 import { logoutAdmin } from "@/lib/actions/admin-auth";
 import SidebarShell from "@/components/ui/sidebar-shell";
 import SidebarNav from "@/components/ui/sidebar-nav";
@@ -20,33 +34,33 @@ export default function AdminShell({
   const [loggingOut, startLogoutTransition] = useTransition();
 
   const groups = [
-    { label: "Overview", items: [{ href: "/admin", label: "Admin Dashboard" }] },
+    { label: "Overview", items: [{ href: "/admin", label: "Admin Dashboard", icon: LayoutDashboard }] },
     {
       label: "People & Offices",
       items: [
-        { href: "/admin/offices", label: "Offices" },
-        { href: "/admin/advisors", label: "Advisors" },
-        { href: "/admin/transfer", label: "Transfer Participants" },
+        { href: "/admin/offices", label: "Offices", icon: Building2 },
+        { href: "/admin/advisors", label: "Advisors", icon: Users },
+        { href: "/admin/transfer", label: "Transfer Participants", icon: ArrowRightLeft },
       ],
     },
     {
       label: "Approvals & Settings",
       items: [
-        { href: "/admin/funding-approvals", label: "Funding Approval Queue" },
-        { href: "/admin/programme-settings", label: "Programme Settings" },
-        { href: "/admin/organisation-settings", label: "Organisation Settings" },
-        { href: "/admin/announcements", label: "Announcements" },
+        { href: "/admin/funding-approvals", label: "Funding Approval Queue", icon: Banknote },
+        { href: "/admin/programme-settings", label: "Programme Settings", icon: SlidersHorizontal },
+        { href: "/admin/organisation-settings", label: "Organisation Settings", icon: Settings },
+        { href: "/admin/announcements", label: "Announcements", icon: Megaphone },
       ],
     },
     {
       label: "Reporting",
       items: [
-        { href: "/reports", label: "Reports" },
-        { href: "/admin/performance", label: "Performance Targets" },
-        { href: "/reports/performance-tracker", label: "Performance Tracker" },
+        { href: "/reports", label: "Reports", icon: BarChart3 },
+        { href: "/admin/performance", label: "Performance Targets", icon: Target },
+        { href: "/reports/performance-tracker", label: "Performance Tracker", icon: TrendingUp },
       ],
     },
-    { label: "Audit", items: [{ href: "/admin/notifications", label: "Notification History" }] },
+    { label: "Audit", items: [{ href: "/admin/notifications", label: "Notification History", icon: History }] },
   ];
 
   return (

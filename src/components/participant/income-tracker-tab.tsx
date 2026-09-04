@@ -20,6 +20,7 @@ import Field from "@/components/ui/field";
 import Button from "@/components/ui/button";
 import { Table, THead, Th, TBody } from "@/components/ui/table";
 import Card from "@/components/ui/card";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 const currency = new Intl.NumberFormat("en-GB", {
   style: "currency",
@@ -299,20 +300,32 @@ function DeclarationLink({ filePath }: { filePath: string }) {
 
 function DeleteButton({ entryId }: { entryId: string }) {
   const [deleting, startDeleteTransition] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   return (
-    <button
-      type="button"
-      disabled={deleting}
-      onClick={() => {
-        if (confirm("Delete this income tracker entry?")) {
+    <>
+      <button
+        type="button"
+        disabled={deleting}
+        onClick={() => setConfirmOpen(true)}
+        className="text-sm font-medium text-red-600 hover:underline disabled:opacity-60"
+      >
+        Delete
+      </button>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete this income tracker entry?"
+        description="This cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        pending={deleting}
+        onConfirm={() => {
+          setConfirmOpen(false);
           startDeleteTransition(() => deleteIncomeTrackerEntry(entryId));
-        }
-      }}
-      className="text-sm font-medium text-red-600 hover:underline disabled:opacity-60"
-    >
-      Delete
-    </button>
+        }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+    </>
   );
 }
 

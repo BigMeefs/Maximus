@@ -9,7 +9,7 @@ import clsx from "clsx";
 // padding/weight/colour were deliberately left as local classNames rather
 // than forced into a size here — see the Phase 1 report for the list.
 
-type Variant = "primary" | "secondary" | "danger";
+type Variant = "primary" | "secondary" | "danger" | "success";
 type Size = "xs" | "sm" | "compact" | "md";
 
 const VARIANT_SIZE: Record<Variant, Partial<Record<Size, string>>> = {
@@ -27,6 +27,15 @@ const VARIANT_SIZE: Record<Variant, Partial<Record<Size, string>>> = {
     md: "rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50",
     compact: "rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-60",
     xs: "rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-60",
+  },
+  // Added Phase 4: three sites (Referral Accept, Funding Approve, Mark as
+  // Reviewed) independently used the exact same bg-emerald-600 pattern at
+  // exactly the existing xs/sm/md sizes — a genuine duplicate the Phase 1
+  // sweep missed because it only looked for indigo/slate/red buttons.
+  success: {
+    md: "rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50",
+    sm: "rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60",
+    xs: "rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-60",
   },
 };
 

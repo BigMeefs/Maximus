@@ -6,6 +6,7 @@ import type { NotificationHistoryRow } from "@/lib/data/notifications";
 import { archiveNotification, deleteNotificationPermanently, restoreNotification } from "@/lib/actions/notifications";
 import Button from "@/components/ui/button";
 import Card from "@/components/ui/card";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 function statusBadgeTone(status: string) {
   if (status === "Archived") return "slate" as const;
@@ -57,6 +58,7 @@ function HistoryRow({
 }) {
   const [actorName, setActorName] = useState("");
   const [pending, startTransition] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   return (
     <Card padding="sm">
@@ -115,18 +117,28 @@ function HistoryRow({
         <button
           type="button"
           disabled={pending}
-          onClick={() => {
-            if (!window.confirm("Permanently delete this notification? This cannot be undone.")) return;
-            startTransition(async () => {
-              await deleteNotificationPermanently(row.id);
-              onDeleted();
-            });
-          }}
+          onClick={() => setConfirmOpen(true)}
           className="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-60"
         >
           Delete permanently
         </button>
       </div>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Permanently delete this notification?"
+        description="This cannot be undone."
+        confirmLabel="Delete permanently"
+        destructive
+        pending={pending}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          startTransition(async () => {
+            await deleteNotificationPermanently(row.id);
+            onDeleted();
+          });
+        }}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </Card>
   );
 }
