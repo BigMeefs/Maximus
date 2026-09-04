@@ -58,56 +58,64 @@ body {
 
 /*
  * Advisor dashboard announcement ticker — see
- * src/components/announcement-ticker.tsx. The track renders the active
- * announcements twice back-to-back and scrolls exactly one copy's width
- * (translateX(-50%) of a `width: max-content` flex row), so the loop from
- * the last announcement back to the first is seamless regardless of how
- * many announcements there are or how long they are.
+ * src/components/announcement-ticker.tsx. React renders exactly ONE
+ * announcement at a time (no duplicated strip); this animation slides that
+ * single element from fully off-screen left to fully off-screen right
+ * within the box. `translateX(-100%)` at the start uses the item's own
+ * width to guarantee full concealment on the left no matter how long the
+ * text is; `100vw` on the end position is simply a distance guaranteed to
+ * clear the box's right edge (the box can never be wider than the
+ * viewport), so the item is always fully off-screen at both ends. When the
+ * animation ends, the component swaps in the next announcement and mounts
+ * a fresh element (key changes), which restarts the slide — that also
+ * makes a single announcement repeat left-to-right indefinitely rather
+ * than needing a separate looping case.
  */
-.announcement-ticker {
+.announcement-ticker__viewport {
+  position: relative;
   overflow: hidden;
+  height: 1.25rem; /* matches text-sm's line-height so the box doesn't jump */
 }
 
-.announcement-ticker__track {
-  display: flex;
-  width: max-content;
-  animation: announcement-ticker-scroll var(--announcement-ticker-duration, 30s) linear infinite;
+.announcement-ticker__item {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  transform: translateX(-100%);
+  animation-name: announcement-ticker-travel;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
 }
 
-.announcement-ticker:hover .announcement-ticker__track {
+.announcement-ticker:hover .announcement-ticker__item {
   animation-play-state: paused;
 }
 
-@keyframes announcement-ticker-scroll {
+@keyframes announcement-ticker-travel {
   from {
-    transform: translateX(0);
+    transform: translateX(-100%);
   }
   to {
-    transform: translateX(-50%);
+    transform: translateX(calc(100vw + 100%));
   }
 }
 
-/* Respect prefers-reduced-motion: stop the scroll and show the
-   announcements as a plain, static, wrapping line instead of a moving
-   marquee. The duplicated copy (kept for the seamless loop above, and
-   already aria-hidden) is hidden outright so nothing repeats visually. */
+.announcement-ticker__static {
+  display: none;
+}
+
+/* Respect prefers-reduced-motion: hide the travelling viewport entirely
+   (an element with display:none never runs its CSS animation, so nothing
+   moves and nothing advances) and show every active announcement at once
+   as a plain, static, wrapping line instead. */
 @media (prefers-reduced-motion: reduce) {
-  .announcement-ticker {
-    overflow: visible;
-  }
-
-  .announcement-ticker__track {
-    animation: none;
-    transform: none;
-    display: block;
-    width: auto;
-  }
-
-  .announcement-ticker__track [data-ticker-copy="duplicate"] {
+  .announcement-ticker__viewport {
     display: none;
   }
 
-  .announcement-ticker__track > div:not([data-ticker-copy="duplicate"]) {
-    flex-wrap: wrap;
+  .announcement-ticker__static {
+    display: block;
+    white-space: normal;
   }
 }
